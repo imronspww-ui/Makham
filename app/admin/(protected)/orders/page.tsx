@@ -1,20 +1,53 @@
 'use client'
 import { useState } from 'react'
-import { RefreshCw, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { OrderStatusBadge, statusConfig } from '@/components/admin/OrderStatusBadge'
 import { OrderDetailModal } from '@/components/admin/OrderDetailModal'
 import { OrderRowSkeleton } from '@/components/ui/Skeleton'
-import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
+import { updateOrderStatus } from '@/lib/services/orderService'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
 import type { Order, OrderStatus } from '@/types'
 
 const ALL_STATUSES: (OrderStatus | 'all')[] = ['all', 'pending', 'cooking', 'delivering', 'completed', 'cancelled']
+const ORDER_STATUSES: OrderStatus[] = ['pending', 'cooking', 'delivering', 'completed', 'cancelled']
+
+function QuickStatusSelect({ order }: { order: Order }) {
+  const [updating, setUpdating] = useState(false)
+
+  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const newStatus = e.target.value as OrderStatus
+    if (newStatus === order.status) return
+    setUpdating(true)
+    try {
+      await updateOrderStatus(order.id, newStatus)
+      toast.success(`อัปเดตเป็น "${statusConfig[newStatus].label}" สำเร็จ`)
+    } catch {
+      toast.error('อัปเดตสถานะไม่สำเร็จ')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  return (
+    <select
+      value={order.status}
+      onChange={handleChange}
+      disabled={updating}
+      className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-orange-400 outline-none bg-white disabled:opacity-50 cursor-pointer hover:border-orange-300 transition-colors"
+    >
+      {ORDER_STATUSES.map((s) => (
+        <option key={s} value={s}>{statusConfig[s].label}</option>
+      ))}
+    </select>
+  )
+}
 
 export default function OrdersPage() {
-  const { orders, loading, reload } = useOrders()
+  const { orders, loading } = useOrders()
   const [selected, setSelected] = useState<Order | null>(null)
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -30,10 +63,10 @@ export default function OrdersPage() {
       <FirebaseBanner />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">ออเดอร์ทั้งหมด</h1>
-        <Button variant="outline" size="sm" onClick={reload}>
-          <RefreshCw size={14} />
-          รีเฟรช
-        </Button>
+        <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-100 rounded-full px-3 py-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+          อัปเดตสดทันที
+        </span>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -99,11 +132,16 @@ export default function OrdersPage() {
                       {order.payment.status === 'paid' ? 'ชำระแล้ว' : 'รอชำระ'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3"><OrderStatusBadge status={order.status} /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1.5">
+                      <OrderStatusBadge status={order.status} />
+                      <QuickStatusSelect order={order} />
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-xs text-gray-400">{formatDate(order.createdAt)}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => setSelected(order)}
-                      className="text-xs text-orange-500 hover:text-orange-700 font-medium">ดูรายละเอียด</button>
+                      className="text-xs text-orange-500 hover:text-orange-700 font-medium whitespace-nowrap">ดูรายละเอียด</button>
                   </td>
                 </tr>
               ))}
@@ -112,7 +150,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      <OrderDetailModal order={selected} onClose={() => setSelected(null)} onUpdated={reload} />
+      <OrderDetailModal order={selected} onClose={() => setSelected(null)} onUpdated={() => setSelected(null)} />
     </div>
   )
 }

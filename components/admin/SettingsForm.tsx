@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { promptpaySettingsSchema, deliverySettingsSchema, type PromptPayFormData, type DeliverySettingsFormData } from '@/lib/utils/validation'
-import { updatePromptPaySettings, updateDeliverySettings } from '@/lib/services/settingsService'
+import { promptpaySettingsSchema, deliverySettingsSchema, storeSettingsSchema, type PromptPayFormData, type DeliverySettingsFormData, type StoreSettingsFormData } from '@/lib/utils/validation'
+import { updatePromptPaySettings, updateDeliverySettings, updateStoreSettings } from '@/lib/services/settingsService'
 import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import type { Settings } from '@/types'
 import Image from 'next/image'
@@ -112,6 +112,105 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
         </div>
       </div>
       <Button type="submit" loading={saving} className="self-start">บันทึกการตั้งค่าจัดส่ง</Button>
+    </form>
+  )
+}
+
+export function StoreSettingsForm({ settings, onSaved }: Props) {
+  const [saving, setSaving] = useState(false)
+  const [logoPreview, setLogoPreview] = useState(settings.store.logoUrl ?? '')
+  const [bgPreview, setBgPreview] = useState(settings.store.bgImageUrl ?? '')
+
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<StoreSettingsFormData>({
+    resolver: zodResolver(storeSettingsSchema),
+    defaultValues: {
+      name: settings.store.name,
+      logoUrl: settings.store.logoUrl ?? '',
+      bgImageUrl: settings.store.bgImageUrl ?? '',
+    },
+  })
+
+  const logoVal = watch('logoUrl')
+  const bgVal = watch('bgImageUrl')
+
+  useEffect(() => { setLogoPreview(logoVal ?? '') }, [logoVal])
+  useEffect(() => { setBgPreview(bgVal ?? '') }, [bgVal])
+
+  async function onSubmit(data: StoreSettingsFormData) {
+    setSaving(true)
+    try {
+      await updateStoreSettings({
+        ...settings.store,
+        name: data.name,
+        logoUrl: data.logoUrl || undefined,
+        bgImageUrl: data.bgImageUrl || undefined,
+      })
+      toast.success('บันทึกข้อมูลร้านสำเร็จ')
+      onSaved()
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <Input
+        label="ชื่อร้าน *"
+        {...register('name')}
+        error={errors.name?.message}
+        placeholder="ร้านมะขาม"
+      />
+
+      {/* Logo URL */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">URL โลโก้</label>
+        <div className="flex gap-3 items-start">
+          <div className="flex-1">
+            <input
+              {...register('logoUrl')}
+              placeholder="https://example.com/logo.png"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">วาง URL รูปภาพโลโก้ร้าน (แนะนำสี่เหลี่ยมจัตุรัส)</p>
+          </div>
+          {logoPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoPreview} alt="logo preview"
+              className="h-12 w-12 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+              onError={() => setLogoPreview('')} />
+          ) : (
+            <div className="h-12 w-12 rounded-xl bg-gray-100 border border-dashed border-gray-300 flex-shrink-0 flex items-center justify-center text-gray-300 text-xs">โลโก้</div>
+          )}
+        </div>
+      </div>
+
+      {/* Background URL */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">URL รูปพื้นหลัง</label>
+        <div className="flex gap-3 items-start">
+          <div className="flex-1">
+            <input
+              {...register('bgImageUrl')}
+              placeholder="https://example.com/background.jpg"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">วาง URL รูปภาพพื้นหลัง (ถ้าไม่ใส่จะใช้ gradient สีส้ม-เขียว)</p>
+          </div>
+          {bgPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={bgPreview} alt="bg preview"
+              className="h-12 w-20 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+              onError={() => setBgPreview('')} />
+          ) : (
+            <div className="h-12 w-20 rounded-xl flex-shrink-0 border border-dashed border-gray-300"
+              style={{ background: 'linear-gradient(160deg, #fef6e4 0%, #f0faf4 40%, #fdf2e9 100%)' }} />
+          )}
+        </div>
+      </div>
+
+      <Button type="submit" loading={saving} className="self-start">บันทึกข้อมูลร้าน</Button>
     </form>
   )
 }

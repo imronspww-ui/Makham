@@ -47,9 +47,16 @@ export const deliverySettingsSchema = z.object({
   maxDistance: z.number().min(1, 'ต้องมากกว่า 0'),
 })
 
+export const storeSettingsSchema = z.object({
+  name: z.string().min(1, 'กรุณากรอกชื่อร้าน'),
+  logoUrl: z.string().optional(),
+  bgImageUrl: z.string().optional(),
+})
+
 export type LoginFormData = z.infer<typeof loginSchema>
 export type CheckoutFormData = z.infer<typeof checkoutSchema>
 export type MenuItemFormData = z.infer<typeof menuItemSchema>
 export type CategoryFormData = z.infer<typeof categorySchema>
 export type PromptPayFormData = z.infer<typeof promptpaySettingsSchema>
 export type DeliverySettingsFormData = z.infer<typeof deliverySettingsSchema>
+export type StoreSettingsFormData = z.infer<typeof storeSettingsSchema>

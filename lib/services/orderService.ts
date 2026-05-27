@@ -8,6 +8,7 @@ import {
   updateDoc,
   query,
   orderBy,
+  onSnapshot,
   Timestamp,
   docToData,
 } from '@/lib/firebase/firestore'
@@ -57,4 +58,19 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
 export async function updatePaymentStatus(id: string, status: 'pending' | 'paid'): Promise<void> {
   requireFirebase()
   await updateDoc(doc(db, COL, id), { 'payment.status': status, updatedAt: Timestamp.now() })
+}
+
+export function subscribeToOrders(callback: (orders: Order[]) => void): () => void {
+  if (!isFirebaseConfigured) { callback([]); return () => {} }
+  const q = query(collection(db, COL), orderBy('createdAt', 'desc'))
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => docToData<Order>(d.id, d.data())))
+  })
+}
+
+export function subscribeToOrder(id: string, callback: (order: Order | null) => void): () => void {
+  if (!isFirebaseConfigured) { callback(null); return () => {} }
+  return onSnapshot(doc(db, COL, id), (snap) => {
+    callback(snap.exists() ? docToData<Order>(snap.id, snap.data()) : null)
+  })
 }

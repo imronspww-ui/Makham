@@ -1,7 +1,7 @@
 'use client'
-import { QrCode, Truck } from 'lucide-react'
+import { QrCode, Store, Truck } from 'lucide-react'
 import { useSettings } from '@/lib/hooks/useSettings'
-import { PromptPaySettingsForm, DeliverySettingsForm } from '@/components/admin/SettingsForm'
+import { PromptPaySettingsForm, DeliverySettingsForm, StoreSettingsForm } from '@/components/admin/SettingsForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
 
@@ -15,6 +15,16 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6 max-w-2xl">
       <FirebaseBanner />
       <h1 className="text-2xl font-bold text-gray-800">ตั้งค่า</h1>
+
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+            <Store size={16} />
+          </div>
+          <h2 className="font-semibold text-gray-700">ข้อมูลร้านและแบรนด์</h2>
+        </div>
+        <StoreSettingsForm settings={settings} onSaved={reload} />
+      </div>
 
       <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-4">

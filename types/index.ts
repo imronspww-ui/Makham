@@ -38,6 +38,7 @@ export interface OrderItem {
   price: number
   qty: number
   subtotal: number
+  imageUrl?: string
 }
 
 export interface DeliveryInfo {
@@ -76,6 +77,8 @@ export interface StoreSettings {
   address: string
   lat: number
   lng: number
+  logoUrl?: string
+  bgImageUrl?: string
 }
 
 export interface PromptPaySettings {

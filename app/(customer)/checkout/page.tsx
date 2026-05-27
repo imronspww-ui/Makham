@@ -62,6 +62,7 @@ export default function CheckoutPage() {
           price: i.price,
           qty: i.qty,
           subtotal: i.price * i.qty,
+          ...(i.imageUrl ? { imageUrl: i.imageUrl } : {}),
         })),
         ...(orderType === 'delivery' && lat && lng
           ? { delivery: { address, lat, lng, distanceKm: distanceKm!, fee: deliveryFee! } }
