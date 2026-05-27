@@ -50,22 +50,12 @@ export default function CheckoutPage() {
       return
     }
 
-    // ชื่อและเบอร์โทรบังคับทุกวิธีชำระเงิน
-    if (!formData.customerName?.trim()) {
-      toast.error('กรุณากรอกชื่อ')
-      return
-    }
-    if (!formData.customerPhone?.trim()) {
-      toast.error('กรุณากรอกเบอร์โทร')
-      return
-    }
-
     setSubmitting(true)
     try {
       const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
         orderNumber: generateOrderNumber(),
         orderType,
-        customer: { name: formData.customerName ?? '', phone: formData.customerPhone ?? '' },
+        customer: { name: formData.customerName, phone: formData.customerPhone },
         items: items.map((i) => ({
           menuItemId: i.menuItemId,
           name: i.name,

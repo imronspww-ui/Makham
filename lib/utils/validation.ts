@@ -6,14 +6,12 @@ export const loginSchema = z.object({
 })
 
 export const checkoutSchema = z.object({
-  customerName: z.string().optional(),
+  customerName: z.string().min(1, 'กรุณากรอกชื่อ'),
   customerPhone: z
     .string()
-    .optional()
-    .refine(
-      (v) => !v || (v.length >= 9 && v.length <= 10 && /^[0-9]+$/.test(v)),
-      'กรุณากรอกเบอร์โทรที่ถูกต้อง (9-10 หลัก)'
-    ),
+    .min(9, 'กรุณากรอกเบอร์โทรที่ถูกต้อง (9-10 หลัก)')
+    .max(10, 'กรุณากรอกเบอร์โทรที่ถูกต้อง (9-10 หลัก)')
+    .regex(/^[0-9]+$/, 'กรุณากรอกเฉพาะตัวเลข (9-10 หลัก)'),
   note: z.string().optional(),
 })
 
