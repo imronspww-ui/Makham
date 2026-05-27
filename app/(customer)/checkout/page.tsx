@@ -50,16 +50,14 @@ export default function CheckoutPage() {
       return
     }
 
-    // ชื่อและเบอร์โทรบังคับเฉพาะ QR PromptPay
-    if (paymentMethod === 'promptpay') {
-      if (!formData.customerName?.trim()) {
-        toast.error('กรุณากรอกชื่อสำหรับการชำระผ่าน QR')
-        return
-      }
-      if (!formData.customerPhone?.trim()) {
-        toast.error('กรุณากรอกเบอร์โทรสำหรับการชำระผ่าน QR')
-        return
-      }
+    // ชื่อและเบอร์โทรบังคับทุกวิธีชำระเงิน
+    if (!formData.customerName?.trim()) {
+      toast.error('กรุณากรอกชื่อ')
+      return
+    }
+    if (!formData.customerPhone?.trim()) {
+      toast.error('กรุณากรอกเบอร์โทร')
+      return
     }
 
     setSubmitting(true)
@@ -109,18 +107,15 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
-          <h2 className="font-semibold text-gray-700">
-            ข้อมูลลูกค้า
-            {paymentMethod !== 'promptpay' && <span className="text-xs font-normal text-gray-400 ml-1">(ไม่บังคับ)</span>}
-          </h2>
+          <h2 className="font-semibold text-gray-700">ข้อมูลลูกค้า</h2>
           <Input
-            label={paymentMethod === 'promptpay' ? 'ชื่อ *' : 'ชื่อ'}
+            label="ชื่อ *"
             {...register('customerName')}
             error={errors.customerName?.message}
             placeholder="ชื่อ-นามสกุล"
           />
           <Input
-            label={paymentMethod === 'promptpay' ? 'เบอร์โทร *' : 'เบอร์โทร'}
+            label="เบอร์โทร *"
             {...register('customerPhone')}
             error={errors.customerPhone?.message}
             placeholder="0812345678"
