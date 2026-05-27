@@ -1,0 +1,46 @@
+'use client'
+import { QrCode, Truck } from 'lucide-react'
+import { useSettings } from '@/lib/hooks/useSettings'
+import { PromptPaySettingsForm, DeliverySettingsForm } from '@/components/admin/SettingsForm'
+import { Spinner } from '@/components/ui/Spinner'
+import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
+
+export default function SettingsPage() {
+  const { settings, loading, reload } = useSettings()
+
+  if (loading) return <Spinner text="กำลังโหลดการตั้งค่า..." />
+  if (!settings) return <div className="py-10 text-center text-gray-400">ไม่สามารถโหลดการตั้งค่าได้</div>
+
+  return (
+    <div className="flex flex-col gap-6 max-w-2xl">
+      <FirebaseBanner />
+      <h1 className="text-2xl font-bold text-gray-800">ตั้งค่า</h1>
+
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+            <QrCode size={16} />
+          </div>
+          <h2 className="font-semibold text-gray-700">ข้อมูล PromptPay</h2>
+        </div>
+        <PromptPaySettingsForm settings={settings} onSaved={reload} />
+      </div>
+
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+            <Truck size={16} />
+          </div>
+          <h2 className="font-semibold text-gray-700">ตั้งค่าการจัดส่ง</h2>
+        </div>
+        <DeliverySettingsForm settings={settings} onSaved={reload} />
+      </div>
+
+      <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-sm text-gray-500">
+        <p className="font-medium text-gray-600 mb-2">ข้อมูล Firebase</p>
+        <p>ตั้งค่า Firebase Project ID: <code className="bg-gray-200 px-1 rounded text-xs">{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'ยังไม่ได้ตั้งค่า'}</code></p>
+        <p className="mt-1 text-xs text-gray-400">แก้ไขได้ที่ไฟล์ .env.local</p>
+      </div>
+    </div>
+  )
+}
