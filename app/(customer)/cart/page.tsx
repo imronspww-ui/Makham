@@ -3,32 +3,16 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ShoppingCart, Pencil } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { useMenu } from '@/lib/hooks/useMenu'
 import { OrderTypeSelector } from '@/components/customer/OrderTypeSelector'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { formatCurrency } from '@/lib/utils/format'
 import { Button } from '@/components/ui/Button'
 import type { CartItem, MenuItem, SelectedOption } from '@/types'
 
-/** Build a minimal MenuItem-shaped object from a CartItem so ItemOptionsModal can render */
-function toMenuItem(cartItem: CartItem): MenuItem {
-  return {
-    id: cartItem.menuItemId,
-    name: cartItem.name,
-    description: '',
-    price: cartItem.price,
-    categoryId: '',
-    imageUrl: cartItem.imageUrl ?? '',
-    isAvailable: true,
-    isSoldOut: false,
-    optionGroups: cartItem.optionGroups ?? [],
-    createdAt: '',
-    updatedAt: '',
-  }
-}
-
 /** Convert SelectedOption[] → Record<groupId, choiceId[]> for modal pre-fill */
 function toSelectionMap(selected: SelectedOption[]): Record<string, string[]> {
-  return selected.reduce<Record<string, string[]>>((acc, opt) => ({
+  return (selected ?? []).reduce<Record<string, string[]>>((acc, opt) => ({
     ...acc,
     [opt.groupId]: [...(acc[opt.groupId] ?? []), opt.choiceId],
   }), {})
@@ -36,6 +20,8 @@ function toSelectionMap(selected: SelectedOption[]): Record<string, string[]> {
 
 export default function CartPage() {
   const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
+  // Fetch live menu so we always get up-to-date optionGroups even for old cart items
+  const { items: menuItems } = useMenu()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
 
   if (items.length === 0) {
@@ -48,11 +34,30 @@ export default function CartPage() {
     )
   }
 
+  /** Find the MenuItem from live menu data, fallback to CartItem-derived object */
+  function getLiveMenuItem(cartItem: CartItem): MenuItem {
+    return menuItems.find((m) => m.id === cartItem.menuItemId) ?? {
+      id: cartItem.menuItemId,
+      name: cartItem.name,
+      description: '',
+      price: cartItem.price,
+      categoryId: '',
+      imageUrl: cartItem.imageUrl ?? '',
+      isAvailable: true,
+      isSoldOut: false,
+      optionGroups: cartItem.optionGroups ?? [],
+      createdAt: '',
+      updatedAt: '',
+    }
+  }
+
   function handleEditSave(selectedOptions: SelectedOption[], itemNote: string) {
     if (!editingItem) return
     updateItemOptions(editingItem.menuItemId, selectedOptions, itemNote)
     setEditingItem(null)
   }
+
+  const editingMenuItem = editingItem ? getLiveMenuItem(editingItem) : null
 
   return (
     <div className="flex flex-col gap-5 max-w-lg mx-auto">
@@ -72,7 +77,9 @@ export default function CartPage() {
         <h2 className="text-sm font-semibold text-gray-600">รายการสินค้า</h2>
         {items.map((item) => {
           const unitPrice = getItemEffectivePrice(item)
-          const hasOptions = (item.optionGroups ?? []).length > 0
+          // Use live menu data to determine if item has options (fixes stale cart items)
+          const liveMenuItem = getLiveMenuItem(item)
+          const hasOptions = (liveMenuItem.optionGroups ?? []).length > 0
           return (
             <div key={item.menuItemId} className="flex items-start gap-3 rounded-xl bg-white border border-gray-100 p-3 shadow-sm">
               <div className="flex-1 min-w-0">
@@ -132,9 +139,9 @@ export default function CartPage() {
       </div>
 
       {/* Edit options modal */}
-      {editingItem && (
+      {editingItem && editingMenuItem && (
         <ItemOptionsModal
-          item={toMenuItem(editingItem)}
+          item={editingMenuItem}
           initialSelections={toSelectionMap(editingItem.selectedOptions ?? [])}
           initialNote={editingItem.itemNote ?? ''}
           isEdit

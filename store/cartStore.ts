@@ -39,7 +39,14 @@ export const useCartStore = create<CartState>()(
         if (existing) {
           set((state) => ({
             items: state.items.map((i) =>
-              i.menuItemId === newItem.menuItemId ? { ...i, qty: i.qty + 1 } : i,
+              i.menuItemId === newItem.menuItemId
+                ? {
+                    ...i,
+                    qty: i.qty + 1,
+                    // Always refresh optionGroups from the latest menu data
+                    optionGroups: newItem.optionGroups ?? i.optionGroups,
+                  }
+                : i,
             ),
           }))
         } else {

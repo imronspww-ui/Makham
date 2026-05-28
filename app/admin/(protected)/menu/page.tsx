@@ -118,7 +118,7 @@ export default function MenuPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['เมนู', 'หมวดหมู่', 'ราคา', 'สถานะ', 'จัดการ'].map((h) => (
+                {['เมนู', 'หมวดหมู่', 'ราคา', 'ตัวเลือก', 'สถานะ', 'จัดการ'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs text-gray-400 font-medium">{h}</th>
                 ))}
               </tr>
@@ -146,6 +146,15 @@ export default function MenuPage() {
                       {cat ? <Badge color="gray">{cat.name}</Badge> : <span className="text-gray-400 text-xs">-</span>}
                     </td>
                     <td className="px-4 py-3 font-semibold text-orange-600">{formatCurrency(item.price)}</td>
+                    <td className="px-4 py-3">
+                      {(item.optionGroups ?? []).length > 0 ? (
+                        <span className="text-xs text-purple-600 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">
+                          {item.optionGroups.length} กลุ่ม
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <button onClick={() => handleToggleAvailable(item)} className="flex items-center gap-1 text-xs">
