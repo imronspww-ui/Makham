@@ -1,6 +1,6 @@
 'use client'
-import Image from 'next/image'
-import { Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, UtensilsCrossed } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { formatCurrency } from '@/lib/utils/format'
 import type { MenuItem } from '@/types'
@@ -11,6 +11,7 @@ interface Props {
 
 export function MenuCard({ item }: Props) {
   const { addItem, items } = useCartStore()
+  const [imgError, setImgError] = useState(false)
   const cartQty = items.find((i) => i.menuItemId === item.id)?.qty ?? 0
   const unavailable = !item.isAvailable || item.isSoldOut
 
@@ -18,6 +19,8 @@ export function MenuCard({ item }: Props) {
     if (unavailable) return
     addItem({ menuItemId: item.id, name: item.name, price: item.price, imageUrl: item.imageUrl })
   }
+
+  const showImage = item.imageUrl && !imgError
 
   return (
     <div
@@ -28,16 +31,18 @@ export function MenuCard({ item }: Props) {
       ].join(' ')}
     >
       <div className="relative h-44 w-full bg-gray-100">
-        {item.imageUrl ? (
-          <Image
+        {showImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={item.imageUrl}
             alt={item.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, 50vw"
+            className="h-full w-full object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-4xl">🍽️</div>
+          <div className="flex h-full items-center justify-center text-gray-200">
+            <UtensilsCrossed size={48} />
+          </div>
         )}
         {item.isSoldOut && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">

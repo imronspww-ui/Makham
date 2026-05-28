@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { OrderStatusBadge, statusConfig } from '@/components/admin/OrderStatusBadge'
@@ -8,13 +8,14 @@ import { OrderDetailModal } from '@/components/admin/OrderDetailModal'
 import { OrderRowSkeleton } from '@/components/ui/Skeleton'
 import { Badge } from '@/components/ui/Badge'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
-import { updateOrderStatus } from '@/lib/services/orderService'
+import { updateOrderStatus, updatePaymentStatus } from '@/lib/services/orderService'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
 import type { Order, OrderStatus } from '@/types'
 
 const ALL_STATUSES: (OrderStatus | 'all')[] = ['all', 'pending', 'cooking', 'delivering', 'completed', 'cancelled']
 const ORDER_STATUSES: OrderStatus[] = ['pending', 'cooking', 'delivering', 'completed', 'cancelled']
 
+// ── Quick status dropdown ────────────────────────────────────────────────────
 function QuickStatusSelect({ order }: { order: Order }) {
   const [updating, setUpdating] = useState(false)
 
@@ -46,6 +47,42 @@ function QuickStatusSelect({ order }: { order: Order }) {
   )
 }
 
+// ── Quick pay button ─────────────────────────────────────────────────────────
+function QuickPayButton({ order }: { order: Order }) {
+  const [updating, setUpdating] = useState(false)
+
+  if (order.payment.status === 'paid') {
+    return <Badge color="green">✅ ชำระแล้ว</Badge>
+  }
+
+  async function handlePay() {
+    setUpdating(true)
+    try {
+      await updatePaymentStatus(order.id, 'paid')
+      toast.success('✅ บันทึกการชำระเงินแล้ว')
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Badge color="gray">⏳ รอชำระ</Badge>
+      <button
+        onClick={handlePay}
+        disabled={updating}
+        className="flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800 disabled:opacity-40 transition-colors"
+      >
+        <CheckCircle2 size={12} />
+        {updating ? 'กำลังบันทึก...' : 'ยืนยันชำระ'}
+      </button>
+    </div>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function OrdersPage() {
   const { orders, loading } = useOrders()
   const [selected, setSelected] = useState<Order | null>(null)
@@ -128,9 +165,7 @@ export default function OrdersPage() {
                   <td className="px-4 py-3">{order.orderType === 'pickup' ? '🛍️ รับหน้าร้าน' : '🚚 จัดส่ง'}</td>
                   <td className="px-4 py-3 font-semibold text-orange-600">{formatCurrency(order.total)}</td>
                   <td className="px-4 py-3">
-                    <Badge color={order.payment.status === 'paid' ? 'green' : 'gray'}>
-                      {order.payment.status === 'paid' ? 'ชำระแล้ว' : 'รอชำระ'}
-                    </Badge>
+                    <QuickPayButton order={order} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1.5">
