@@ -51,6 +51,14 @@ export default function MenuPage() {
     } catch { toast.error('อัปเดตไม่สำเร็จ') }
   }
 
+  async function handleTogglePopular(item: MenuItem) {
+    try {
+      await updateMenuItem(item.id, { isPopular: !item.isPopular })
+      toast.success(item.isPopular ? 'ยกเลิกเมนูยอดนิยม' : '🔥 เพิ่มเป็นเมนูยอดนิยมแล้ว')
+      reload()
+    } catch { toast.error('อัปเดตไม่สำเร็จ') }
+  }
+
   function openAddCategory() {
     setEditCategory(null)
     setCatModalOpen(true)
@@ -177,6 +185,10 @@ export default function MenuPage() {
                         <button onClick={() => handleToggleSoldOut(item)} className="flex items-center gap-1 text-xs">
                           {item.isSoldOut ? <ToggleRight size={16} className="text-red-500" /> : <ToggleLeft size={16} className="text-gray-300" />}
                           <span className={item.isSoldOut ? 'text-red-500' : 'text-gray-400'}>{item.isSoldOut ? 'สินค้าหมด' : 'มีสินค้า'}</span>
+                        </button>
+                        <button onClick={() => handleTogglePopular(item)} className="flex items-center gap-1 text-xs">
+                          {item.isPopular ? <ToggleRight size={16} className="text-amber-500" /> : <ToggleLeft size={16} className="text-gray-300" />}
+                          <span className={item.isPopular ? 'text-amber-600 font-medium' : 'text-gray-400'}>{item.isPopular ? '🔥 ยอดนิยม' : 'ยอดนิยม'}</span>
                         </button>
                       </div>
                     </td>
