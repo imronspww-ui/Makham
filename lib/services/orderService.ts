@@ -60,6 +60,11 @@ export async function updatePaymentStatus(id: string, status: 'pending' | 'paid'
   await updateDoc(doc(db, COL, id), { 'payment.status': status, updatedAt: Timestamp.now() })
 }
 
+export async function updateOrderSlip(id: string, slipUrl: string): Promise<void> {
+  requireFirebase()
+  await updateDoc(doc(db, COL, id), { 'payment.slipUrl': slipUrl, updatedAt: Timestamp.now() })
+}
+
 export function subscribeToOrders(callback: (orders: Order[]) => void): () => void {
   if (!isFirebaseConfigured) { callback([]); return () => {} }
   const q = query(collection(db, COL), orderBy('createdAt', 'desc'))

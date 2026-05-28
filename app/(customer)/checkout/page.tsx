@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
+import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { LocationPicker } from '@/components/customer/LocationPicker'
 import { PaymentSection } from '@/components/customer/PaymentSection'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +23,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const { items, orderType, getTotalPrice, clearCart } = useCartStore()
   const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, reset } = useCheckoutStore()
+  const addOrderToHistory = useOrderHistoryStore((s) => s.addOrder)
 
   const { register, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -76,6 +78,7 @@ export default function CheckoutPage() {
       }
 
       const id = await createOrder(orderData)
+      addOrderToHistory({ id, orderNumber: orderData.orderNumber, createdAt: new Date().toISOString() })
       clearCart()
       reset()
       toast.success('สั่งอาหารสำเร็จ!')

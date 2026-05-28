@@ -113,6 +113,18 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
           </div>
         )}
 
+        {/* Slip preview */}
+        {order.payment.slipUrl && (
+          <div className="rounded-xl border border-gray-100 p-3">
+            <p className="text-xs text-gray-500 font-medium mb-2">สลิปการโอนเงิน</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={order.payment.slipUrl} alt="payment slip"
+              className="max-h-56 w-full rounded-lg object-contain border border-gray-100 bg-gray-50 cursor-pointer"
+              onClick={() => window.open(order.payment.slipUrl, '_blank')} />
+            <p className="text-xs text-gray-400 mt-1">คลิกเพื่อดูเต็มจอ</p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <p className="text-xs text-gray-500 font-medium">เปลี่ยนสถานะ</p>
           <div className="flex flex-wrap gap-2">

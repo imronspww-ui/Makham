@@ -1,27 +1,96 @@
 'use client'
-import { use } from 'react'
+import { use, useState, useRef } from 'react'
 import Link from 'next/link'
-import { CheckCircle, Clock, ChefHat, Truck, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon } from 'lucide-react'
 import { useOrder } from '@/lib/hooks/useOrder'
+import { useOrderNotification } from '@/lib/hooks/useOrderNotification'
+import { useSettings } from '@/lib/hooks/useSettings'
+import { updateOrderSlip } from '@/lib/services/orderService'
+import { uploadImage } from '@/lib/firebase/storage'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import type { OrderStatus } from '@/types'
 
 const statusInfo: Record<OrderStatus, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-  pending:   { label: 'รอดำเนินการ',    icon: <Clock size={36} />,       color: 'text-yellow-500', bg: 'bg-yellow-50' },
-  cooking:   { label: 'กำลังทำอาหาร',  icon: <ChefHat size={36} />,     color: 'text-orange-500', bg: 'bg-orange-50' },
-  delivering:{ label: 'กำลังจัดส่ง',   icon: <Truck size={36} />,       color: 'text-blue-500',   bg: 'bg-blue-50'   },
-  completed: { label: 'เสร็จสิ้น',      icon: <CheckCircle size={36} />, color: 'text-green-500',  bg: 'bg-green-50'  },
-  cancelled: { label: 'ยกเลิกแล้ว',    icon: <XCircle size={36} />,     color: 'text-red-500',    bg: 'bg-red-50'    },
+  pending:    { label: 'รอดำเนินการ',   icon: <Clock size={36} />,       color: 'text-yellow-500', bg: 'bg-yellow-50' },
+  cooking:    { label: 'กำลังทำอาหาร', icon: <ChefHat size={36} />,     color: 'text-orange-500', bg: 'bg-orange-50' },
+  delivering: { label: 'กำลังจัดส่ง',  icon: <Truck size={36} />,       color: 'text-blue-500',   bg: 'bg-blue-50'   },
+  completed:  { label: 'เสร็จสิ้น',     icon: <CheckCircle size={36} />, color: 'text-green-500',  bg: 'bg-green-50'  },
+  cancelled:  { label: 'ยกเลิกแล้ว',   icon: <XCircle size={36} />,     color: 'text-red-500',    bg: 'bg-red-50'    },
 }
 
 const FLOW: OrderStatus[] = ['pending', 'cooking', 'delivering', 'completed']
 const FLOW_LABELS = ['รับออเดอร์', 'ทำอาหาร', 'พร้อมรับ/ส่ง', 'เสร็จสิ้น']
 
+// ─── Slip uploader ───────────────────────────────────────────────────────────
+function SlipUploader({ orderId }: { orderId: string }) {
+  const [uploading, setUploading] = useState(false)
+  const [localPreview, setLocalPreview] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Instant local preview while uploading
+    const reader = new FileReader()
+    reader.onload = (ev) => setLocalPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+
+    setUploading(true)
+    try {
+      const url = await uploadImage(file)
+      await updateOrderSlip(orderId, url)
+      toast.success('แนบสลิปสำเร็จ ✅')
+    } catch {
+      toast.error('แนบสลิปไม่สำเร็จ กรุณาลองใหม่')
+      setLocalPreview(null)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {localPreview && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={localPreview} alt="slip preview"
+          className="max-h-48 w-full rounded-xl object-contain border border-gray-100 bg-gray-50" />
+      )}
+      <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed p-5 cursor-pointer transition-colors ${
+        uploading
+          ? 'border-orange-200 bg-orange-50 opacity-70 pointer-events-none'
+          : 'border-orange-200 hover:bg-orange-50'
+      }`}>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFile}
+          disabled={uploading}
+        />
+        <Upload size={20} className="text-orange-400" />
+        <span className="text-sm font-medium text-orange-600">
+          {uploading ? 'กำลังอัปโหลด...' : 'แตะเพื่อถ่ายหรือเลือกรูปสลิป'}
+        </span>
+        <span className="text-xs text-gray-400">รองรับ JPG, PNG</span>
+      </label>
+    </div>
+  )
+}
+
+// ─── Main page ───────────────────────────────────────────────────────────────
 export default function OrderPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params)
   const { order, loading } = useOrder(orderId)
+  const { settings } = useSettings()
+  const storeName = settings?.store.name ?? 'ร้านมะขาม'
+
+  useOrderNotification(order, storeName)
 
   if (loading) return <Spinner text="กำลังโหลดออเดอร์..." />
   if (!order) return (
@@ -33,6 +102,10 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 
   const info = statusInfo[order.status]
   const currentStep = FLOW.indexOf(order.status)
+  const needsSlip = order.payment.method === 'promptpay'
+    && order.payment.status === 'pending'
+    && order.status !== 'cancelled'
+  const hasSlip = !!order.payment.slipUrl
 
   return (
     <div className="max-w-md mx-auto flex flex-col gap-5">
@@ -81,16 +154,55 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
         </div>
       )}
 
+      {/* Slip section — PromptPay pending payment */}
+      {(needsSlip || hasSlip) && (
+        <div className="rounded-2xl bg-white border border-orange-100 p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <ImageIcon size={16} className="text-orange-400" />
+            <h2 className="font-semibold text-gray-700">สลิปการโอนเงิน</h2>
+          </div>
+          {hasSlip ? (
+            <div className="flex flex-col gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={order.payment.slipUrl} alt="payment slip"
+                className="max-h-52 w-full rounded-xl object-contain border border-gray-100 bg-gray-50" />
+              <p className="text-xs text-green-600 font-medium">✅ แนบสลิปแล้ว รอร้านตรวจสอบ</p>
+              {needsSlip && (
+                <label className="text-xs text-orange-500 underline cursor-pointer">
+                  <input type="file" accept="image/*" capture="environment" className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      try {
+                        const url = await uploadImage(file)
+                        await updateOrderSlip(order.id, url)
+                        toast.success('อัปโหลดสลิปใหม่แล้ว ✅')
+                      } catch {
+                        toast.error('อัปโหลดไม่สำเร็จ')
+                      }
+                    }} />
+                  เปลี่ยนสลิป
+                </label>
+              )}
+            </div>
+          ) : (
+            <SlipUploader orderId={order.id} />
+          )}
+        </div>
+      )}
+
       {/* Items */}
       <div className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm">
         <h2 className="font-semibold text-gray-700 mb-3">รายการสินค้า</h2>
         <div className="flex flex-col">
           {order.items.map((item, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-              {item.imageUrl && (
+              {item.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.imageUrl} alt={item.name}
                   className="h-11 w-11 rounded-lg object-cover flex-shrink-0 border border-gray-100" />
+              ) : (
+                <div className="h-11 w-11 rounded-lg bg-gray-50 flex-shrink-0 border border-gray-100" />
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 truncate">{item.name}</p>
@@ -113,7 +225,7 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
         </div>
       </div>
 
-      {/* Payment info */}
+      {/* Payment & customer info */}
       <div className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm text-sm text-gray-600 flex flex-col gap-1.5">
         <div className="flex justify-between">
           <span className="text-gray-400">ประเภท</span>

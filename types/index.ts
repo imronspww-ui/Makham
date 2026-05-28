@@ -62,6 +62,7 @@ export interface Order {
   payment: {
     method: PaymentMethod
     status: PaymentStatus
+    slipUrl?: string
   }
   subtotal: number
   deliveryFee: number
