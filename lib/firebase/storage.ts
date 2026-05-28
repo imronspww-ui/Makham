@@ -1,23 +1,20 @@
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { app, isFirebaseConfigured } from '@/lib/firebase/config'
-
 /**
- * Upload a file directly to Firebase Storage from the browser.
- * Returns the public download URL.
+ * Upload an image file via the server-side /api/upload route.
+ * Uses ImgBB when IMGBB_API_KEY is set (production/Vercel),
+ * falls back to local public/uploads/ in development.
  *
  * @param file   - The File object to upload
- * @param folder - Storage folder ('images' for menu, 'slips' for payment slips)
+ * @param folder - Hint folder ('images' | 'slips') — used as filename prefix in local mode
  */
 export async function uploadImage(file: File, folder = 'images'): Promise<string> {
-  if (!isFirebaseConfigured) {
-    throw new Error('กรุณาตั้งค่า Firebase ก่อนอัปโหลดรูปภาพ')
-  }
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('folder', folder)
 
-  const storage = getStorage(app)
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-  const storageRef = ref(storage, path)
+  const res = await fetch('/api/upload', { method: 'POST', body: formData })
+  if (!res.ok) throw new Error('อัปโหลดรูปไม่สำเร็จ')
 
-  const snapshot = await uploadBytes(storageRef, file)
-  return getDownloadURL(snapshot.ref)
+  const data = await res.json()
+  if (!data.url) throw new Error('ไม่ได้รับ URL รูปภาพ')
+  return data.url as string
 }
