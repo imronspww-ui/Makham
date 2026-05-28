@@ -168,14 +168,9 @@ export function CartDrawer({ open, onClose }: Props) {
               <span>รวม</span>
               <span className="text-orange-500">{formatCurrency(getTotalPrice())}</span>
             </div>
-            <div className="flex gap-2">
-              <Link href="/cart" onClick={onClose} className="flex-1">
-                <Button variant="outline" fullWidth>ดูตะกร้า</Button>
-              </Link>
-              <Link href="/checkout" onClick={onClose} className="flex-1">
-                <Button fullWidth>สั่งอาหาร</Button>
-              </Link>
-            </div>
+            <Link href="/cart" onClick={onClose}>
+              <Button fullWidth>ดูตะกร้า / เลือกตัวเลือก</Button>
+            </Link>
           </div>
         )}
       </div>
