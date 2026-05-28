@@ -6,6 +6,7 @@ import { useCartStore } from '@/store/cartStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { CartDrawer } from '@/components/customer/CartDrawer'
 import { useSettings } from '@/lib/hooks/useSettings'
+import { useStoreHours } from '@/lib/hooks/useStoreHours'
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const [cartOpen, setCartOpen] = useState(false)
@@ -13,6 +14,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const getTotalItems = useCartStore((s) => s.getTotalItems)
   const historyOrders = useOrderHistoryStore((s) => s.orders)
   const { settings } = useSettings()
+  const { isOpen } = useStoreHours(settings)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -28,6 +30,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         : { background: 'linear-gradient(165deg, #fef9f2 0%, #fff7ed 55%, #fef4e2 100%)' }
       }
     >
+      {/* ── Closed banner ── */}
+      {!isOpen && (
+        <div className="bg-red-600 text-white text-center py-2 px-4 text-sm font-medium z-40 relative">
+          🚫 ร้านปิดให้บริการชั่วคราว · ขออภัยในความไม่สะดวก
+        </div>
+      )}
+
       {/* ── Dark classy header ── */}
       <header className="sticky top-0 z-30 border-b border-[#2d1e0a]" style={{ background: '#1c1209' }}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">

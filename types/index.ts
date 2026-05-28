@@ -126,6 +126,19 @@ export interface StoreSettings {
   bgImageUrl?: string
 }
 
+export interface DaySchedule {
+  isOff: boolean
+  open: string   // "09:00"
+  close: string  // "21:00"
+}
+
+export interface OpeningHoursSettings {
+  enabled: boolean
+  /** 'auto' = follow schedule | 'open' = force open | 'closed' = force closed */
+  manualOverride: 'auto' | 'open' | 'closed'
+  schedule: Record<string, DaySchedule>  // "0"=Sun … "6"=Sat
+}
+
 export interface PromptPaySettings {
   phone: string
   accountName: string
@@ -142,4 +155,5 @@ export interface Settings {
   store: StoreSettings
   promptpay: PromptPaySettings
   delivery: DeliverySettings
+  openingHours?: OpeningHoursSettings
 }

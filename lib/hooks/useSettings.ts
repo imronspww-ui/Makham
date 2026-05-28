@@ -1,27 +1,22 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { getSettings } from '@/lib/services/settingsService'
+import { subscribeToSettings } from '@/lib/services/settingsService'
 import type { Settings } from '@/types'
-
-const DEFAULT_DELIVERY = { pricePerKm: 10, minDistance: 1, minFee: 30, maxDistance: 20 }
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await getSettings()
+  useEffect(() => {
+    const unsub = subscribeToSettings((data) => {
       setSettings(data)
-    } finally {
       setLoading(false)
-    }
+    })
+    return unsub
   }, [])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  // kept for API compatibility — real-time makes explicit reload unnecessary
+  const reload = useCallback(() => {}, [])
 
-  return { settings, loading, reload: load, defaultDelivery: DEFAULT_DELIVERY }
+  return { settings, loading, reload }
 }

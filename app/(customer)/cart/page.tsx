@@ -6,6 +6,8 @@ import { ArrowLeft, ShoppingCart, Pencil, AlertCircle } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useMenu } from '@/lib/hooks/useMenu'
+import { useSettings } from '@/lib/hooks/useSettings'
+import { useStoreHours } from '@/lib/hooks/useStoreHours'
 import { OrderTypeSelector } from '@/components/customer/OrderTypeSelector'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { formatCurrency } from '@/lib/utils/format'
@@ -38,6 +40,8 @@ function getLiveMenuItem(cartItem: CartItem, menuItems: MenuItem[]): MenuItem {
 export default function CartPage() {
   const router = useRouter()
   const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
+  const { settings } = useSettings()
+  const { isOpen } = useStoreHours(settings)
   const { categoryAddons, toggleCategoryAddon, note, setNote } = useCheckoutStore()
   const { items: menuItems, categories } = useMenu()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
@@ -72,6 +76,7 @@ export default function CartPage() {
   const canProceed = missingGroups.length === 0
 
   function handleProceed() {
+    if (!isOpen) return   // ปุ่มถูก disable แล้ว แต่กันไว้อีกชั้น
     if (!canProceed) {
       const first = missingGroups[0]
       alert(`กรุณาเลือก${first.groupName} สำหรับ${first.cat.name}`)
@@ -258,8 +263,9 @@ export default function CartPage() {
           <span className="text-orange-500">{formatCurrency(getTotalPrice())}</span>
         </div>
         <Button fullWidth size="lg" onClick={handleProceed}
-          className={!canProceed ? 'opacity-60' : ''}>
-          ดำเนินการสั่งซื้อ
+          disabled={!isOpen}
+          className={(!canProceed || !isOpen) ? 'opacity-60' : ''}>
+          {isOpen ? 'ดำเนินการสั่งซื้อ' : '🚫 ร้านปิดอยู่'}
         </Button>
       </div>
 

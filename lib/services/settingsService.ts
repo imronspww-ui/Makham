@@ -1,7 +1,7 @@
-import { db, doc, getDoc, setDoc } from '@/lib/firebase/firestore'
+import { db, doc, getDoc, setDoc, onSnapshot } from '@/lib/firebase/firestore'
 import { isFirebaseConfigured } from '@/lib/firebase/config'
 import { cacheGet, cacheSet, cacheClear } from '@/lib/utils/cache'
-import type { Settings, PromptPaySettings, DeliverySettings, StoreSettings } from '@/types'
+import type { Settings, PromptPaySettings, DeliverySettings, StoreSettings, OpeningHoursSettings } from '@/types'
 
 const CACHE_KEY = 'settings:main'
 const TTL = 5 * 60_000
@@ -54,4 +54,26 @@ export async function updateStoreSettings(data: StoreSettings): Promise<void> {
   requireFirebase()
   await setDoc(doc(db, 'settings', 'main'), { store: data }, { merge: true })
   cacheClear('settings:')
+}
+
+export async function updateOpeningHoursSettings(data: OpeningHoursSettings): Promise<void> {
+  requireFirebase()
+  await setDoc(doc(db, 'settings', 'main'), { openingHours: data }, { merge: true })
+  cacheClear('settings:')
+}
+
+/** Real-time subscription — fires immediately then on every change */
+export function subscribeToSettings(callback: (s: Settings) => void): () => void {
+  if (!isFirebaseConfigured) { callback(DEFAULT_SETTINGS); return () => {} }
+  return onSnapshot(
+    doc(db, 'settings', 'main'),
+    (snap) => {
+      const result = snap.exists()
+        ? ({ ...DEFAULT_SETTINGS, ...snap.data() } as Settings)
+        : DEFAULT_SETTINGS
+      cacheClear('settings:')
+      callback(result)
+    },
+    () => callback(DEFAULT_SETTINGS),
+  )
 }
