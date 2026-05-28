@@ -41,7 +41,7 @@ function SlipUploader({ orderId }: { orderId: string }) {
 
     setUploading(true)
     try {
-      const url = await uploadImage(file)
+      const url = await uploadImage(file, 'slips')
       await updateOrderSlip(orderId, url)
       toast.success('แนบสลิปสำเร็จ ✅')
     } catch {
@@ -174,7 +174,7 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
                       const file = e.target.files?.[0]
                       if (!file) return
                       try {
-                        const url = await uploadImage(file)
+                        const url = await uploadImage(file, 'slips')
                         await updateOrderSlip(order.id, url)
                         toast.success('อัปโหลดสลิปใหม่แล้ว ✅')
                       } catch {
