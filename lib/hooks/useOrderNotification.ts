@@ -3,11 +3,31 @@ import { useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import type { Order, OrderStatus } from '@/types'
 
-const STATUS_MESSAGES: Partial<Record<OrderStatus, { title: string; body: string; emoji: string }>> = {
-  cooking:    { title: 'กำลังทำอาหาร!', body: 'ร้านรับออเดอร์และกำลังทำอาหารให้คุณแล้ว 👨‍🍳', emoji: '👨‍🍳' },
-  delivering: { title: 'กำลังจัดส่ง!', body: 'อาหารของคุณกำลังเดินทางมาแล้ว 🛵', emoji: '🚚' },
-  completed:  { title: 'เสร็จสิ้น!', body: 'อาหารของคุณพร้อมแล้ว มารับได้เลย ✅', emoji: '✅' },
-  cancelled:  { title: 'ออเดอร์ถูกยกเลิก', body: 'ออเดอร์ของคุณถูกยกเลิกแล้ว กรุณาติดต่อร้าน', emoji: '❌' },
+const STATUS_MESSAGES: Partial<Record<OrderStatus, { title: string; body: string; emoji: string; speech: string }>> = {
+  cooking:    {
+    title: 'กำลังทำอาหาร!',
+    body: 'ร้านรับออเดอร์และกำลังทำอาหารให้คุณแล้ว 👨‍🍳',
+    emoji: '👨‍🍳',
+    speech: 'ร้านรับออเดอร์แล้วครับ กำลังทำอาหารให้คุณ รอสักครู่นะครับ',
+  },
+  delivering: {
+    title: 'กำลังจัดส่ง!',
+    body: 'อาหารของคุณกำลังเดินทางมาแล้ว 🛵',
+    emoji: '🚚',
+    speech: 'อาหารของคุณกำลังส่งแล้วครับ รอรับได้เลยนะครับ',
+  },
+  completed:  {
+    title: 'เสร็จสิ้น!',
+    body: 'อาหารของคุณพร้อมแล้ว มารับได้เลย ✅',
+    emoji: '✅',
+    speech: 'อาหารที่คุณสั่งเสร็จเรียบร้อยแล้วครับ มารับได้เลยนะครับ ขอบคุณที่ใช้บริการครับ',
+  },
+  cancelled:  {
+    title: 'ออเดอร์ถูกยกเลิก',
+    body: 'ออเดอร์ของคุณถูกยกเลิกแล้ว กรุณาติดต่อร้าน',
+    emoji: '❌',
+    speech: 'ขออภัยครับ ออเดอร์ของคุณถูกยกเลิกแล้ว กรุณาติดต่อร้านครับ',
+  },
 }
 
 function playBeep(frequency: number) {
@@ -28,6 +48,29 @@ function playBeep(frequency: number) {
   }
 }
 
+function speak(text: string) {
+  try {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    // Cancel any ongoing speech first
+    window.speechSynthesis.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'th-TH'
+    utterance.rate = 0.88
+    utterance.pitch = 1.05
+    utterance.volume = 1.0
+
+    // Prefer a Thai voice if available, fall back to default
+    const voices = window.speechSynthesis.getVoices()
+    const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
+    if (thaiVoice) utterance.voice = thaiVoice
+
+    window.speechSynthesis.speak(utterance)
+  } catch {
+    // ignore — speech blocked or unsupported
+  }
+}
+
 export function useOrderNotification(order: Order | null, storeName = 'ร้านมะขาม') {
   const prevStatus = useRef<OrderStatus | null>(null)
   const initialized = useRef(false)
@@ -42,6 +85,10 @@ export function useOrderNotification(order: Order | null, storeName = 'ร้า
       initialized.current = true
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission()
+      }
+      // Pre-load voices so they're ready when needed
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.getVoices()
       }
       return
     }
@@ -61,12 +108,15 @@ export function useOrderNotification(order: Order | null, storeName = 'ร้า
       try {
         new Notification(`${storeName} — ${info.title}`, { body: info.body, icon: '/favicon.ico' })
       } catch {
-        // ignore — some browsers block new Notification() in certain contexts
+        // ignore
       }
     }
 
     // Audible beep
     const freq = current === 'completed' ? 880 : current === 'cancelled' ? 220 : 660
     playBeep(freq)
+
+    // 🔊 Text-to-speech — fires 0.7s after beep so sounds don't overlap
+    setTimeout(() => speak(info.speech), 700)
   }, [order]) // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -9,6 +9,7 @@ import { ArrowLeft, Upload, ImageIcon } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
+import { useCustomerStore } from '@/store/customerStore'
 import { LocationPicker } from '@/components/customer/LocationPicker'
 import { PaymentSection } from '@/components/customer/PaymentSection'
 import { Button } from '@/components/ui/Button'
@@ -28,10 +29,17 @@ export default function CheckoutPage() {
   const { items, orderType, getTotalPrice, clearCart, getItemEffectivePrice } = useCartStore()
   const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, categoryAddons, note, reset } = useCheckoutStore()
   const addOrderToHistory = useOrderHistoryStore((s) => s.addOrder)
+  const { name: savedName, phone: savedPhone, saveCustomer } = useCustomerStore()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
   })
+
+  // Auto-fill saved customer info
+  useEffect(() => {
+    if (savedName) setValue('customerName', savedName)
+    if (savedPhone) setValue('customerPhone', savedPhone)
+  }, [savedName, savedPhone, setValue])
 
   const subtotal = getTotalPrice()
   const fee = orderType === 'delivery' ? (deliveryFee ?? 0) : 0
@@ -110,6 +118,8 @@ export default function CheckoutPage() {
 
       const id = await createOrder(orderData)
       addOrderToHistory({ id, orderNumber: orderData.orderNumber, createdAt: new Date().toISOString() })
+      // Remember customer name & phone for next order
+      saveCustomer(formData.customerName, formData.customerPhone)
       clearCart()
       reset()
       toast.success('สั่งอาหารสำเร็จ!')
