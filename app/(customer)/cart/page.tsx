@@ -44,7 +44,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-gray-400">
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-stone-400">
         <ShoppingCart size={60} strokeWidth={1.5} />
         <p className="text-lg">ตะกร้าว่างเปล่า</p>
         <Link href="/"><Button variant="outline">เลือกเมนู</Button></Link>
@@ -91,20 +91,20 @@ export default function CartPage() {
   return (
     <div className="flex flex-col gap-5 max-w-lg mx-auto">
       <div className="flex items-center gap-3">
-        <Link href="/" className="p-2 hover:bg-gray-100 rounded-xl">
+        <Link href="/" className="p-2 hover:bg-stone-100 rounded-xl">
           <ArrowLeft size={20} />
         </Link>
         <h1 className="text-xl font-bold">ตะกร้าสินค้า ({getTotalItems()} รายการ)</h1>
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-600 mb-3">ประเภทการรับ</h2>
+        <h2 className="text-sm font-semibold text-stone-600 mb-3">ประเภทการรับ</h2>
         <OrderTypeSelector />
       </section>
 
       {/* Cart items */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-600">รายการสินค้า</h2>
+        <h2 className="text-sm font-semibold text-stone-600">รายการสินค้า</h2>
         {items.map((item) => {
           const unitPrice = getItemEffectivePrice(item)
           const live = getLiveMenuItem(item, menuItems)
@@ -112,9 +112,9 @@ export default function CartPage() {
           return (
             <div key={item.menuItemId} className="flex items-start gap-3 rounded-xl bg-white border border-gray-100 p-3 shadow-sm">
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-gray-800">{item.name}</p>
+                <p className="font-medium text-sm text-stone-800">{item.name}</p>
                 {item.selectedOptions?.length > 0 && (
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-stone-400 mt-0.5">
                     {item.selectedOptions.map((o) => o.choiceName).join(', ')}
                     {item.selectedOptions.some((o) => o.extraPrice > 0) && (
                       <span className="text-orange-400 ml-1">
@@ -123,7 +123,7 @@ export default function CartPage() {
                     )}
                   </p>
                 )}
-                {item.itemNote && <p className="text-xs text-gray-400 mt-0.5">📝 {item.itemNote}</p>}
+                {item.itemNote && <p className="text-xs text-stone-400 mt-0.5">📝 {item.itemNote}</p>}
                 <div className="flex items-center gap-3 mt-1">
                   <p className="text-orange-500 text-sm font-medium">{formatCurrency(unitPrice)} / ชิ้น</p>
                   {hasOptions && (
@@ -136,7 +136,7 @@ export default function CartPage() {
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <button onClick={() => updateQty(item.menuItemId, item.qty - 1)}
-                  className="h-8 w-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100 text-lg font-bold">−</button>
+                  className="h-8 w-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-stone-100 text-lg font-bold">−</button>
                 <span className="w-6 text-center font-semibold">{item.qty}</span>
                 <button onClick={() => updateQty(item.menuItemId, item.qty + 1)}
                   className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600 text-lg font-bold">+</button>
@@ -151,12 +151,12 @@ export default function CartPage() {
       {/* ── Category-level option selection ── */}
       {categoriesNeedingOptions.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-gray-600">ตัวเลือกประจำหมวดหมู่</h2>
+          <h2 className="text-sm font-semibold text-stone-600">ตัวเลือกประจำหมวดหมู่</h2>
           {categoriesNeedingOptions.map((cat) => (
             <div key={cat.id} className="rounded-2xl bg-white border border-orange-100 p-4 shadow-sm flex flex-col gap-3">
-              <p className="text-sm font-semibold text-gray-700">
+              <p className="text-sm font-semibold text-stone-700">
                 🍢 {cat.name}
-                <span className="ml-1.5 text-xs text-gray-400 font-normal">(เลือก 1 ครั้งสำหรับทั้งออเดอร์)</span>
+                <span className="ml-1.5 text-xs text-stone-400 font-normal">(เลือก 1 ครั้งสำหรับทั้งออเดอร์)</span>
               </p>
               {(cat.optionGroups ?? []).map((group) => {
                 const groupSelections = categoryAddons.filter(
@@ -166,7 +166,7 @@ export default function CartPage() {
                 return (
                   <div key={group.id}>
                     <div className="flex items-center gap-2 mb-2">
-                      <p className="text-sm font-medium text-gray-700">{group.name}</p>
+                      <p className="text-sm font-medium text-stone-700">{group.name}</p>
                       {group.required && (
                         <span className={`text-xs rounded-full px-2 py-0.5 border ${
                           isGroupMissing
@@ -198,7 +198,7 @@ export default function CartPage() {
                               'flex items-center justify-between px-3 py-2.5 rounded-xl border-2 text-sm text-left transition-all',
                               isSelected
                                 ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                : 'border-gray-200 text-gray-600 hover:border-orange-200',
+                                : 'border-gray-200 text-stone-600 hover:border-orange-200',
                             ].join(' ')}
                           >
                             <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export default function CartPage() {
 
       {/* Order note */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-gray-700">หมายเหตุออเดอร์ (ไม่บังคับ)</label>
+        <label className="text-sm font-medium text-stone-700">หมายเหตุออเดอร์ (ไม่บังคับ)</label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -249,7 +249,7 @@ export default function CartPage() {
 
       {/* Summary + proceed */}
       <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-3 shadow-sm">
-        <div className="flex justify-between text-sm text-gray-600">
+        <div className="flex justify-between text-sm text-stone-600">
           <span>รวมสินค้า</span>
           <span>{formatCurrency(getTotalPrice())}</span>
         </div>

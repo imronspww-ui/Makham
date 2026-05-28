@@ -46,11 +46,12 @@ export function MenuFormModal({ open, onClose, onSaved, editItem, categories }: 
         imageUrl: editItem.imageUrl,
         isAvailable: editItem.isAvailable,
         isSoldOut: editItem.isSoldOut,
+        isPopular: editItem.isPopular ?? false,
       })
       setOptionGroups(editItem.optionGroups ?? [])
       setExpandedGroups(new Set((editItem.optionGroups ?? []).map((g) => g.id)))
     } else {
-      reset({ isAvailable: true, isSoldOut: false, description: '', imageUrl: '', price: 0, categoryId: '', name: '' })
+      reset({ isAvailable: true, isSoldOut: false, isPopular: false, description: '', imageUrl: '', price: 0, categoryId: '', name: '' })
       setOptionGroups([])
       setExpandedGroups(new Set())
     }
@@ -186,8 +187,8 @@ export function MenuFormModal({ open, onClose, onSaved, editItem, categories }: 
           </div>
         </div>
 
-        {/* Availability */}
-        <div className="flex gap-4">
+        {/* Availability + Popular */}
+        <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" {...register('isAvailable')} className="rounded accent-orange-500" />
             เปิดขาย
@@ -195,6 +196,10 @@ export function MenuFormModal({ open, onClose, onSaved, editItem, categories }: 
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" {...register('isSoldOut')} className="rounded accent-orange-500" />
             สินค้าหมด
+          </label>
+          <label className="flex items-center gap-2 text-sm text-amber-700 font-medium">
+            <input type="checkbox" {...register('isPopular')} className="rounded accent-amber-500" />
+            🔥 เมนูยอดนิยม
           </label>
         </div>
 

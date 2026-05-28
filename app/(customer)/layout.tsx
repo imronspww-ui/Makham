@@ -25,22 +25,25 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       className="min-h-screen bg-cover bg-center bg-fixed"
       style={bgImageUrl
         ? { backgroundImage: `url(${bgImageUrl})` }
-        : { background: 'linear-gradient(160deg, #fef6e4 0%, #f0faf4 40%, #fdf2e9 100%)' }
+        : { background: 'linear-gradient(165deg, #fef9f2 0%, #fff7ed 55%, #fef4e2 100%)' }
       }
     >
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+      {/* ── Dark classy header ── */}
+      <header className="sticky top-0 z-30 border-b border-[#2d1e0a]" style={{ background: '#1c1209' }}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2.5 group">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logoUrl} alt={storeName}
-                className="h-8 w-8 rounded-xl object-cover border border-gray-100" />
+                className="h-9 w-9 rounded-xl object-cover border border-amber-700/40 shadow-sm" />
             ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-white">
-                <Store size={16} />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 shadow-sm group-hover:bg-amber-400 transition-colors">
+                <Store size={17} className="text-white" />
               </div>
             )}
-            <span className="font-bold text-gray-800">{storeName}</span>
+            <span className="font-bold tracking-wide text-amber-50 group-hover:text-amber-200 transition-colors">
+              {storeName}
+            </span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -48,7 +51,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             {mounted && historyOrders.length > 0 && (
               <Link
                 href="/my-orders"
-                className="relative flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm hover:border-orange-300 hover:text-orange-600 transition-colors"
+                className="relative flex items-center gap-1.5 rounded-xl border border-stone-700 bg-stone-800/60 px-3 py-2 text-sm font-medium text-stone-300 hover:border-amber-600 hover:text-amber-300 transition-colors"
               >
                 <ClipboardList size={15} />
                 <span className="hidden sm:inline">ออเดอร์ของฉัน</span>
@@ -61,7 +64,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             {/* Cart button */}
             <button
               onClick={() => setCartOpen(true)}
-              className="relative flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 transition-colors"
+              className="relative flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-400 active:scale-95 transition-all duration-150"
             >
               <ShoppingCart size={16} />
               ตะกร้า
@@ -74,6 +77,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </div>
         </div>
       </header>
+
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>

@@ -28,6 +28,7 @@ export interface MenuItem {
   imageUrl: string
   isAvailable: boolean
   isSoldOut: boolean
+  isPopular?: boolean
   optionGroups: OptionGroup[]
   createdAt: string
   updatedAt: string

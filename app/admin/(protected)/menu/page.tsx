@@ -145,7 +145,12 @@ export default function MenuPage() {
                           <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-lg">🍽️</div>
                         )}
                         <div>
-                          <p className="font-medium text-gray-800">{item.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-gray-800">{item.name}</p>
+                            {item.isPopular && (
+                              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5">🔥</span>
+                            )}
+                          </div>
                           {item.description && <p className="text-xs text-gray-400 line-clamp-1">{item.description}</p>}
                         </div>
                       </div>

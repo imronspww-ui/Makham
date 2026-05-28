@@ -25,6 +25,9 @@ export function CartDrawer({ open, onClose }: Props) {
   const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
   const { items: menuItems } = useMenu()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
@@ -71,7 +74,7 @@ export function CartDrawer({ open, onClose }: Props) {
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
             <ShoppingCart size={20} className="text-orange-500" />
-            <h2 className="text-lg font-semibold">ตะกร้า ({getTotalItems()})</h2>
+            <h2 className="text-lg font-semibold">ตะกร้า {mounted ? `(${getTotalItems()})` : ''}</h2>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-gray-100">
             <X size={20} />
@@ -80,7 +83,7 @@ export function CartDrawer({ open, onClose }: Props) {
 
         {/* Items */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {items.length === 0 ? (
+          {!mounted || items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
               <ShoppingCart size={48} strokeWidth={1.5} />
               <p>ยังไม่มีสินค้าในตะกร้า</p>
@@ -162,7 +165,7 @@ export function CartDrawer({ open, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        {items.length > 0 && (
+        {mounted && items.length > 0 && (
           <div className="border-t px-5 py-4 flex flex-col gap-3">
             <div className="flex items-center justify-between text-base font-semibold">
               <span>รวม</span>

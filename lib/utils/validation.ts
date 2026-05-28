@@ -23,6 +23,7 @@ export const menuItemSchema = z.object({
   imageUrl: z.string(),
   isAvailable: z.boolean(),
   isSoldOut: z.boolean(),
+  isPopular: z.boolean().optional(),
 })
 
 export const categorySchema = z.object({

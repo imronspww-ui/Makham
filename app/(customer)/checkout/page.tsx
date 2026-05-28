@@ -62,7 +62,7 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 py-20 text-gray-400">
+      <div className="flex flex-col items-center gap-4 py-20 text-stone-400">
         <p>ไม่มีสินค้าในตะกร้า</p>
         <Link href="/"><Button variant="outline">กลับหน้าเมนู</Button></Link>
       </div>
@@ -143,7 +143,7 @@ export default function CheckoutPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {/* Customer info */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
-          <h2 className="font-semibold text-gray-700">ข้อมูลลูกค้า</h2>
+          <h2 className="font-semibold text-stone-700">ข้อมูลลูกค้า</h2>
           <Input label="ชื่อ *" {...register('customerName')} error={errors.customerName?.message} placeholder="ชื่อ-นามสกุล" />
           <Input label="เบอร์โทร *" {...register('customerPhone')} error={errors.customerPhone?.message} placeholder="0812345678" type="tel" />
         </section>
@@ -151,14 +151,14 @@ export default function CheckoutPage() {
         {/* Delivery location */}
         {orderType === 'delivery' && (
           <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm">
-            <h2 className="font-semibold text-gray-700 mb-3">ที่อยู่จัดส่ง</h2>
+            <h2 className="font-semibold text-stone-700 mb-3">ที่อยู่จัดส่ง</h2>
             <LocationPicker />
           </section>
         )}
 
         {/* Payment */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
-          <h2 className="font-semibold text-gray-700">วิธีชำระเงิน</h2>
+          <h2 className="font-semibold text-stone-700">วิธีชำระเงิน</h2>
           <PaymentSection />
         </section>
 
@@ -167,7 +167,7 @@ export default function CheckoutPage() {
           <section className="rounded-2xl bg-white border border-orange-100 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <ImageIcon size={16} className="text-orange-400" />
-              <h2 className="font-semibold text-gray-700">
+              <h2 className="font-semibold text-stone-700">
                 แนบสลิปการโอนเงิน <span className="text-red-500 text-sm">*</span>
               </h2>
             </div>
@@ -193,7 +193,7 @@ export default function CheckoutPage() {
                 <span className="text-sm font-medium text-orange-600">
                   {uploadingSlip ? 'กำลังอัปโหลด...' : 'แตะเพื่อถ่ายหรือเลือกรูปสลิป'}
                 </span>
-                <span className="text-xs text-gray-400">สแกน QR แล้วโอนเงิน จากนั้นถ่ายสลิป</span>
+                <span className="text-xs text-stone-400">สแกน QR แล้วโอนเงิน จากนั้นถ่ายสลิป</span>
               </label>
             )}
           </section>
@@ -201,22 +201,22 @@ export default function CheckoutPage() {
 
         {/* Order summary */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-2">
-          <h2 className="font-semibold text-gray-700 mb-1">สรุปคำสั่งซื้อ</h2>
+          <h2 className="font-semibold text-stone-700 mb-1">สรุปคำสั่งซื้อ</h2>
           {items.map((item) => {
             const unitPrice = getItemEffectivePrice(item)
             return (
               <div key={item.menuItemId}>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-sm text-stone-600">
                   <span>{item.name} × {item.qty}</span>
                   <span>{formatCurrency(unitPrice * item.qty)}</span>
                 </div>
                 {item.selectedOptions?.length > 0 && (
-                  <p className="text-xs text-gray-400 ml-2">
+                  <p className="text-xs text-stone-400 ml-2">
                     {item.selectedOptions.map((o) => o.choiceName).join(', ')}
                   </p>
                 )}
                 {item.itemNote && (
-                  <p className="text-xs text-gray-400 ml-2">📝 {item.itemNote}</p>
+                  <p className="text-xs text-stone-400 ml-2">📝 {item.itemNote}</p>
                 )}
               </div>
             )
@@ -224,7 +224,7 @@ export default function CheckoutPage() {
           {categoryAddons.length > 0 && (
             <div className="mt-2 pt-2 border-t border-gray-50 flex flex-col gap-1">
               {categoryAddons.map((addon, i) => (
-                <div key={i} className="flex justify-between text-xs text-gray-500">
+                <div key={i} className="flex justify-between text-xs text-stone-500">
                   <span>🍢 {addon.groupName}: {addon.choiceName}</span>
                   {addon.extraPrice > 0 && <span className="text-orange-500">+{formatCurrency(addon.extraPrice)}</span>}
                 </div>
@@ -232,7 +232,7 @@ export default function CheckoutPage() {
             </div>
           )}
           <div className="border-t border-gray-100 pt-2 flex flex-col gap-1">
-            <div className="flex justify-between text-sm text-gray-500">
+            <div className="flex justify-between text-sm text-stone-500">
               <span>ค่าส่ง</span>
               <span>{formatCurrency(fee)}</span>
             </div>
