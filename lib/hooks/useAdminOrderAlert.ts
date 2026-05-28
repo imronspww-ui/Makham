@@ -27,6 +27,25 @@ function playAlarm() {
   }
 }
 
+/** พูดข้อความภาษาไทย */
+function speak(text: string) {
+  try {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'th-TH'
+    utterance.rate = 0.9
+    utterance.pitch = 1.0
+    utterance.volume = 1.0
+    const voices = window.speechSynthesis.getVoices()
+    const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
+    if (thaiVoice) utterance.voice = thaiVoice
+    window.speechSynthesis.speak(utterance)
+  } catch {
+    // ignore — speech blocked or unsupported
+  }
+}
+
 /** กระพริบ title tab 6 ครั้ง */
 function flashTitle(msg: string) {
   if (typeof document === 'undefined') return
@@ -47,6 +66,10 @@ export function useAdminOrderAlert() {
     // ขอสิทธิ์ browser notification ล่วงหน้า
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
+    }
+    // pre-load เสียงพูดไว้ก่อน เพื่อไม่ให้ delay ตอนเรียกใช้จริง
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices()
     }
 
     const unsub = subscribeToOrders((orders: Order[]) => {
@@ -69,6 +92,12 @@ export function useAdminOrderAlert() {
 
       // เสียงกริ่ง
       playAlarm()
+
+      // เสียงพูด — ดีเลย์ 700ms ให้กริ่งเล่นก่อน
+      const name = first.customer.name
+      const total = first.total.toLocaleString()
+      const extra = fresh.length > 1 ? ` และมีออเดอร์เพิ่มอีก ${fresh.length - 1} รายการ` : ''
+      setTimeout(() => speak(`มีออเดอร์ใหม่เข้ามาจาก${name} ยอด${total}บาท${extra} กรุณาตรวจสอบด้วยครับ`), 700)
 
       // กระพริบ tab title
       flashTitle(`🔔 ออเดอร์ใหม่! (${fresh.length})`)
