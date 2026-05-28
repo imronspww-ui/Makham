@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   const [uploadingSlip, setUploadingSlip] = useState(false)
 
   const { items, orderType, getTotalPrice, clearCart, getItemEffectivePrice } = useCartStore()
-  const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, categoryAddons, reset } = useCheckoutStore()
+  const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, categoryAddons, note, reset } = useCheckoutStore()
   const addOrderToHistory = useOrderHistoryStore((s) => s.addOrder)
 
   const { register, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>({
@@ -104,7 +104,7 @@ export default function CheckoutPage() {
         subtotal,
         deliveryFee: fee,
         total,
-        note: formData.note ?? '',
+        note: note,
         status: 'pending',
       }
 
@@ -232,14 +232,6 @@ export default function CheckoutPage() {
             </div>
           </div>
         </section>
-
-        {/* Order note */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">หมายเหตุออเดอร์ (ไม่บังคับ)</label>
-          <textarea {...register('note')} rows={2}
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-            placeholder="เช่น ส่งด่วน, โทรก่อนส่ง" />
-        </div>
 
         <Button type="submit" size="lg" fullWidth loading={submitting}>
           ยืนยันสั่งอาหาร {formatCurrency(total)}

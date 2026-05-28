@@ -38,7 +38,7 @@ function getLiveMenuItem(cartItem: CartItem, menuItems: MenuItem[]): MenuItem {
 export default function CartPage() {
   const router = useRouter()
   const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
-  const { categoryAddons, toggleCategoryAddon } = useCheckoutStore()
+  const { categoryAddons, toggleCategoryAddon, note, setNote } = useCheckoutStore()
   const { items: menuItems, categories } = useMenu()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
 
@@ -234,6 +234,18 @@ export default function CartPage() {
           )}
         </section>
       )}
+
+      {/* Order note */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">หมายเหตุออเดอร์ (ไม่บังคับ)</label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+          placeholder="เช่น ไม่ใส่ผัก, ไม่ใส่น้ำแข็ง, ส่งด่วน"
+          className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+        />
+      </div>
 
       {/* Summary + proceed */}
       <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-3 shadow-sm">
