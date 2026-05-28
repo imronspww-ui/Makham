@@ -34,6 +34,7 @@ export function MenuCard({ item }: Props) {
       imageUrl: item.imageUrl,
       selectedOptions: [],
       itemNote: '',
+      optionGroups: item.optionGroups,
     })
   }
 
@@ -46,6 +47,7 @@ export function MenuCard({ item }: Props) {
         imageUrl: item.imageUrl,
         selectedOptions,
         itemNote,
+        optionGroups: item.optionGroups,
       })
     }
     setShowOptions(false)

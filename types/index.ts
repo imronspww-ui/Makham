@@ -51,6 +51,7 @@ export interface CartItem {
   imageUrl: string
   selectedOptions: SelectedOption[]
   itemNote: string
+  optionGroups?: OptionGroup[]   // kept for in-cart option editing
 }
 
 export type OrderType = 'pickup' | 'delivery'

@@ -9,12 +9,18 @@ interface Props {
   item: MenuItem
   onClose: () => void
   onAdd: (selectedOptions: SelectedOption[], itemNote: string, qty: number) => void
+  /** Pre-filled selections for edit mode (groupId → choiceId[]) */
+  initialSelections?: Record<string, string[]>
+  /** Pre-filled note for edit mode */
+  initialNote?: string
+  /** When true: hides qty selector and changes button label to "บันทึกตัวเลือก" */
+  isEdit?: boolean
 }
 
-export function ItemOptionsModal({ item, onClose, onAdd }: Props) {
+export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {}, initialNote = '', isEdit = false }: Props) {
   // { [groupId]: choiceId[] }
-  const [selections, setSelections] = useState<Record<string, string[]>>({})
-  const [itemNote, setItemNote] = useState('')
+  const [selections, setSelections] = useState<Record<string, string[]>>(initialSelections)
+  const [itemNote, setItemNote] = useState(initialNote)
   const [qty, setQty] = useState(1)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
 
@@ -166,30 +172,32 @@ export function ItemOptionsModal({ item, onClose, onAdd }: Props) {
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-100 flex flex-col gap-3">
-          {/* Qty selector */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-600">จำนวน</span>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="h-8 w-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100"
-              >
-                <Minus size={14} />
-              </button>
-              <span className="w-8 text-center font-bold text-gray-800">{qty}</span>
-              <button
-                type="button"
-                onClick={() => setQty((q) => q + 1)}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600"
-              >
-                <Plus size={14} />
-              </button>
+          {/* Qty selector — hidden in edit mode */}
+          {!isEdit && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">จำนวน</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="h-8 w-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="w-8 text-center font-bold text-gray-800">{qty}</span>
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => q + 1)}
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <Button fullWidth size="lg" onClick={handleAdd}>
-            เพิ่มลงตะกร้า {formatCurrency(totalPrice)}
+            {isEdit ? `บันทึกตัวเลือก` : `เพิ่มลงตะกร้า ${formatCurrency(totalPrice)}`}
           </Button>
         </div>
       </div>

@@ -1,13 +1,42 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, Pencil } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { OrderTypeSelector } from '@/components/customer/OrderTypeSelector'
+import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { formatCurrency } from '@/lib/utils/format'
 import { Button } from '@/components/ui/Button'
+import type { CartItem, MenuItem, SelectedOption } from '@/types'
+
+/** Build a minimal MenuItem-shaped object from a CartItem so ItemOptionsModal can render */
+function toMenuItem(cartItem: CartItem): MenuItem {
+  return {
+    id: cartItem.menuItemId,
+    name: cartItem.name,
+    description: '',
+    price: cartItem.price,
+    categoryId: '',
+    imageUrl: cartItem.imageUrl ?? '',
+    isAvailable: true,
+    isSoldOut: false,
+    optionGroups: cartItem.optionGroups ?? [],
+    createdAt: '',
+    updatedAt: '',
+  }
+}
+
+/** Convert SelectedOption[] → Record<groupId, choiceId[]> for modal pre-fill */
+function toSelectionMap(selected: SelectedOption[]): Record<string, string[]> {
+  return selected.reduce<Record<string, string[]>>((acc, opt) => ({
+    ...acc,
+    [opt.groupId]: [...(acc[opt.groupId] ?? []), opt.choiceId],
+  }), {})
+}
 
 export default function CartPage() {
-  const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice } = useCartStore()
+  const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null)
 
   if (items.length === 0) {
     return (
@@ -17,6 +46,12 @@ export default function CartPage() {
         <Link href="/"><Button variant="outline">เลือกเมนู</Button></Link>
       </div>
     )
+  }
+
+  function handleEditSave(selectedOptions: SelectedOption[], itemNote: string) {
+    if (!editingItem) return
+    updateItemOptions(editingItem.menuItemId, selectedOptions, itemNote)
+    setEditingItem(null)
   }
 
   return (
@@ -37,6 +72,7 @@ export default function CartPage() {
         <h2 className="text-sm font-semibold text-gray-600">รายการสินค้า</h2>
         {items.map((item) => {
           const unitPrice = getItemEffectivePrice(item)
+          const hasOptions = (item.optionGroups ?? []).length > 0
           return (
             <div key={item.menuItemId} className="flex items-start gap-3 rounded-xl bg-white border border-gray-100 p-3 shadow-sm">
               <div className="flex-1 min-w-0">
@@ -55,7 +91,18 @@ export default function CartPage() {
                 {item.itemNote && (
                   <p className="text-xs text-gray-400 mt-0.5">📝 {item.itemNote}</p>
                 )}
-                <p className="text-orange-500 text-sm font-medium mt-0.5">{formatCurrency(unitPrice)} / ชิ้น</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-orange-500 text-sm font-medium">{formatCurrency(unitPrice)} / ชิ้น</p>
+                  {hasOptions && (
+                    <button
+                      onClick={() => setEditingItem(item)}
+                      className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700 transition-colors"
+                    >
+                      <Pencil size={11} />
+                      แก้ไขตัวเลือก
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <button onClick={() => updateQty(item.menuItemId, item.qty - 1)}
@@ -83,6 +130,18 @@ export default function CartPage() {
           <Button fullWidth size="lg">ดำเนินการสั่งซื้อ</Button>
         </Link>
       </div>
+
+      {/* Edit options modal */}
+      {editingItem && (
+        <ItemOptionsModal
+          item={toMenuItem(editingItem)}
+          initialSelections={toSelectionMap(editingItem.selectedOptions ?? [])}
+          initialNote={editingItem.itemNote ?? ''}
+          isEdit
+          onClose={() => setEditingItem(null)}
+          onAdd={(selectedOptions, itemNote) => handleEditSave(selectedOptions, itemNote)}
+        />
+      )}
     </div>
   )
 }

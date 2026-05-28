@@ -9,6 +9,7 @@ interface CartState {
   addItem: (item: Omit<CartItem, 'qty'>) => void
   removeItem: (menuItemId: string) => void
   updateQty: (menuItemId: string, qty: number) => void
+  updateItemOptions: (menuItemId: string, selectedOptions: SelectedOption[], itemNote: string) => void
   clearCart: () => void
   setOrderType: (type: OrderType) => void
   getTotalItems: () => number
@@ -58,6 +59,13 @@ export const useCartStore = create<CartState>()(
           }))
         }
       },
+
+      updateItemOptions: (menuItemId, selectedOptions, itemNote) =>
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.menuItemId === menuItemId ? { ...i, selectedOptions, itemNote } : i,
+          ),
+        })),
 
       clearCart: () => set({ items: [] }),
       setOrderType: (type) => set({ orderType: type }),
