@@ -1,8 +1,8 @@
 'use client'
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import type { Settings } from '@/types'
 
-/** Pure function — can be used outside React too */
+/** Pure function — usable outside React (e.g. OpeningHoursForm preview) */
 export function computeIsOpen(settings: Settings | null): boolean {
   const hours = settings?.openingHours
   if (!hours || !hours.enabled) return true      // ยังไม่ตั้งค่า → เปิดเสมอ
@@ -22,6 +22,16 @@ export function computeIsOpen(settings: Settings | null): boolean {
 }
 
 export function useStoreHours(settings: Settings | null) {
-  const isOpen = useMemo(() => computeIsOpen(settings), [settings])
+  const [isOpen, setIsOpen] = useState(() => computeIsOpen(settings))
+
+  useEffect(() => {
+    // Re-compute ทันทีเมื่อ settings เปลี่ยน (Firestore onSnapshot)
+    setIsOpen(computeIsOpen(settings))
+
+    // Re-compute ทุก 30 วินาที → ตัดเองเมื่อถึงเวลาปิด/เปิดตามตาราง
+    const id = setInterval(() => setIsOpen(computeIsOpen(settings)), 30_000)
+    return () => clearInterval(id)
+  }, [settings])
+
   return { isOpen }
 }

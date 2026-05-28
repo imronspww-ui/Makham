@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Clock, Power, CalendarDays } from 'lucide-react'
+import { Clock, Power, CalendarDays, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { updateOpeningHoursSettings } from '@/lib/services/settingsService'
@@ -36,11 +36,27 @@ interface Props { settings: Settings }
 export function OpeningHoursForm({ settings }: Props) {
   const [hours, setHours] = useState<OpeningHoursSettings>(() => mergeHours(settings.openingHours))
   const [saving, setSaving] = useState(false)
+  const [quickSaving, setQuickSaving] = useState(false)
 
   const isOpen = computeIsOpen({ ...settings, openingHours: hours })
 
-  function setOverride(v: OpeningHoursSettings['manualOverride']) {
-    setHours((h) => ({ ...h, manualOverride: v, enabled: true }))
+  /** ควบคุมด่วน — บันทึก Firestore ทันที */
+  async function setOverride(v: OpeningHoursSettings['manualOverride']) {
+    const next: OpeningHoursSettings = { ...hours, manualOverride: v, enabled: true }
+    setHours(next)
+    setQuickSaving(true)
+    try {
+      await updateOpeningHoursSettings(next)
+      const msg =
+        v === 'open'   ? '🟢 เปิดร้านแล้ว — ลูกค้าเห็นทันที' :
+        v === 'closed' ? '🔴 ปิดร้านแล้ว — ลูกค้าเห็นทันที' :
+                         '📅 เปลี่ยนเป็นตามตารางแล้ว'
+      toast.success(msg)
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setQuickSaving(false)
+    }
   }
 
   function toggleEnabled(v: boolean) {
@@ -58,7 +74,7 @@ export function OpeningHoursForm({ settings }: Props) {
     setSaving(true)
     try {
       await updateOpeningHoursSettings(hours)
-      toast.success('บันทึกเวลาเปิด-ปิดสำเร็จ')
+      toast.success('บันทึกตารางเวลาสำเร็จ')
     } catch {
       toast.error('บันทึกไม่สำเร็จ')
     } finally {
@@ -83,7 +99,7 @@ export function OpeningHoursForm({ settings }: Props) {
         <span className="text-xs text-gray-400">สถานะที่ลูกค้าเห็น</span>
       </div>
 
-      {/* ── สวิตช์หลัก: เปิด/ปิดระบบเวลา ── */}
+      {/* ── สวิตช์หลัก ── */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-700">เปิดใช้ระบบควบคุมเวลา</p>
@@ -106,21 +122,25 @@ export function OpeningHoursForm({ settings }: Props) {
 
       {hours.enabled && (
         <>
-          {/* ── Manual override buttons ── */}
+          {/* ── ควบคุมด่วน (บันทึก Firestore ทันที) ── */}
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ควบคุมด่วน</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+              <Zap size={11} className="text-yellow-500" />
+              ควบคุมด่วน — มีผลทันที
+            </p>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: 'open'   as const, label: '🟢 เปิดร้านทันที',   cls: 'border-green-300 bg-green-50 text-green-700' },
-                { value: 'closed' as const, label: '🔴 ปิดร้านทันที',   cls: 'border-red-300 bg-red-50 text-red-700'       },
-                { value: 'auto'   as const, label: '📅 ตามตาราง',       cls: 'border-blue-300 bg-blue-50 text-blue-700'    },
+                { value: 'open'   as const, label: '🟢 เปิดร้านทันที', cls: 'border-green-300 bg-green-50 text-green-700' },
+                { value: 'closed' as const, label: '🔴 ปิดร้านทันที', cls: 'border-red-300 bg-red-50 text-red-700'       },
+                { value: 'auto'   as const, label: '📅 ตามตาราง',      cls: 'border-blue-300 bg-blue-50 text-blue-700'    },
               ].map(({ value, label, cls }) => (
                 <button
                   key={value}
                   type="button"
+                  disabled={quickSaving}
                   onClick={() => setOverride(value)}
                   className={[
-                    'rounded-xl border-2 px-3 py-2.5 text-xs font-semibold transition-all',
+                    'rounded-xl border-2 px-3 py-2.5 text-xs font-semibold transition-all disabled:opacity-60',
                     hours.manualOverride === value
                       ? cls + ' shadow-sm'
                       : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300',
@@ -132,7 +152,7 @@ export function OpeningHoursForm({ settings }: Props) {
             </div>
           </div>
 
-          {/* ── ตารางเวลารายวัน (ใช้เมื่อ auto) ── */}
+          {/* ── ตารางเวลารายวัน ── */}
           {hours.manualOverride === 'auto' && (
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -147,12 +167,9 @@ export function OpeningHoursForm({ settings }: Props) {
                       'flex items-center gap-3 px-4 py-2.5',
                       s.isOff ? 'bg-gray-50 opacity-60' : 'bg-white',
                     ].join(' ')}>
-                      {/* วันในสัปดาห์ */}
                       <span className="w-16 text-sm font-medium text-gray-700 shrink-0">
                         {DAY_LABELS[day]}
                       </span>
-
-                      {/* toggle หยุด */}
                       <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
                         <input
                           type="checkbox"
@@ -162,8 +179,6 @@ export function OpeningHoursForm({ settings }: Props) {
                         />
                         หยุด
                       </label>
-
-                      {/* เวลาเปิด-ปิด */}
                       {!s.isOff && (
                         <div className="flex items-center gap-2 ml-auto">
                           <Clock size={12} className="text-gray-400" />
@@ -186,6 +201,10 @@ export function OpeningHoursForm({ settings }: Props) {
                   )
                 })}
               </div>
+              <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                <Clock size={11} />
+                ระบบตรวจนาฬิกาทุก 30 วินาที — ปิด/เปิดอัตโนมัติตามเวลาที่กำหนด
+              </p>
             </div>
           )}
         </>
@@ -193,7 +212,7 @@ export function OpeningHoursForm({ settings }: Props) {
 
       <Button onClick={handleSave} loading={saving} className="self-start">
         <Power size={14} />
-        บันทึกการตั้งค่า
+        บันทึกตาราง
       </Button>
     </div>
   )
