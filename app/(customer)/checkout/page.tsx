@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import toast from 'react-hot-toast'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Upload, ImageIcon } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
@@ -14,6 +14,7 @@ import { PaymentSection } from '@/components/customer/PaymentSection'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createOrder } from '@/lib/services/orderService'
+import { uploadImage } from '@/lib/firebase/storage'
 import { checkoutSchema, type CheckoutFormData } from '@/lib/utils/validation'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import type { Order } from '@/types'
@@ -21,7 +22,10 @@ import type { Order } from '@/types'
 export default function CheckoutPage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
-  const { items, orderType, getTotalPrice, clearCart } = useCartStore()
+  const [slipUrl, setSlipUrl] = useState('')
+  const [uploadingSlip, setUploadingSlip] = useState(false)
+
+  const { items, orderType, getTotalPrice, clearCart, getItemEffectivePrice } = useCartStore()
   const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, reset } = useCheckoutStore()
   const addOrderToHistory = useOrderHistoryStore((s) => s.addOrder)
 
@@ -32,6 +36,21 @@ export default function CheckoutPage() {
   const subtotal = getTotalPrice()
   const fee = orderType === 'delivery' ? (deliveryFee ?? 0) : 0
   const total = subtotal + fee
+
+  async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingSlip(true)
+    try {
+      const url = await uploadImage(file, 'slips')
+      setSlipUrl(url)
+      toast.success('แนบสลิปสำเร็จ ✅')
+    } catch {
+      toast.error('อัปโหลดสลิปไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setUploadingSlip(false)
+    }
+  }
 
   if (items.length === 0) {
     return (
@@ -51,6 +70,11 @@ export default function CheckoutPage() {
       toast.error('กรุณาตรวจสอบระยะทางจัดส่งก่อน')
       return
     }
+    // Require slip for PromptPay
+    if (paymentMethod === 'promptpay' && !slipUrl) {
+      toast.error('กรุณาแนบสลิปการโอนเงินก่อนยืนยัน')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -63,13 +87,19 @@ export default function CheckoutPage() {
           name: i.name,
           price: i.price,
           qty: i.qty,
-          subtotal: i.price * i.qty,
+          subtotal: getItemEffectivePrice(i) * i.qty,
           ...(i.imageUrl ? { imageUrl: i.imageUrl } : {}),
+          ...(i.selectedOptions?.length ? { selectedOptions: i.selectedOptions } : {}),
+          ...(i.itemNote ? { itemNote: i.itemNote } : {}),
         })),
         ...(orderType === 'delivery' && lat && lng
           ? { delivery: { address, lat, lng, distanceKm: distanceKm!, fee: deliveryFee! } }
           : {}),
-        payment: { method: paymentMethod, status: 'pending' },
+        payment: {
+          method: paymentMethod,
+          status: 'pending',
+          ...(slipUrl ? { slipUrl } : {}),
+        },
         subtotal,
         deliveryFee: fee,
         total,
@@ -100,23 +130,14 @@ export default function CheckoutPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {/* Customer info */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
           <h2 className="font-semibold text-gray-700">ข้อมูลลูกค้า</h2>
-          <Input
-            label="ชื่อ *"
-            {...register('customerName')}
-            error={errors.customerName?.message}
-            placeholder="ชื่อ-นามสกุล"
-          />
-          <Input
-            label="เบอร์โทร *"
-            {...register('customerPhone')}
-            error={errors.customerPhone?.message}
-            placeholder="0812345678"
-            type="tel"
-          />
+          <Input label="ชื่อ *" {...register('customerName')} error={errors.customerName?.message} placeholder="ชื่อ-นามสกุล" />
+          <Input label="เบอร์โทร *" {...register('customerPhone')} error={errors.customerPhone?.message} placeholder="0812345678" type="tel" />
         </section>
 
+        {/* Delivery location */}
         {orderType === 'delivery' && (
           <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm">
             <h2 className="font-semibold text-gray-700 mb-3">ที่อยู่จัดส่ง</h2>
@@ -124,19 +145,71 @@ export default function CheckoutPage() {
           </section>
         )}
 
+        {/* Payment */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
           <h2 className="font-semibold text-gray-700">วิธีชำระเงิน</h2>
           <PaymentSection />
         </section>
 
+        {/* Slip upload — PromptPay only */}
+        {paymentMethod === 'promptpay' && (
+          <section className="rounded-2xl bg-white border border-orange-100 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <ImageIcon size={16} className="text-orange-400" />
+              <h2 className="font-semibold text-gray-700">
+                แนบสลิปการโอนเงิน <span className="text-red-500 text-sm">*</span>
+              </h2>
+            </div>
+            {slipUrl ? (
+              <div className="flex flex-col gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={slipUrl} alt="slip" className="max-h-52 w-full rounded-xl object-contain border border-gray-100 bg-gray-50" />
+                <button
+                  type="button"
+                  onClick={() => setSlipUrl('')}
+                  className="text-xs text-red-400 hover:text-red-600 self-start"
+                >
+                  เปลี่ยนสลิป
+                </button>
+              </div>
+            ) : (
+              <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed p-5 cursor-pointer transition-colors ${
+                uploadingSlip ? 'border-orange-200 bg-orange-50 opacity-70 pointer-events-none' : 'border-orange-200 hover:bg-orange-50'
+              }`}>
+                <input type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={handleSlipUpload} disabled={uploadingSlip} />
+                <Upload size={20} className="text-orange-400" />
+                <span className="text-sm font-medium text-orange-600">
+                  {uploadingSlip ? 'กำลังอัปโหลด...' : 'แตะเพื่อถ่ายหรือเลือกรูปสลิป'}
+                </span>
+                <span className="text-xs text-gray-400">สแกน QR แล้วโอนเงิน จากนั้นถ่ายสลิป</span>
+              </label>
+            )}
+          </section>
+        )}
+
+        {/* Order summary */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-2">
           <h2 className="font-semibold text-gray-700 mb-1">สรุปคำสั่งซื้อ</h2>
-          {items.map((item) => (
-            <div key={item.menuItemId} className="flex justify-between text-sm text-gray-600">
-              <span>{item.name} × {item.qty}</span>
-              <span>{formatCurrency(item.price * item.qty)}</span>
-            </div>
-          ))}
+          {items.map((item) => {
+            const unitPrice = getItemEffectivePrice(item)
+            return (
+              <div key={item.menuItemId}>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>{item.name} × {item.qty}</span>
+                  <span>{formatCurrency(unitPrice * item.qty)}</span>
+                </div>
+                {item.selectedOptions?.length > 0 && (
+                  <p className="text-xs text-gray-400 ml-2">
+                    {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                  </p>
+                )}
+                {item.itemNote && (
+                  <p className="text-xs text-gray-400 ml-2">📝 {item.itemNote}</p>
+                )}
+              </div>
+            )
+          })}
           <div className="border-t border-gray-100 pt-2 flex flex-col gap-1">
             <div className="flex justify-between text-sm text-gray-500">
               <span>ค่าส่ง</span>
@@ -149,11 +222,12 @@ export default function CheckoutPage() {
           </div>
         </section>
 
+        {/* Order note */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">หมายเหตุ (ไม่บังคับ)</label>
+          <label className="text-sm font-medium text-gray-700">หมายเหตุออเดอร์ (ไม่บังคับ)</label>
           <textarea {...register('note')} rows={2}
             className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-            placeholder="เช่น ไม่ใส่ผัก, ผัดไม่เผ็ด" />
+            placeholder="เช่น ส่งด่วน, โทรก่อนส่ง" />
         </div>
 
         <Button type="submit" size="lg" fullWidth loading={submitting}>

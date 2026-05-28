@@ -70,6 +70,16 @@ function QuickPayButton({ order }: { order: Order }) {
   return (
     <div className="flex flex-col gap-1">
       <Badge color="gray">⏳ รอชำระ</Badge>
+      {order.payment.slipUrl && (
+        <a
+          href={order.payment.slipUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs text-blue-500 hover:text-blue-700 underline"
+        >
+          🧾 ดูสลิป
+        </a>
+      )}
       <button
         onClick={handlePay}
         disabled={updating}

@@ -87,7 +87,17 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
             <tbody>
               {order.items.map((item, i) => (
                 <tr key={i} className="border-t border-gray-100">
-                  <td className="px-3 py-2">{item.name}</td>
+                  <td className="px-3 py-2">
+                    <p>{item.name}</p>
+                    {item.selectedOptions && item.selectedOptions.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                      </p>
+                    )}
+                    {item.itemNote && (
+                      <p className="text-xs text-gray-400 mt-0.5">📝 {item.itemNote}</p>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-center">{item.qty}</td>
                   <td className="px-3 py-2 text-right">{formatCurrency(item.subtotal)}</td>
                 </tr>

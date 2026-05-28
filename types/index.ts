@@ -15,8 +15,32 @@ export interface MenuItem {
   imageUrl: string
   isAvailable: boolean
   isSoldOut: boolean
+  optionGroups: OptionGroup[]
   createdAt: string
   updatedAt: string
+}
+
+// ─── Menu option groups ──────────────────────────────────────────────────────
+export interface OptionChoice {
+  id: string
+  name: string
+  extraPrice: number
+}
+
+export interface OptionGroup {
+  id: string
+  name: string
+  required: boolean
+  multiSelect: boolean
+  choices: OptionChoice[]
+}
+
+export interface SelectedOption {
+  groupId: string
+  groupName: string
+  choiceId: string
+  choiceName: string
+  extraPrice: number
 }
 
 export interface CartItem {
@@ -25,6 +49,8 @@ export interface CartItem {
   price: number
   qty: number
   imageUrl: string
+  selectedOptions: SelectedOption[]
+  itemNote: string
 }
 
 export type OrderType = 'pickup' | 'delivery'
@@ -39,6 +65,8 @@ export interface OrderItem {
   qty: number
   subtotal: number
   imageUrl?: string
+  selectedOptions?: SelectedOption[]
+  itemNote?: string
 }
 
 export interface DeliveryInfo {

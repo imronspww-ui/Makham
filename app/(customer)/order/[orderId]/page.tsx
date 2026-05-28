@@ -206,7 +206,15 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 truncate">{item.name}</p>
-                <p className="text-xs text-gray-400">× {item.qty}</p>
+                {item.selectedOptions && item.selectedOptions.length > 0 && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                  </p>
+                )}
+                {item.itemNote && (
+                  <p className="text-xs text-gray-400 mt-0.5">📝 {item.itemNote}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-0.5">× {item.qty}</p>
               </div>
               <span className="text-sm font-medium text-gray-700">{formatCurrency(item.subtotal)}</span>
             </div>
