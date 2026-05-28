@@ -1,8 +1,9 @@
 'use client'
-import { QrCode, Store, Truck, Clock } from 'lucide-react'
+import { QrCode, Store, Truck, Clock, ShieldAlert } from 'lucide-react'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { PromptPaySettingsForm, DeliverySettingsForm, StoreSettingsForm } from '@/components/admin/SettingsForm'
 import { OpeningHoursForm } from '@/components/admin/OpeningHoursForm'
+import { DangerZoneForm } from '@/components/admin/DangerZoneForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
 
@@ -61,6 +62,17 @@ export default function SettingsPage() {
         <p className="font-medium text-gray-600 mb-2">ข้อมูล Firebase</p>
         <p>ตั้งค่า Firebase Project ID: <code className="bg-gray-200 px-1 rounded text-xs">{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'ยังไม่ได้ตั้งค่า'}</code></p>
         <p className="mt-1 text-xs text-gray-400">แก้ไขได้ที่ไฟล์ .env.local</p>
+      </div>
+
+      {/* ── Danger Zone ── */}
+      <div className="rounded-2xl bg-white border-2 border-red-200 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
+            <ShieldAlert size={16} />
+          </div>
+          <h2 className="font-semibold text-red-600">Danger Zone</h2>
+        </div>
+        <DangerZoneForm />
       </div>
     </div>
   )

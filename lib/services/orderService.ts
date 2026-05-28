@@ -6,6 +6,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   orderBy,
   onSnapshot,
@@ -71,6 +72,14 @@ export function subscribeToOrders(callback: (orders: Order[]) => void): () => vo
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => docToData<Order>(d.id, d.data())))
   })
+}
+
+/** ลบออเดอร์ทั้งหมดใน collection — ใช้ก่อน go-live เพื่อล้างข้อมูลทดสอบ */
+export async function deleteAllOrders(): Promise<number> {
+  requireFirebase()
+  const snap = await getDocs(collection(db, COL))
+  await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, COL, d.id))))
+  return snap.docs.length
 }
 
 export function subscribeToOrder(id: string, callback: (order: Order | null) => void): () => void {
