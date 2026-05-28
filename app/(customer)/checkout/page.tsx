@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   const [uploadingSlip, setUploadingSlip] = useState(false)
 
   const { items, orderType, getTotalPrice, clearCart, getItemEffectivePrice } = useCartStore()
-  const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, reset } = useCheckoutStore()
+  const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, categoryAddons, reset } = useCheckoutStore()
   const addOrderToHistory = useOrderHistoryStore((s) => s.addOrder)
 
   const { register, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>({
@@ -100,6 +100,7 @@ export default function CheckoutPage() {
           status: 'pending',
           ...(slipUrl ? { slipUrl } : {}),
         },
+        ...(categoryAddons.length > 0 ? { categoryAddons } : {}),
         subtotal,
         deliveryFee: fee,
         total,
@@ -210,6 +211,16 @@ export default function CheckoutPage() {
               </div>
             )
           })}
+          {categoryAddons.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-gray-50 flex flex-col gap-1">
+              {categoryAddons.map((addon, i) => (
+                <div key={i} className="flex justify-between text-xs text-gray-500">
+                  <span>🍢 {addon.groupName}: {addon.choiceName}</span>
+                  {addon.extraPrice > 0 && <span className="text-orange-500">+{formatCurrency(addon.extraPrice)}</span>}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="border-t border-gray-100 pt-2 flex flex-col gap-1">
             <div className="flex justify-between text-sm text-gray-500">
               <span>ค่าส่ง</span>

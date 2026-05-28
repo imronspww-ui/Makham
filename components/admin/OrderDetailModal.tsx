@@ -116,6 +116,21 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
           </table>
         </div>
 
+        {/* Category addons (sauce, etc.) */}
+        {order.categoryAddons && order.categoryAddons.length > 0 && (
+          <div className="rounded-xl bg-orange-50 border border-orange-100 p-3">
+            <p className="text-xs text-orange-600 font-medium mb-2">ตัวเลือกประจำหมวดหมู่</p>
+            <div className="flex flex-col gap-1">
+              {order.categoryAddons.map((addon, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-gray-600">🍢 {addon.categoryName} — {addon.groupName}</span>
+                  <span className="font-medium text-gray-800">{addon.choiceName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {order.note && (
           <div className="rounded-xl bg-yellow-50 border border-yellow-200 p-3 text-sm text-gray-700">
             <p className="text-xs text-yellow-600 font-medium mb-0.5">หมายเหตุ</p>

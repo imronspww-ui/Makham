@@ -4,6 +4,19 @@ export interface Category {
   sortOrder: number
   isActive: boolean
   createdAt: string
+  /** Option groups required once per order when cart has items from this category */
+  optionGroups?: OptionGroup[]
+}
+
+/** One choice selection for a category-level option group */
+export interface CategoryAddon {
+  categoryId: string
+  categoryName: string
+  groupId: string
+  groupName: string
+  choiceId: string
+  choiceName: string
+  extraPrice: number
 }
 
 export interface MenuItem {
@@ -98,6 +111,7 @@ export interface Order {
   total: number
   note: string
   status: OrderStatus
+  categoryAddons?: CategoryAddon[]   // category-level sauce/addon selections
   createdAt: string
   updatedAt: string
 }

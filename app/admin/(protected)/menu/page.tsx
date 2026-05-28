@@ -1,24 +1,25 @@
 'use client'
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag } from 'lucide-react'
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
 import { deleteMenuItem, updateMenuItem } from '@/lib/services/menuService'
-import { createCategory, updateCategory, deleteCategory } from '@/lib/services/categoryService'
+import { deleteCategory } from '@/lib/services/categoryService'
 import { MenuFormModal } from '@/components/admin/MenuFormModal'
+import { CategoryFormModal } from '@/components/admin/CategoryFormModal'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
 import { Badge } from '@/components/ui/Badge'
 import { formatCurrency } from '@/lib/utils/format'
-import type { MenuItem } from '@/types'
+import type { Category, MenuItem } from '@/types'
 
 export default function MenuPage() {
   const { items, categories, loading, reload } = useAdminMenu()
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState<MenuItem | null>(null)
-  const [newCatName, setNewCatName] = useState('')
-  const [addingCat, setAddingCat] = useState(false)
+  const [catModalOpen, setCatModalOpen] = useState(false)
+  const [editCategory, setEditCategory] = useState<Category | null>(null)
 
   function openAdd() { setEditItem(null); setModalOpen(true) }
   function openEdit(item: MenuItem) { setEditItem(item); setModalOpen(true) }
@@ -50,16 +51,14 @@ export default function MenuPage() {
     } catch { toast.error('อัปเดตไม่สำเร็จ') }
   }
 
-  async function handleAddCategory() {
-    if (!newCatName.trim()) return
-    setAddingCat(true)
-    try {
-      await createCategory({ name: newCatName.trim(), sortOrder: categories.length, isActive: true })
-      toast.success('เพิ่มหมวดหมู่สำเร็จ')
-      setNewCatName('')
-      reload()
-    } catch (err) { toast.error(err instanceof Error ? err.message : 'เพิ่มไม่สำเร็จ') }
-    finally { setAddingCat(false) }
+  function openAddCategory() {
+    setEditCategory(null)
+    setCatModalOpen(true)
+  }
+
+  function openEditCategory(cat: Category) {
+    setEditCategory(cat)
+    setCatModalOpen(true)
   }
 
   async function handleDeleteCategory(id: string, name: string) {
@@ -83,27 +82,36 @@ export default function MenuPage() {
 
       {/* Categories */}
       <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <Tag size={16} className="text-orange-500" />
-          <h2 className="font-semibold text-gray-700">หมวดหมู่ ({categories.length})</h2>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Tag size={16} className="text-orange-500" />
+            <h2 className="font-semibold text-gray-700">หมวดหมู่ ({categories.length})</h2>
+          </div>
+          <Button size="sm" onClick={openAddCategory}><Plus size={14} />เพิ่มหมวดหมู่</Button>
         </div>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1">
-              <span className="text-sm">{cat.name}</span>
-              <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="ml-1 text-gray-400 hover:text-red-500">×</button>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input
-            value={newCatName}
-            onChange={(e) => setNewCatName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-            placeholder="ชื่อหมวดหมู่ใหม่"
-            className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none"
-          />
-          <Button size="sm" onClick={handleAddCategory} loading={addingCat}>เพิ่ม</Button>
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat) => {
+            const hasOptions = (cat.optionGroups ?? []).length > 0
+            return (
+              <div key={cat.id} className={[
+                'flex items-center gap-1.5 rounded-full border px-3 py-1',
+                hasOptions ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-gray-50',
+              ].join(' ')}>
+                <span className="text-sm">{cat.name}</span>
+                {hasOptions && (
+                  <span className="text-[10px] text-orange-500 font-medium bg-orange-100 rounded-full px-1.5">
+                    {cat.optionGroups!.length} ตัวเลือก
+                  </span>
+                )}
+                <button onClick={() => openEditCategory(cat)}
+                  className="text-gray-400 hover:text-orange-500 transition-colors ml-0.5">
+                  <Settings2 size={12} />
+                </button>
+                <button onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                  className="text-gray-400 hover:text-red-500 transition-colors">×</button>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -191,6 +199,13 @@ export default function MenuPage() {
         onSaved={reload}
         editItem={editItem}
         categories={categories}
+      />
+      <CategoryFormModal
+        open={catModalOpen}
+        onClose={() => setCatModalOpen(false)}
+        onSaved={reload}
+        category={editCategory}
+        defaultSortOrder={categories.length}
       />
     </div>
   )
