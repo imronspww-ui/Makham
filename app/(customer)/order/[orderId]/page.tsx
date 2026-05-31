@@ -2,13 +2,13 @@
 import { use, useState, useRef } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift } from 'lucide-react'
+import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift, MapPin, ExternalLink } from 'lucide-react'
 import { useOrder } from '@/lib/hooks/useOrder'
 import { useOrderNotification } from '@/lib/hooks/useOrderNotification'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { updateOrderSlip } from '@/lib/services/orderService'
 import { uploadImage } from '@/lib/firebase/storage'
-import { formatCurrency, formatDate } from '@/lib/utils/format'
+import { formatCurrency, formatDate, formatDistance } from '@/lib/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import type { OrderStatus } from '@/types'
@@ -232,6 +232,34 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
           </div>
         </div>
       </div>
+
+      {/* Delivery location — only for delivery orders */}
+      {order.orderType === 'delivery' && order.delivery && (
+        <div className="rounded-2xl bg-white border border-blue-100 p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin size={16} className="text-blue-500" />
+            <h2 className="font-semibold text-gray-700 text-sm">ที่อยู่จัดส่ง</h2>
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-gray-700 leading-relaxed">{order.delivery.address}</p>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>ระยะทาง</span>
+              <span className="font-medium text-gray-700">{formatDistance(order.delivery.distanceKm)}</span>
+            </div>
+            {order.delivery.lat && order.delivery.lng && (
+              <a
+                href={`https://www.google.com/maps?q=${order.delivery.lat},${order.delivery.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700 w-fit"
+              >
+                <ExternalLink size={12} />
+                ดูตำแหน่งบน Google Maps
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Payment & customer info */}
       <div className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm text-sm text-gray-600 flex flex-col gap-1.5">

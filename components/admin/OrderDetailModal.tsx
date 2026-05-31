@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { OrderStatusBadge, statusConfig } from './OrderStatusBadge'
 import { updateOrderStatus, updatePaymentStatus } from '@/lib/services/orderService'
-import { formatCurrency, formatDate } from '@/lib/utils/format'
+import { formatCurrency, formatDate, formatDistance } from '@/lib/utils/format'
 import type { Order, OrderStatus } from '@/types'
 
 interface Props {
@@ -71,7 +71,22 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
           <div className="rounded-xl bg-gray-50 p-3">
             <p className="text-xs text-gray-400 mb-1">ประเภท</p>
             <p className="font-medium">{order.orderType === 'pickup' ? '🛍️ รับหน้าร้าน' : '🚚 จัดส่ง'}</p>
-            {order.delivery && <p className="text-xs text-gray-500 mt-0.5">{order.delivery.address}</p>}
+            {order.delivery && (
+              <div className="mt-1.5 flex flex-col gap-1">
+                <p className="text-xs text-gray-600 leading-relaxed">{order.delivery.address}</p>
+                <p className="text-xs text-gray-400">{formatDistance(order.delivery.distanceKm)}</p>
+                {order.delivery.lat && order.delivery.lng && (
+                  <a
+                    href={`https://www.google.com/maps?q=${order.delivery.lat},${order.delivery.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-500 hover:text-blue-700 underline w-fit"
+                  >
+                    📍 ดูแผนที่
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
