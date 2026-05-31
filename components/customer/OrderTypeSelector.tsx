@@ -1,14 +1,30 @@
 'use client'
 import { ShoppingBag, Truck } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { useSettings } from '@/lib/hooks/useSettings'
 import type { OrderType } from '@/types'
 
 export function OrderTypeSelector() {
   const { orderType, setOrderType } = useCartStore()
+  const { settings } = useSettings()
+
+  // default true เพื่อ backward-compat (ก่อนมี field นี้ใน Firestore)
+  const deliveryEnabled = settings?.delivery?.enabled ?? true
 
   const options: { value: OrderType; label: string; icon: React.ReactNode; desc: string; disabled?: boolean }[] = [
-    { value: 'pickup', label: 'รับหน้าร้าน', icon: <ShoppingBag size={20} />, desc: 'รับได้ทันที' },
-    { value: 'delivery', label: 'จัดส่ง', icon: <Truck size={20} />, desc: 'ส่งถึงบ้าน' },
+    {
+      value: 'pickup',
+      label: 'รับหน้าร้าน',
+      icon: <ShoppingBag size={20} />,
+      desc: 'รับได้ทันที',
+    },
+    {
+      value: 'delivery',
+      label: 'จัดส่ง',
+      icon: <Truck size={20} />,
+      desc: deliveryEnabled ? 'ส่งถึงบ้าน' : 'ปิดให้บริการชั่วคราว',
+      disabled: !deliveryEnabled,
+    },
   ]
 
   return (

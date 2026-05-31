@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS: Settings = {
     lng: parseFloat(process.env.NEXT_PUBLIC_STORE_LNG ?? '100.5018'),
   },
   promptpay: { phone: '', accountName: '' },
-  delivery: { pricePerKm: 10, minDistance: 1, minFee: 30, maxDistance: 20 },
+  delivery: { enabled: true, pricePerKm: 10, minDistance: 1, minFee: 30, maxDistance: 20 },
 }
 
 export async function getSettings(): Promise<Settings> {
@@ -47,6 +47,18 @@ export async function updatePromptPaySettings(data: PromptPaySettings): Promise<
 export async function updateDeliverySettings(data: DeliverySettings): Promise<void> {
   requireFirebase()
   await setDoc(doc(db, 'settings', 'main'), { delivery: data }, { merge: true })
+  cacheClear('settings:')
+}
+
+/**
+ * เปิด/ปิดบริการจัดส่งทันที โดยไม่กระทบค่าอื่นใน delivery settings
+ * เหมาะสำหรับกดเปิด/ปิดรายวัน (เสาร์-อาทิตย์ / วันหยุด)
+ */
+export async function toggleDeliveryEnabled(enabled: boolean): Promise<void> {
+  requireFirebase()
+  const snap = await getDoc(doc(db, 'settings', 'main'))
+  const current: DeliverySettings = (snap.exists() ? snap.data().delivery : null) ?? DEFAULT_SETTINGS.delivery
+  await setDoc(doc(db, 'settings', 'main'), { delivery: { ...current, enabled } }, { merge: true })
   cacheClear('settings:')
 }
 

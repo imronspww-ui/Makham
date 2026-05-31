@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { promptpaySettingsSchema, deliverySettingsSchema, storeSettingsSchema, type PromptPayFormData, type DeliverySettingsFormData, type StoreSettingsFormData } from '@/lib/utils/validation'
-import { updatePromptPaySettings, updateDeliverySettings, updateStoreSettings } from '@/lib/services/settingsService'
+import { updatePromptPaySettings, updateDeliverySettings, updateStoreSettings, toggleDeliveryEnabled } from '@/lib/services/settingsService'
 import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import type { Settings } from '@/types'
 import Image from 'next/image'
@@ -64,16 +64,34 @@ export function PromptPaySettingsForm({ settings, onSaved }: Props) {
 }
 
 export function DeliverySettingsForm({ settings, onSaved }: Props) {
-  const [saving, setSaving] = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const [toggling,  setToggling]  = useState(false)
+  const [enabled,   setEnabled]   = useState(settings.delivery.enabled ?? true)
+
   const { register, handleSubmit, formState: { errors } } = useForm<DeliverySettingsFormData>({
     resolver: zodResolver(deliverySettingsSchema),
     defaultValues: settings.delivery,
   })
 
+  async function handleToggle() {
+    setToggling(true)
+    try {
+      const next = !enabled
+      await toggleDeliveryEnabled(next)
+      setEnabled(next)
+      toast.success(next ? '🟢 เปิดบริการจัดส่งแล้ว' : '🔴 ปิดบริการจัดส่งชั่วคราวแล้ว')
+      onSaved()
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setToggling(false)
+    }
+  }
+
   async function onSubmit(data: DeliverySettingsFormData) {
     setSaving(true)
     try {
-      await updateDeliverySettings(data)
+      await updateDeliverySettings({ ...data, enabled })
       toast.success('บันทึกการตั้งค่าจัดส่งสำเร็จ')
       onSaved()
     } catch {
@@ -85,6 +103,35 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      {/* ── Toggle เปิด/ปิดบริการ ── */}
+      <div className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-colors ${
+        enabled ? 'border-green-300 bg-green-50' : 'border-red-200 bg-red-50'
+      }`}>
+        <div>
+          <p className={`font-semibold text-sm ${enabled ? 'text-green-700' : 'text-red-600'}`}>
+            {enabled ? '🟢 เปิดให้บริการจัดส่ง' : '🔴 ปิดให้บริการชั่วคราว'}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {enabled
+              ? 'ลูกค้าสามารถเลือก "จัดส่ง" ได้ในหน้าตะกร้า'
+              : 'ปุ่มจัดส่งในหน้าตะกร้าจะถูกปิด ลูกค้าเลือกได้เฉพาะ "รับหน้าร้าน"'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={toggling}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-all disabled:opacity-60 ${
+            enabled
+              ? 'bg-red-500 text-white hover:bg-red-600'
+              : 'bg-green-500 text-white hover:bg-green-600'
+          }`}
+        >
+          {toggling
+            ? <span className="animate-spin">⏳</span>
+            : enabled ? 'ปิดชั่วคราว' : 'เปิดบริการ'}
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">ราคาต่อกิโลเมตร (บาท)</label>
