@@ -1,10 +1,102 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Users, Search, TrendingUp, Star, X, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
+import { Users, Search, TrendingUp, Star, X, Loader2, ChevronUp, ChevronDown, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { subscribeToCustomers, adjustCustomerPoints } from '@/lib/services/customerService'
+import { subscribeToCustomers, adjustCustomerPoints, createCustomer } from '@/lib/services/customerService'
 import { formatCurrency } from '@/lib/utils/format'
 import type { CustomerProfile } from '@/types'
+
+// ─── Add Customer Modal ───────────────────────────────────────────────────────
+
+function AddCustomerModal({ onClose }: { onClose: () => void }) {
+  const [phone,   setPhone]   = useState('')
+  const [name,    setName]    = useState('')
+  const [points,  setPoints]  = useState(0)
+  const [saving,  setSaving]  = useState(false)
+
+  async function handleSave() {
+    const cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone.length !== 10) { toast.error('เบอร์โทรต้อง 10 หลัก'); return }
+    if (!name.trim()) { toast.error('กรุณากรอกชื่อ'); return }
+    setSaving(true)
+    try {
+      await createCustomer(cleanPhone, name.trim(), points)
+      toast.success('เพิ่มลูกค้าสำเร็จ')
+      onClose()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'เพิ่มลูกค้าไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-gray-800">เพิ่มลูกค้าใหม่</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
+            <X size={18} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">เบอร์โทรศัพท์ *</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0812345678"
+              maxLength={10}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">ชื่อ *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ชื่อลูกค้า"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">แต้มเริ่มต้น</label>
+            <input
+              type="number"
+              min={0}
+              value={points === 0 ? '' : points}
+              onChange={(e) => setPoints(Math.max(0, Number(e.target.value)))}
+              placeholder="0"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gray-800 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+            บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Adjust Points Modal ──────────────────────────────────────────────────────
 
@@ -127,9 +219,10 @@ function AdjustModal({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<CustomerProfile[]>([])
-  const [search,    setSearch]    = useState('')
-  const [adjusting, setAdjusting] = useState<CustomerProfile | null>(null)
+  const [customers,     setCustomers]     = useState<CustomerProfile[]>([])
+  const [search,        setSearch]        = useState('')
+  const [adjusting,     setAdjusting]     = useState<CustomerProfile | null>(null)
+  const [addingCustomer, setAddingCustomer] = useState(false)
 
   useEffect(() => {
     return subscribeToCustomers(setCustomers)
@@ -156,6 +249,13 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold text-gray-800">ลูกค้า</h1>
           <p className="text-sm text-gray-400 mt-0.5">{customers.length} คน ทั้งหมด</p>
         </div>
+        <button
+          onClick={() => setAddingCustomer(true)}
+          className="flex items-center gap-2 rounded-xl bg-gray-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+        >
+          <UserPlus size={15} />
+          เพิ่มลูกค้า
+        </button>
       </div>
 
       {/* Summary cards */}
@@ -288,6 +388,11 @@ export default function CustomersPage() {
           onClose={() => setAdjusting(null)}
           onSaved={() => {}}
         />
+      )}
+
+      {/* Add customer modal */}
+      {addingCustomer && (
+        <AddCustomerModal onClose={() => setAddingCustomer(false)} />
       )}
     </div>
   )

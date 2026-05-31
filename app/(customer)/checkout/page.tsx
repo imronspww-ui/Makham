@@ -33,6 +33,7 @@ export default function CheckoutPage() {
   const [customerProfile,  setCustomerProfile]  = useState<CustomerProfile | null>(null)
   const [loadingProfile,   setLoadingProfile]   = useState(false)
   const [selectedRedeem,   setSelectedRedeem]   = useState<RedeemableItem | null>(null)
+  const [redeemQty,        setRedeemQty]        = useState(1)
   const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { items, orderType, getTotalPrice, clearCart, getItemEffectivePrice } = useCartStore()
@@ -71,6 +72,7 @@ export default function CheckoutPage() {
       const profile = await getCustomer(phone)
       setCustomerProfile(profile)
       setSelectedRedeem(null)
+      setRedeemQty(1)
       setLoadingProfile(false)
     }, 500)
     return () => { if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current) }
@@ -87,6 +89,7 @@ export default function CheckoutPage() {
   const availableRedeemables = (loyalty?.redeemableItems ?? []).filter(
     (r) => effectivePoints >= r.pointsCost,
   )
+  const maxQty = selectedRedeem ? Math.floor(effectivePoints / selectedRedeem.pointsCost) : 1
 
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -165,11 +168,11 @@ export default function CheckoutPage() {
           menuItemId: selectedRedeem.menuItemId,
           name:       `🎁 ${selectedRedeem.menuItemName}`,
           price:      0,
-          qty:        1,
+          qty:        redeemQty,
           subtotal:   0,
           isRedeemed: true,
         })
-        orderData.pointsUsed    = selectedRedeem.pointsCost
+        orderData.pointsUsed    = selectedRedeem.pointsCost * redeemQty
         orderData.redeemedItemId = selectedRedeem.menuItemId
       }
       if (pointsEarned > 0) {
@@ -185,7 +188,7 @@ export default function CheckoutPage() {
           phone:        formData.customerPhone.replace(/\D/g, ''),
           name:         formData.customerName,
           pointsEarned,
-          pointsUsed:   selectedRedeem?.pointsCost ?? 0,
+          pointsUsed:   selectedRedeem ? selectedRedeem.pointsCost * redeemQty : 0,
           orderTotal:   total,
           expiryMonths: loyalty.expiryMonths ?? 3,
         }).catch(() => {})
@@ -263,7 +266,7 @@ export default function CheckoutPage() {
                         <button
                           key={item.menuItemId}
                           type="button"
-                          onClick={() => setSelectedRedeem(chosen ? null : item)}
+                          onClick={() => { setSelectedRedeem(chosen ? null : item); setRedeemQty(1) }}
                           className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all border ${
                             chosen
                               ? 'bg-amber-50 border-amber-300 text-amber-800'
@@ -282,10 +285,34 @@ export default function CheckoutPage() {
                       )
                     })}
                     {selectedRedeem && (
-                      <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
-                        <CheckCircle size={11} />
-                        จะได้ &quot;{selectedRedeem.menuItemName}&quot; ฟรี 1 ชิ้น (หักแต้ม {selectedRedeem.pointsCost} แต้ม)
-                      </p>
+                      <div className="flex flex-col gap-2 mt-1">
+                        {/* Quantity picker */}
+                        <div className="flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
+                          <span className="text-sm text-amber-800 font-medium flex items-center gap-1.5">
+                            <Gift size={13} className="text-amber-500" />
+                            {selectedRedeem.menuItemName}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRedeemQty((q) => Math.max(1, q - 1))}
+                              disabled={redeemQty <= 1}
+                              className="h-6 w-6 rounded-full bg-amber-100 text-amber-700 font-bold text-base flex items-center justify-center hover:bg-amber-200 disabled:opacity-30 transition-colors"
+                            >−</button>
+                            <span className="w-5 text-center text-sm font-bold text-amber-700">{redeemQty}</span>
+                            <button
+                              type="button"
+                              onClick={() => setRedeemQty((q) => Math.min(maxQty, q + 1))}
+                              disabled={redeemQty >= maxQty}
+                              className="h-6 w-6 rounded-full bg-amber-100 text-amber-700 font-bold text-base flex items-center justify-center hover:bg-amber-200 disabled:opacity-30 transition-colors"
+                            >+</button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                          <CheckCircle size={11} />
+                          จะได้ &quot;{selectedRedeem.menuItemName}&quot; ฟรี {redeemQty} ชิ้น (หักแต้ม {selectedRedeem.pointsCost * redeemQty} แต้ม)
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
@@ -405,9 +432,9 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-sm text-amber-600 bg-amber-50 rounded-lg px-2 py-1 mt-1">
                 <span className="flex items-center gap-1">
                   <Gift size={12} />
-                  {selectedRedeem.menuItemName} (ฟรี)
+                  {selectedRedeem.menuItemName}{redeemQty > 1 ? ` × ${redeemQty}` : ''} (ฟรี)
                 </span>
-                <span className="text-xs font-medium">-{selectedRedeem.pointsCost} แต้ม</span>
+                <span className="text-xs font-medium">-{selectedRedeem.pointsCost * redeemQty} แต้ม</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-base mt-1">

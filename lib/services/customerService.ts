@@ -115,6 +115,33 @@ export async function upsertCustomerAfterOrder({
   } catch { /* silent — ไม่ให้ความผิดพลาดด้านแต้มทำให้ order สะดุด */ }
 }
 
+/**
+ * สร้างลูกค้าใหม่ด้วยมือโดย admin
+ * โยน Error ถ้าเบอร์โทรมีอยู่แล้วในระบบ
+ */
+export async function createCustomer(
+  phone: string,
+  name: string,
+  initialPoints: number,
+  expiryMonths: number = 3,
+): Promise<void> {
+  if (!isFirebaseConfigured) throw new Error('Firebase ไม่ได้ตั้งค่า')
+  const ref  = doc(db, COL, phone)
+  const snap = await getDoc(ref)
+  if (snap.exists()) throw new Error('เบอร์โทรนี้มีอยู่ในระบบแล้ว')
+  const now = Timestamp.now()
+  await setDoc(ref, {
+    name,
+    points:         Math.max(0, initialPoints),
+    totalOrders:    0,
+    totalSpent:     0,
+    lastOrderAt:    now,
+    pointsExpireAt: toExpireAt(expiryMonths),
+    createdAt:      now,
+    updatedAt:      now,
+  })
+}
+
 /** ปรับแต้มด้วยมือโดย admin (+delta หรือ -delta) */
 export async function adjustCustomerPoints(phone: string, delta: number): Promise<void> {
   if (!isFirebaseConfigured) return
