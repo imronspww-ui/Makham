@@ -89,11 +89,12 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
   const { register, handleSubmit, formState: { errors } } = useForm<DeliverySettingsFormData>({
     resolver: zodResolver(deliverySettingsSchema),
     defaultValues: {
-      freeFirstKm: settings.delivery.freeFirstKm ?? 0,
-      pricePerKm:  settings.delivery.pricePerKm,
-      minDistance: settings.delivery.minDistance,
-      minFee:      settings.delivery.minFee,
-      maxDistance: settings.delivery.maxDistance,
+      freeFirstKm:    settings.delivery.freeFirstKm ?? 0,
+      minOrderAmount: settings.delivery.minOrderAmount ?? 0,
+      pricePerKm:     settings.delivery.pricePerKm,
+      minDistance:    settings.delivery.minDistance,
+      minFee:         settings.delivery.minFee,
+      maxDistance:    settings.delivery.maxDistance,
     },
   })
 
@@ -157,6 +158,18 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
         </button>
       </div>
       <div className="grid grid-cols-2 gap-4">
+        {/* ── ยอดสั่งขั้นต่ำ ── */}
+        <div className="flex flex-col gap-1 col-span-2">
+          <label className="text-sm font-medium text-gray-700">
+            ยอดสั่งขั้นต่ำสำหรับ Delivery (บาท)
+            <span className="ml-1.5 text-xs text-gray-400 font-normal">— ใส่ 0 ถ้าไม่มีขั้นต่ำ</span>
+          </label>
+          <input type="number" min="0" {...register('minOrderAmount', { valueAsNumber: true })}
+            className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none" />
+          {errors.minOrderAmount && <p className="text-xs text-red-500">{errors.minOrderAmount.message}</p>}
+          <p className="text-xs text-gray-400">เช่น ใส่ 100 = ลูกค้าต้องซื้อรวมอย่างน้อย ฿100 จึงจะเลือก Delivery ได้</p>
+        </div>
+
         <div className="flex flex-col gap-1 col-span-2">
           <label className="text-sm font-medium text-gray-700">
             กิโลเมตรแรกฟรี (กม.)

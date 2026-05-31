@@ -39,7 +39,7 @@ function getLiveMenuItem(cartItem: CartItem, menuItems: MenuItem[]): MenuItem {
 
 export default function CartPage() {
   const router = useRouter()
-  const { items, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
+  const { items, orderType, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
   const { settings } = useSettings()
   const { isOpen } = useStoreHours(settings)
   const { categoryAddons, toggleCategoryAddon, note, setNote } = useCheckoutStore()
@@ -63,6 +63,12 @@ export default function CartPage() {
   const categoriesNeedingOptions: Category[] = categories.filter(
     (cat) => cartCategoryIds.has(cat.id) && (cat.optionGroups ?? []).some((g) => g.required),
   )
+
+  // ── ยอดขั้นต่ำ delivery ──────────────────────────────────────────────────────
+  const minOrderAmount = settings?.delivery?.minOrderAmount ?? 0
+  const cartTotal = getTotalPrice()
+  const belowMinOrder = orderType === 'delivery' && minOrderAmount > 0 && cartTotal < minOrderAmount
+  const minOrderShortfall = minOrderAmount - cartTotal
 
   // Check if all required category options are selected
   const missingGroups: Array<{ cat: Category; groupName: string }> = []
@@ -256,16 +262,30 @@ export default function CartPage() {
       <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-3 shadow-sm">
         <div className="flex justify-between text-sm text-stone-600">
           <span>รวมสินค้า</span>
-          <span>{formatCurrency(getTotalPrice())}</span>
+          <span>{formatCurrency(cartTotal)}</span>
         </div>
         <div className="border-t border-gray-100 pt-3 flex justify-between font-bold text-base">
           <span>รวม</span>
-          <span className="text-orange-500">{formatCurrency(getTotalPrice())}</span>
+          <span className="text-orange-500">{formatCurrency(cartTotal)}</span>
         </div>
+
+        {/* ── แจ้งเตือนยอดขั้นต่ำ ── */}
+        {belowMinOrder && (
+          <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5">
+            <AlertCircle size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-700 leading-relaxed">
+              <span className="font-semibold">ยอดสั่งขั้นต่ำ {formatCurrency(minOrderAmount)}</span>
+              {' '}สำหรับ Delivery
+              <br />
+              เพิ่มสินค้าอีก <span className="font-bold text-amber-800">{formatCurrency(minOrderShortfall)}</span> เพื่อดำเนินการต่อ
+            </div>
+          </div>
+        )}
+
         <Button fullWidth size="lg" onClick={handleProceed}
-          disabled={!isOpen}
-          className={(!canProceed || !isOpen) ? 'opacity-60' : ''}>
-          {isOpen ? 'ดำเนินการสั่งซื้อ' : '🚫 ร้านปิดอยู่'}
+          disabled={!isOpen || belowMinOrder}
+          className={(!canProceed || !isOpen || belowMinOrder) ? 'opacity-60' : ''}>
+          {!isOpen ? '🚫 ร้านปิดอยู่' : belowMinOrder ? `ยอดไม่ถึงขั้นต่ำ (${formatCurrency(minOrderAmount)})` : 'ดำเนินการสั่งซื้อ'}
         </Button>
       </div>
 

@@ -42,11 +42,12 @@ export const promptpaySettingsSchema = z.object({
 })
 
 export const deliverySettingsSchema = z.object({
-  freeFirstKm: z.number().min(0, 'ต้องไม่ติดลบ'),
-  pricePerKm:  z.number().min(0, 'ต้องไม่ติดลบ'),
-  minDistance: z.number().min(0, 'ต้องไม่ติดลบ'),
-  minFee:      z.number().min(0, 'ต้องไม่ติดลบ'),
-  maxDistance: z.number().min(1, 'ต้องมากกว่า 0'),
+  freeFirstKm:    z.number().min(0, 'ต้องไม่ติดลบ'),
+  pricePerKm:     z.number().min(0, 'ต้องไม่ติดลบ'),
+  minDistance:    z.number().min(0, 'ต้องไม่ติดลบ'),
+  minFee:         z.number().min(0, 'ต้องไม่ติดลบ'),
+  maxDistance:    z.number().min(1, 'ต้องมากกว่า 0'),
+  minOrderAmount: z.number().min(0, 'ต้องไม่ติดลบ'),
 })
 
 export const storeSettingsSchema = z.object({

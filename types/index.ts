@@ -150,8 +150,9 @@ export interface PromptPaySettings {
 }
 
 export interface DeliverySettings {
-  enabled?: boolean     // true = เปิดบริการ (default), false = ปิดชั่วคราว
-  freeFirstKm?: number  // กม. แรกฟรี (default: 0 = ไม่มีฟรี)
+  enabled?: boolean      // true = เปิดบริการ (default), false = ปิดชั่วคราว
+  freeFirstKm?: number   // กม. แรกฟรี (default: 0 = ไม่มีฟรี)
+  minOrderAmount?: number // ยอดสั่งขั้นต่ำสำหรับ delivery (0 = ไม่มีขั้นต่ำ)
   pricePerKm: number
   minDistance: number
   minFee: number

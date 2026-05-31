@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS: Settings = {
     lng: parseFloat(process.env.NEXT_PUBLIC_STORE_LNG ?? '100.5018'),
   },
   promptpay: { phone: '', accountName: '' },
-  delivery: { enabled: true, freeFirstKm: 0, pricePerKm: 10, minDistance: 1, minFee: 30, maxDistance: 20 },
+  delivery: { enabled: true, freeFirstKm: 0, minOrderAmount: 0, pricePerKm: 10, minDistance: 1, minFee: 30, maxDistance: 20 },
 }
 
 export async function getSettings(): Promise<Settings> {
