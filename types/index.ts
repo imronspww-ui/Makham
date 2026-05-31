@@ -82,6 +82,7 @@ export interface OrderItem {
   imageUrl?: string
   selectedOptions?: SelectedOption[]
   itemNote?: string
+  isRedeemed?: boolean   // true = แลกด้วยแต้มสะสม (ราคา ฿0)
 }
 
 export interface DeliveryInfo {
@@ -113,6 +114,9 @@ export interface Order {
   note: string
   status: OrderStatus
   categoryAddons?: CategoryAddon[]   // category-level sauce/addon selections
+  pointsEarned?: number              // แต้มที่ได้รับจากออเดอร์นี้
+  pointsUsed?: number                // แต้มที่ใช้แลกเมนูฟรี
+  redeemedItemId?: string            // menuItemId ของเมนูที่แลก
   createdAt: string
   updatedAt: string
 }
@@ -151,9 +155,40 @@ export interface DeliverySettings {
   maxDistance: number
 }
 
+// ─── Loyalty / Points ────────────────────────────────────────────────────────
+
+export interface RedeemableItem {
+  menuItemId: string
+  menuItemName: string
+  pointsCost: number
+}
+
+export interface LoyaltySettings {
+  enabled: boolean
+  pointsPer100Baht: number    // default: 5
+  expiryMonths: number        // default: 3
+  redeemableItems: RedeemableItem[]
+}
+
+export interface CustomerProfile {
+  id: string              // = phone number
+  phone: string
+  name: string
+  points: number          // แต้มปัจจุบัน (0 ถ้าหมดอายุแล้ว)
+  totalOrders: number
+  totalSpent: number
+  lastOrderAt: string
+  pointsExpireAt: string  // ISO — หมดอายุ X เดือนหลังสั่งล่าสุด
+  createdAt: string
+  updatedAt: string
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface Settings {
   store: StoreSettings
   promptpay: PromptPaySettings
   delivery: DeliverySettings
   openingHours?: OpeningHoursSettings
+  loyalty?: LoyaltySettings
 }

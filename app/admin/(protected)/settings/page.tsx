@@ -1,8 +1,9 @@
 'use client'
-import { QrCode, Store, Truck, Clock, ShieldAlert } from 'lucide-react'
+import { QrCode, Store, Truck, Clock, ShieldAlert, Star } from 'lucide-react'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { PromptPaySettingsForm, DeliverySettingsForm, StoreSettingsForm } from '@/components/admin/SettingsForm'
 import { OpeningHoursForm } from '@/components/admin/OpeningHoursForm'
+import { LoyaltySettingsForm } from '@/components/admin/LoyaltySettingsForm'
 import { DangerZoneForm } from '@/components/admin/DangerZoneForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
@@ -56,6 +57,20 @@ export default function SettingsPage() {
           <h2 className="font-semibold text-gray-700">เวลาเปิด-ปิดร้าน</h2>
         </div>
         <OpeningHoursForm settings={settings} />
+      </div>
+
+      {/* ── Loyalty / Points ── */}
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+            <Star size={16} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-700">ระบบสะสมแต้ม</h2>
+            <p className="text-xs text-gray-400">ลูกค้าสะสมแต้มผ่านเบอร์โทร แลกเมนูฟรีได้</p>
+          </div>
+        </div>
+        <LoyaltySettingsForm settings={settings} onSaved={reload} />
       </div>
 
       <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-sm text-gray-500">

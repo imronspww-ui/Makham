@@ -2,13 +2,14 @@
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutDashboard, ClipboardList, UtensilsCrossed, Settings,
+  LayoutDashboard, ClipboardList, UtensilsCrossed, Settings, Users,
 } from 'lucide-react'
 
 const PAGE_META: Record<string, { label: string; icon: React.ElementType; desc: string }> = {
   '/admin/dashboard': { label: 'ภาพรวม',    icon: LayoutDashboard, desc: 'สรุปยอดขายและสถานะร้าน'     },
   '/admin/orders':    { label: 'ออเดอร์',     icon: ClipboardList,   desc: 'จัดการออเดอร์ทั้งหมด'       },
   '/admin/menu':      { label: 'จัดการเมนู',  icon: UtensilsCrossed, desc: 'เพิ่ม/แก้ไข/ลบเมนูอาหาร'  },
+  '/admin/customers': { label: 'ลูกค้า',      icon: Users,           desc: 'แต้มสะสมและข้อมูลลูกค้า'   },
   '/admin/settings':  { label: 'ตั้งค่า',      icon: Settings,        desc: 'ตั้งค่าร้าน, PromptPay, จัดส่ง' },
 }
 

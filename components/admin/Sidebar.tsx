@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ClipboardList, UtensilsCrossed,
-  Settings, LogOut, ExternalLink, Store,
+  Settings, LogOut, ExternalLink, Store, Users,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/admin/dashboard', label: 'ภาพรวม',     icon: LayoutDashboard },
   { href: '/admin/orders',    label: 'ออเดอร์',      icon: ClipboardList   },
   { href: '/admin/menu',      label: 'จัดการเมนู',   icon: UtensilsCrossed },
+  { href: '/admin/customers', label: 'ลูกค้า',       icon: Users           },
   { href: '/admin/settings',  label: 'ตั้งค่า',       icon: Settings        },
 ]
 

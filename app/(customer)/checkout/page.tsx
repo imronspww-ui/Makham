@@ -1,11 +1,11 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Upload, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Upload, ImageIcon, Star, Gift, CheckCircle } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
@@ -15,10 +15,12 @@ import { PaymentSection } from '@/components/customer/PaymentSection'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createOrder } from '@/lib/services/orderService'
+import { getCustomer, upsertCustomerAfterOrder } from '@/lib/services/customerService'
+import { getSettings } from '@/lib/services/settingsService'
 import { uploadImage } from '@/lib/firebase/storage'
 import { checkoutSchema, type CheckoutFormData } from '@/lib/utils/validation'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
-import type { Order } from '@/types'
+import type { Order, LoyaltySettings, RedeemableItem, CustomerProfile } from '@/types'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -26,12 +28,19 @@ export default function CheckoutPage() {
   const [slipUrl, setSlipUrl] = useState('')
   const [uploadingSlip, setUploadingSlip] = useState(false)
 
+  // ── Loyalty state ────────────────────────────────────────────────────────
+  const [loyalty,          setLoyalty]          = useState<LoyaltySettings | null>(null)
+  const [customerProfile,  setCustomerProfile]  = useState<CustomerProfile | null>(null)
+  const [loadingProfile,   setLoadingProfile]   = useState(false)
+  const [selectedRedeem,   setSelectedRedeem]   = useState<RedeemableItem | null>(null)
+  const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const { items, orderType, getTotalPrice, clearCart, getItemEffectivePrice } = useCartStore()
   const { lat, lng, distanceKm, deliveryFee, address, paymentMethod, categoryAddons, note, reset } = useCheckoutStore()
   const addOrderToHistory = useOrderHistoryStore((s) => s.addOrder)
   const { name: savedName, phone: savedPhone, saveCustomer } = useCustomerStore()
 
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
   })
 
@@ -41,9 +50,43 @@ export default function CheckoutPage() {
     if (savedPhone) setValue('customerPhone', savedPhone)
   }, [savedName, savedPhone, setValue])
 
+  // โหลด loyalty settings ครั้งเดียวตอน mount
+  useEffect(() => {
+    getSettings().then((s) => setLoyalty(s.loyalty ?? null)).catch(() => {})
+  }, [])
+
+  // Debounce phone → ดึงแต้มลูกค้า
+  const phoneValue = watch('customerPhone')
+  useEffect(() => {
+    if (!loyalty?.enabled) return
+    if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current)
+    const phone = (phoneValue ?? '').replace(/\D/g, '')
+    if (phone.length !== 10) {
+      setCustomerProfile(null)
+      setSelectedRedeem(null)
+      return
+    }
+    phoneDebounceRef.current = setTimeout(async () => {
+      setLoadingProfile(true)
+      const profile = await getCustomer(phone)
+      setCustomerProfile(profile)
+      setSelectedRedeem(null)
+      setLoadingProfile(false)
+    }, 500)
+    return () => { if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current) }
+  }, [phoneValue, loyalty?.enabled])
+
   const subtotal = getTotalPrice()
   const fee = orderType === 'delivery' ? (deliveryFee ?? 0) : 0
   const total = subtotal + fee
+
+  // ── Loyalty computed values ──────────────────────────────────────────────
+  const pointsExpired      = customerProfile ? new Date(customerProfile.pointsExpireAt) < new Date() : false
+  const effectivePoints    = (!customerProfile || pointsExpired) ? 0 : customerProfile.points
+  const pointsEarned       = loyalty?.enabled ? Math.floor(total / 100) * (loyalty.pointsPer100Baht ?? 5) : 0
+  const availableRedeemables = (loyalty?.redeemableItems ?? []).filter(
+    (r) => effectivePoints >= r.pointsCost,
+  )
 
   async function handleSlipUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -116,8 +159,38 @@ export default function CheckoutPage() {
         status: 'pending',
       }
 
+      // เพิ่มเมนูที่แลกแต้มเป็น item ฟรี
+      if (selectedRedeem) {
+        orderData.items.push({
+          menuItemId: selectedRedeem.menuItemId,
+          name:       `🎁 ${selectedRedeem.menuItemName}`,
+          price:      0,
+          qty:        1,
+          subtotal:   0,
+          isRedeemed: true,
+        })
+        orderData.pointsUsed    = selectedRedeem.pointsCost
+        orderData.redeemedItemId = selectedRedeem.menuItemId
+      }
+      if (pointsEarned > 0) {
+        orderData.pointsEarned = pointsEarned
+      }
+
       const id = await createOrder(orderData)
       addOrderToHistory({ id, orderNumber: orderData.orderNumber, createdAt: new Date().toISOString() })
+
+      // อัปเดตแต้มลูกค้า (silent — ไม่ block UX)
+      if (loyalty?.enabled && (pointsEarned > 0 || selectedRedeem)) {
+        upsertCustomerAfterOrder({
+          phone:        formData.customerPhone.replace(/\D/g, ''),
+          name:         formData.customerName,
+          pointsEarned,
+          pointsUsed:   selectedRedeem?.pointsCost ?? 0,
+          orderTotal:   total,
+          expiryMonths: loyalty.expiryMonths ?? 3,
+        }).catch(() => {})
+      }
+
       // Remember customer name & phone for next order
       saveCustomer(formData.customerName, formData.customerPhone)
       clearCart()
@@ -147,6 +220,98 @@ export default function CheckoutPage() {
           <Input label="ชื่อ *" {...register('customerName')} error={errors.customerName?.message} placeholder="ชื่อ-นามสกุล" />
           <Input label="เบอร์โทร *" {...register('customerPhone')} error={errors.customerPhone?.message} placeholder="0812345678" type="tel" />
         </section>
+
+        {/* ── Loyalty Points Section ── */}
+        {loyalty?.enabled && (
+          <section className="rounded-2xl bg-white border border-amber-100 p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Star size={15} className="text-amber-500" />
+              <h2 className="font-semibold text-stone-700 text-sm">แต้มสะสม</h2>
+            </div>
+
+            {/* กรอกเบอร์แล้วระบบดึงแต้ม */}
+            {(phoneValue ?? '').replace(/\D/g, '').length < 10 ? (
+              <p className="text-xs text-stone-400">กรอกเบอร์โทรเพื่อตรวจสอบแต้มของคุณ</p>
+            ) : loadingProfile ? (
+              <p className="text-xs text-stone-400 animate-pulse">กำลังตรวจสอบแต้ม...</p>
+            ) : customerProfile ? (
+              <div className="flex flex-col gap-2.5">
+                {/* แต้มปัจจุบัน */}
+                <div className="flex items-center justify-between rounded-xl bg-amber-50 px-3 py-2.5">
+                  <span className="text-sm text-amber-800">แต้มสะสมของคุณ</span>
+                  <div className="text-right">
+                    <p className={`text-lg font-bold ${pointsExpired ? 'text-gray-300' : 'text-amber-600'}`}>
+                      {effectivePoints.toLocaleString()} แต้ม
+                    </p>
+                    {pointsExpired ? (
+                      <p className="text-xs text-red-400">แต้มหมดอายุแล้ว</p>
+                    ) : (
+                      <p className="text-xs text-amber-400">
+                        หมดอายุ {new Date(customerProfile.pointsExpireAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* เมนูที่แลกได้ */}
+                {!pointsExpired && availableRedeemables.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-xs font-medium text-stone-500">เลือกแลกเมนูฟรี (ไม่บังคับ)</p>
+                    {availableRedeemables.map((item) => {
+                      const chosen = selectedRedeem?.menuItemId === item.menuItemId
+                      return (
+                        <button
+                          key={item.menuItemId}
+                          type="button"
+                          onClick={() => setSelectedRedeem(chosen ? null : item)}
+                          className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all border ${
+                            chosen
+                              ? 'bg-amber-50 border-amber-300 text-amber-800'
+                              : 'bg-gray-50 border-gray-200 text-stone-600 hover:border-amber-200 hover:bg-amber-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Gift size={14} className="text-amber-400 shrink-0" />
+                            <span>{item.menuItemName}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-amber-600">{item.pointsCost} แต้ม</span>
+                            {chosen && <CheckCircle size={14} className="text-amber-500" />}
+                          </div>
+                        </button>
+                      )
+                    })}
+                    {selectedRedeem && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
+                        <CheckCircle size={11} />
+                        จะได้ &quot;{selectedRedeem.menuItemName}&quot; ฟรี 1 ชิ้น (หักแต้ม {selectedRedeem.pointsCost} แต้ม)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* จะได้แต้มเพิ่ม */}
+                {pointsEarned > 0 && (
+                  <p className="text-xs text-amber-500 flex items-center gap-1">
+                    <Star size={11} />
+                    สั่งครั้งนี้จะได้รับ +{pointsEarned} แต้ม
+                  </p>
+                )}
+              </div>
+            ) : (
+              /* ยังไม่มีแต้ม — สั่งครั้งแรก */
+              <div className="rounded-xl bg-amber-50 px-3 py-2.5">
+                <p className="text-xs text-amber-700">ยังไม่มีแต้มสะสม — เริ่มสะสมหลังสั่งครั้งนี้!</p>
+                {pointsEarned > 0 && (
+                  <p className="text-xs text-amber-500 mt-0.5 flex items-center gap-1">
+                    <Star size={11} />
+                    จะได้รับ +{pointsEarned} แต้มหลังยืนยันออเดอร์
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Delivery location */}
         {orderType === 'delivery' && (
@@ -236,10 +401,25 @@ export default function CheckoutPage() {
               <span>ค่าส่ง</span>
               <span>{formatCurrency(fee)}</span>
             </div>
+            {selectedRedeem && (
+              <div className="flex justify-between text-sm text-amber-600 bg-amber-50 rounded-lg px-2 py-1 mt-1">
+                <span className="flex items-center gap-1">
+                  <Gift size={12} />
+                  {selectedRedeem.menuItemName} (ฟรี)
+                </span>
+                <span className="text-xs font-medium">-{selectedRedeem.pointsCost} แต้ม</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-base mt-1">
               <span>รวมทั้งสิ้น</span>
               <span className="text-orange-500">{formatCurrency(total)}</span>
             </div>
+            {pointsEarned > 0 && (
+              <div className="flex justify-between text-xs text-amber-500 mt-0.5">
+                <span className="flex items-center gap-1"><Star size={10} />แต้มที่จะได้รับ</span>
+                <span>+{pointsEarned} แต้ม</span>
+              </div>
+            )}
           </div>
         </section>
 
