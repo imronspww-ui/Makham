@@ -8,7 +8,7 @@ export function OrderTypeSelector() {
 
   const options: { value: OrderType; label: string; icon: React.ReactNode; desc: string; disabled?: boolean }[] = [
     { value: 'pickup', label: 'รับหน้าร้าน', icon: <ShoppingBag size={20} />, desc: 'รับได้ทันที' },
-    { value: 'delivery', label: 'จัดส่ง', icon: <Truck size={20} />, desc: 'ปิดให้บริการชั่วคราว', disabled: true },
+    { value: 'delivery', label: 'จัดส่ง', icon: <Truck size={20} />, desc: 'ส่งถึงบ้าน' },
   ]
 
   return (
