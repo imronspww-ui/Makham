@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2, PackageX } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
 import { deleteMenuItem, updateMenuItem } from '@/lib/services/menuService'
@@ -134,7 +134,7 @@ export default function MenuPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['เมนู', 'หมวดหมู่', 'ราคา', 'ตัวเลือก', 'สถานะ', 'จัดการ'].map((h) => (
+                {['เมนู', 'หมวดหมู่', 'ราคา', 'ตัวเลือก', 'สินค้าหมด', 'สถานะ', 'จัดการ'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs text-gray-400 font-medium">{h}</th>
                 ))}
               </tr>
@@ -143,20 +143,26 @@ export default function MenuPage() {
               {items.map((item) => {
                 const cat = categories.find((c) => c.id === item.categoryId)
                 return (
-                  <tr key={item.id} className="border-t border-gray-50 hover:bg-gray-50/50">
+                  <tr key={item.id} className={[
+                    'border-t border-gray-50 transition-colors',
+                    item.isSoldOut ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50/50',
+                  ].join(' ')}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt={item.name} className="h-10 w-10 rounded-lg object-cover border border-gray-100" />
+                          <img src={item.imageUrl} alt={item.name} className="h-10 w-10 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
                         ) : (
-                          <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-lg">🍽️</div>
+                          <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">🍽️</div>
                         )}
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="font-medium text-gray-800">{item.name}</p>
+                            <p className={['font-medium', item.isSoldOut ? 'text-gray-400 line-through' : 'text-gray-800'].join(' ')}>{item.name}</p>
                             {item.isPopular && (
                               <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-1.5">🔥</span>
+                            )}
+                            {item.isSoldOut && (
+                              <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 rounded-full px-1.5">หมด</span>
                             )}
                           </div>
                           {item.description && <p className="text-xs text-gray-400 line-clamp-1">{item.description}</p>}
@@ -176,15 +182,29 @@ export default function MenuPage() {
                         <span className="text-xs text-gray-300">—</span>
                       )}
                     </td>
+
+                    {/* ── ปุ่มสินค้าหมด (โดดเด่น กดง่าย) ── */}
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleToggleSoldOut(item)}
+                        className={[
+                          'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95',
+                          item.isSoldOut
+                            ? 'bg-red-100 text-red-600 border border-red-300 hover:bg-red-200'
+                            : 'bg-gray-100 text-gray-400 border border-gray-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200',
+                        ].join(' ')}
+                        title={item.isSoldOut ? 'คลิกเพื่อรีเซ็ต (มีสินค้า)' : 'คลิกเพื่อตั้งเป็นสินค้าหมด'}
+                      >
+                        <PackageX size={13} />
+                        {item.isSoldOut ? 'หมดแล้ว' : 'หมด?'}
+                      </button>
+                    </td>
+
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <button onClick={() => handleToggleAvailable(item)} className="flex items-center gap-1 text-xs">
                           {item.isAvailable ? <ToggleRight size={16} className="text-green-500" /> : <ToggleLeft size={16} className="text-gray-300" />}
                           <span className={item.isAvailable ? 'text-green-600' : 'text-gray-400'}>{item.isAvailable ? 'เปิดขาย' : 'ปิดขาย'}</span>
-                        </button>
-                        <button onClick={() => handleToggleSoldOut(item)} className="flex items-center gap-1 text-xs">
-                          {item.isSoldOut ? <ToggleRight size={16} className="text-red-500" /> : <ToggleLeft size={16} className="text-gray-300" />}
-                          <span className={item.isSoldOut ? 'text-red-500' : 'text-gray-400'}>{item.isSoldOut ? 'สินค้าหมด' : 'มีสินค้า'}</span>
                         </button>
                         <button onClick={() => handleTogglePopular(item)} className="flex items-center gap-1 text-xs">
                           {item.isPopular ? <ToggleRight size={16} className="text-amber-500" /> : <ToggleLeft size={16} className="text-gray-300" />}
