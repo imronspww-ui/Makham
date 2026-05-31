@@ -2,7 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
+import { Navigation, Loader2, Map } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { promptpaySettingsSchema, deliverySettingsSchema, storeSettingsSchema, type PromptPayFormData, type DeliverySettingsFormData, type StoreSettingsFormData } from '@/lib/utils/validation'
@@ -10,6 +12,22 @@ import { updatePromptPaySettings, updateDeliverySettings, updateStoreSettings, t
 import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import type { Settings } from '@/types'
 import Image from 'next/image'
+
+// Dynamic import — Leaflet ต้องการ window/document (ไม่ render บน server)
+const MapPicker = dynamic(
+  () => import('@/components/customer/MapPickerLeaflet').then((m) => ({ default: m.MapPickerLeaflet })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[200px] w-full rounded-xl bg-gray-100 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Loader2 size={16} className="animate-spin" />
+          กำลังโหลดแผนที่...
+        </div>
+      </div>
+    ),
+  },
+)
 
 interface Props {
   settings: Settings
@@ -179,34 +197,72 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
   )
 }
 
-export function StoreSettingsForm({ settings, onSaved }: Props) {
-  const [saving, setSaving] = useState(false)
-  const [logoPreview, setLogoPreview] = useState(settings.store.logoUrl ?? '')
-  const [bgPreview, setBgPreview] = useState(settings.store.bgImageUrl ?? '')
+const DEFAULT_LAT = 13.7563
+const DEFAULT_LNG = 100.5018
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<StoreSettingsFormData>({
+export function StoreSettingsForm({ settings, onSaved }: Props) {
+  const [saving,       setSaving]       = useState(false)
+  const [logoPreview,  setLogoPreview]  = useState(settings.store.logoUrl ?? '')
+  const [bgPreview,    setBgPreview]    = useState(settings.store.bgImageUrl ?? '')
+  const [detectingLoc, setDetectingLoc] = useState(false)
+  const [geoError,     setGeoError]     = useState<string | null>(null)
+  const [showLocMap,   setShowLocMap]   = useState(false)
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<StoreSettingsFormData>({
     resolver: zodResolver(storeSettingsSchema),
     defaultValues: {
-      name: settings.store.name,
-      logoUrl: settings.store.logoUrl ?? '',
+      name:       settings.store.name,
+      logoUrl:    settings.store.logoUrl ?? '',
       bgImageUrl: settings.store.bgImageUrl ?? '',
+      lat:        settings.store.lat,
+      lng:        settings.store.lng,
     },
   })
 
   const logoVal = watch('logoUrl')
-  const bgVal = watch('bgImageUrl')
+  const bgVal   = watch('bgImageUrl')
+  const latVal  = watch('lat')
+  const lngVal  = watch('lng')
 
   useEffect(() => { setLogoPreview(logoVal ?? '') }, [logoVal])
   useEffect(() => { setBgPreview(bgVal ?? '') }, [bgVal])
+
+  const hasLocation = latVal && lngVal && !isNaN(latVal) && !isNaN(lngVal)
+  const pinLat = hasLocation ? latVal : DEFAULT_LAT
+  const pinLng = hasLocation ? lngVal : DEFAULT_LNG
+
+  function detectStoreLocation() {
+    if (!navigator.geolocation) {
+      setGeoError('เบราว์เซอร์นี้ไม่รองรับการตรวจสอบตำแหน่ง')
+      return
+    }
+    setDetectingLoc(true)
+    setGeoError(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setValue('lat', pos.coords.latitude)
+        setValue('lng', pos.coords.longitude)
+        setShowLocMap(true)
+        setDetectingLoc(false)
+      },
+      () => {
+        setGeoError('ไม่สามารถรับตำแหน่งได้ กรุณากรอกพิกัดด้วยตนเอง')
+        setDetectingLoc(false)
+      },
+    )
+  }
 
   async function onSubmit(data: StoreSettingsFormData) {
     setSaving(true)
     try {
       await updateStoreSettings({
         ...settings.store,
-        name: data.name,
-        logoUrl: data.logoUrl || undefined,
+        name:       data.name,
+        logoUrl:    data.logoUrl || undefined,
         bgImageUrl: data.bgImageUrl || undefined,
+        ...(data.lat && data.lng && !isNaN(data.lat) && !isNaN(data.lng)
+          ? { lat: data.lat, lng: data.lng }
+          : {}),
       })
       toast.success('บันทึกข้อมูลร้านสำเร็จ')
       onSaved()
@@ -271,6 +327,92 @@ export function StoreSettingsForm({ settings, onSaved }: Props) {
               style={{ background: 'linear-gradient(160deg, #fef6e4 0%, #f0faf4 40%, #fdf2e9 100%)' }} />
           )}
         </div>
+      </div>
+
+      {/* ── ตำแหน่งร้าน (สำหรับระบบจัดส่ง) ── */}
+      <div className="flex flex-col gap-3 border-t border-gray-100 pt-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-medium text-gray-700">ตำแหน่งร้าน</p>
+            {hasLocation ? (
+              <p className="text-xs text-green-600 mt-0.5">
+                📍 {latVal!.toFixed(5)}, {lngVal!.toFixed(5)}
+              </p>
+            ) : (
+              <p className="text-xs text-amber-500 mt-0.5">
+                ⚠️ ยังไม่ได้ตั้งค่า — แผนที่จัดส่งจะใช้พิกัดกรุงเทพแทน
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={detectStoreLocation}
+              disabled={detectingLoc}
+              className="flex items-center gap-1.5 rounded-xl border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {detectingLoc ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
+              ตำแหน่งปัจจุบัน
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLocMap((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs ${
+                showLocMap ? 'border-orange-400 text-orange-600 bg-orange-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Map size={12} />
+              {showLocMap ? 'ซ่อนแผนที่' : 'เลือกบนแผนที่'}
+            </button>
+          </div>
+        </div>
+
+        {geoError && <p className="text-xs text-red-500">{geoError}</p>}
+
+        {/* Manual lat/lng inputs */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-gray-500">Latitude (ละติจูด)</label>
+            <input
+              type="number"
+              step="0.00001"
+              {...register('lat', { valueAsNumber: true })}
+              placeholder="13.76000"
+              className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-xs text-gray-500">Longitude (ลองจิจูด)</label>
+            <input
+              type="number"
+              step="0.00001"
+              {...register('lng', { valueAsNumber: true })}
+              placeholder="100.50000"
+              className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400">
+          วิธีหาพิกัด: เปิด Google Maps → คลิกขวาที่หน้าร้าน → คัดลอกตัวเลขพิกัด แล้ววางที่ช่องด้านบน
+        </p>
+
+        {/* Map picker */}
+        {showLocMap && (
+          <>
+            <p className="text-xs text-gray-500">คลิกหรือลากหมุดสีน้ำเงินเพื่อตั้งตำแหน่งร้าน</p>
+            <MapPicker
+              pinLat={pinLat}
+              pinLng={pinLng}
+              storeLat={pinLat}
+              storeLng={pinLng}
+              flyOnChange={false}
+              onSelect={(newLat, newLng) => {
+                setValue('lat', newLat)
+                setValue('lng', newLng)
+              }}
+            />
+          </>
+        )}
       </div>
 
       <Button type="submit" loading={saving} className="self-start">บันทึกข้อมูลร้าน</Button>

@@ -53,6 +53,8 @@ export const storeSettingsSchema = z.object({
   name: z.string().min(1, 'กรุณากรอกชื่อร้าน'),
   logoUrl: z.string().optional(),
   bgImageUrl: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>
