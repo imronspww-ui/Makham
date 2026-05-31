@@ -114,6 +114,8 @@ export interface Order {
   total: number
   note: string
   status: OrderStatus
+  source?: 'online' | 'pos'          // ช่องทางออเดอร์: ออนไลน์ หรือ POS หน้าร้าน
+  discount?: number                   // ส่วนลดรวม (บาท) สำหรับ POS
   categoryAddons?: CategoryAddon[]   // category-level sauce/addon selections
   pointsEarned?: number              // แต้มที่ได้รับจากออเดอร์นี้
   pointsUsed?: number                // แต้มที่ใช้แลกเมนูฟรี
