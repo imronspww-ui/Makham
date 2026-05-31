@@ -39,6 +39,7 @@ export interface OptionChoice {
   id: string
   name: string
   extraPrice: number
+  isSoldOut?: boolean   // true = ตัวเลือกนี้หมด ลูกค้าเลือกไม่ได้
 }
 
 export interface OptionGroup {

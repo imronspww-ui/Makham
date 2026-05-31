@@ -89,7 +89,7 @@ export function MenuFormModal({ open, onClose, onSaved, editItem, categories }: 
   }
 
   function addChoice(groupId: string) {
-    const choice: OptionChoice = { id: uid(), name: '', extraPrice: 0 }
+    const choice: OptionChoice = { id: uid(), name: '', extraPrice: 0, isSoldOut: false }
     setOptionGroups((prev) => prev.map((g) => g.id === groupId ? { ...g, choices: [...g.choices, choice] } : g))
   }
 
@@ -257,7 +257,10 @@ export function MenuFormModal({ open, onClose, onSaved, editItem, categories }: 
                         value={choice.name}
                         onChange={(e) => updateChoice(group.id, choice.id, 'name', e.target.value)}
                         placeholder="ชื่อตัวเลือก"
-                        className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-orange-400 bg-white"
+                        className={[
+                          'flex-1 rounded-lg border px-2.5 py-1.5 text-sm outline-none focus:border-orange-400 bg-white',
+                          choice.isSoldOut ? 'border-red-200 text-gray-400 line-through' : 'border-gray-200',
+                        ].join(' ')}
                       />
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-gray-400">+฿</span>
@@ -270,6 +273,20 @@ export function MenuFormModal({ open, onClose, onSaved, editItem, categories }: 
                           className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-center outline-none focus:border-orange-400 bg-white"
                         />
                       </div>
+                      {/* ── ปุ่มหมด/มี ── */}
+                      <button
+                        type="button"
+                        onClick={() => updateChoice(group.id, choice.id, 'isSoldOut', !choice.isSoldOut)}
+                        title={choice.isSoldOut ? 'คลิกเพื่อรีเซ็ต (มีสินค้า)' : 'คลิกเพื่อตั้งเป็นหมด'}
+                        className={[
+                          'rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors',
+                          choice.isSoldOut
+                            ? 'bg-red-100 text-red-600 border border-red-300 hover:bg-red-200'
+                            : 'bg-gray-100 text-gray-400 border border-gray-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200',
+                        ].join(' ')}
+                      >
+                        {choice.isSoldOut ? 'หมด' : 'หมด?'}
+                      </button>
                       <button type="button" onClick={() => removeChoice(group.id, choice.id)}
                         className="p-1 text-red-400 hover:text-red-600 rounded transition-colors">
                         <Trash2 size={13} />

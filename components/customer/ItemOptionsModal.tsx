@@ -126,28 +126,37 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
               <div className="flex flex-col gap-1.5">
                 {group.choices.map((choice) => {
                   const isSelected = (selections[group.id] ?? []).includes(choice.id)
+                  const soldOut = choice.isSoldOut === true
                   return (
                     <button
                       key={choice.id}
                       type="button"
-                      onClick={() => toggleChoice(group.id, choice.id, group.multiSelect)}
+                      onClick={() => !soldOut && toggleChoice(group.id, choice.id, group.multiSelect)}
+                      disabled={soldOut}
                       className={[
                         'flex items-center justify-between px-3 py-2.5 rounded-xl border-2 text-sm text-left transition-all',
-                        isSelected
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-200 text-gray-600 hover:border-orange-200',
+                        soldOut
+                          ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                          : isSelected
+                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                            : 'border-gray-200 text-gray-600 hover:border-orange-200',
                       ].join(' ')}
                     >
                       <div className="flex items-center gap-2">
                         <div className={[
                           'w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                          isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300',
+                          soldOut ? 'border-gray-200 bg-gray-100'
+                            : isSelected ? 'border-orange-500 bg-orange-500'
+                            : 'border-gray-300',
                         ].join(' ')}>
-                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          {isSelected && !soldOut && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
-                        <span>{choice.name}</span>
+                        <span className={soldOut ? 'line-through text-gray-300' : ''}>{choice.name}</span>
+                        {soldOut && (
+                          <span className="text-[10px] font-semibold text-red-400 bg-red-50 border border-red-100 rounded-full px-1.5 py-0.5">หมด</span>
+                        )}
                       </div>
-                      {choice.extraPrice > 0 && (
+                      {choice.extraPrice > 0 && !soldOut && (
                         <span className="text-xs text-orange-500 font-medium">+{formatCurrency(choice.extraPrice)}</span>
                       )}
                     </button>
