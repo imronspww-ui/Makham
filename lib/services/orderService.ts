@@ -74,6 +74,12 @@ export function subscribeToOrders(callback: (orders: Order[]) => void): () => vo
   })
 }
 
+/** ลบออเดอร์เดี่ยว */
+export async function deleteOrder(id: string): Promise<void> {
+  requireFirebase()
+  await deleteDoc(doc(db, COL, id))
+}
+
 /** ลบออเดอร์ทั้งหมดใน collection — ใช้ก่อน go-live เพื่อล้างข้อมูลทดสอบ */
 export async function deleteAllOrders(): Promise<number> {
   requireFirebase()

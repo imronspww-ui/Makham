@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Search, CheckCircle2 } from 'lucide-react'
+import { Search, CheckCircle2, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { OrderStatusBadge, statusConfig } from '@/components/admin/OrderStatusBadge'
@@ -8,7 +8,7 @@ import { OrderDetailModal } from '@/components/admin/OrderDetailModal'
 import { OrderRowSkeleton } from '@/components/ui/Skeleton'
 import { Badge } from '@/components/ui/Badge'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
-import { updateOrderStatus, updatePaymentStatus } from '@/lib/services/orderService'
+import { updateOrderStatus, updatePaymentStatus, deleteOrder } from '@/lib/services/orderService'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
 import type { Order, OrderStatus } from '@/types'
 
@@ -89,6 +89,55 @@ function QuickPayButton({ order }: { order: Order }) {
         {updating ? 'กำลังบันทึก...' : 'ยืนยันชำระ'}
       </button>
     </div>
+  )
+}
+
+// ── Delete button with inline confirm ───────────────────────────────────────
+function DeleteOrderButton({ order }: { order: Order }) {
+  const [confirm, setConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await deleteOrder(order.id)
+      toast.success(`ลบออเดอร์ ${order.orderNumber} แล้ว`)
+    } catch {
+      toast.error('ลบไม่สำเร็จ')
+      setDeleting(false)
+      setConfirm(false)
+    }
+  }
+
+  if (confirm) {
+    return (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="rounded-lg bg-red-500 px-2 py-1 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+        >
+          {deleting ? '...' : 'ลบ'}
+        </button>
+        <button
+          onClick={() => setConfirm(false)}
+          disabled={deleting}
+          className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          ยกเลิก
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setConfirm(true)}
+      className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+      title="ลบออเดอร์นี้"
+    >
+      <Trash2 size={14} />
+    </button>
   )
 }
 
@@ -185,8 +234,11 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-400">{formatDate(order.createdAt)}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => setSelected(order)}
-                      className="text-xs text-orange-500 hover:text-orange-700 font-medium whitespace-nowrap">ดูรายละเอียด</button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setSelected(order)}
+                        className="text-xs text-orange-500 hover:text-orange-700 font-medium whitespace-nowrap">ดูรายละเอียด</button>
+                      <DeleteOrderButton order={order} />
+                    </div>
                   </td>
                 </tr>
               ))}
