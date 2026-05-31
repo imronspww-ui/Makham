@@ -70,7 +70,13 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
 
   const { register, handleSubmit, formState: { errors } } = useForm<DeliverySettingsFormData>({
     resolver: zodResolver(deliverySettingsSchema),
-    defaultValues: settings.delivery,
+    defaultValues: {
+      freeFirstKm: settings.delivery.freeFirstKm ?? 0,
+      pricePerKm:  settings.delivery.pricePerKm,
+      minDistance: settings.delivery.minDistance,
+      minFee:      settings.delivery.minFee,
+      maxDistance: settings.delivery.maxDistance,
+    },
   })
 
   async function handleToggle() {
@@ -133,6 +139,16 @@ export function DeliverySettingsForm({ settings, onSaved }: Props) {
         </button>
       </div>
       <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1 col-span-2">
+          <label className="text-sm font-medium text-gray-700">
+            กิโลเมตรแรกฟรี (กม.)
+            <span className="ml-1.5 text-xs text-gray-400 font-normal">— ใส่ 0 ถ้าไม่มีระยะฟรี</span>
+          </label>
+          <input type="number" step="0.5" min="0" {...register('freeFirstKm', { valueAsNumber: true })}
+            className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none" />
+          {errors.freeFirstKm && <p className="text-xs text-red-500">{errors.freeFirstKm.message}</p>}
+          <p className="text-xs text-gray-400">เช่น ใส่ 1 = กม. แรกฟรี, ตั้งแต่ กม. 2 เป็นต้นไปคิดตามราคาต่อ กม.</p>
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">ราคาต่อกิโลเมตร (บาท)</label>
           <input type="number" step="0.5" {...register('pricePerKm', { valueAsNumber: true })}

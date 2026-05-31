@@ -21,12 +21,18 @@ export function calculateDistance(
 
 export function calculateDeliveryFee(
   distanceKm: number,
-  settings: { pricePerKm: number; minDistance: number; minFee: number; maxDistance: number },
+  settings: { freeFirstKm?: number; pricePerKm: number; minDistance: number; minFee: number; maxDistance: number },
 ): { fee: number; isOutOfRange: boolean } {
   if (distanceKm > settings.maxDistance) {
     return { fee: 0, isOutOfRange: true }
   }
-  const calculated = distanceKm * settings.pricePerKm
+  const freeKm = settings.freeFirstKm ?? 0
+  // ถ้าอยู่ในระยะฟรี → ค่าส่ง 0 บาท
+  if (freeKm > 0 && distanceKm <= freeKm) {
+    return { fee: 0, isOutOfRange: false }
+  }
+  const chargeableKm = Math.max(0, distanceKm - freeKm)
+  const calculated = chargeableKm * settings.pricePerKm
   const fee = Math.ceil(Math.max(calculated, settings.minFee))
   return { fee, isOutOfRange: false }
 }
