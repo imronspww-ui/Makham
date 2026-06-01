@@ -6,7 +6,7 @@
  */
 
 let _pendingText: string | null = null
-let _listenerAttached = false
+let _listenersAttached = false
 
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
@@ -34,30 +34,41 @@ async function doSpeak(text: string) {
   } catch { /* ignore */ }
 }
 
-/** attach visibility listener ครั้งเดียว */
-function attachVisibilityListener() {
-  if (_listenerAttached || typeof document === 'undefined') return
-  _listenerAttached = true
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && _pendingText) {
+/** Chrome block SpeechSynthesis เมื่อ window ไม่มี focus (ไม่ใช่แค่ tab hidden) */
+function isActive(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.hasFocus()
+}
+
+function attachListeners() {
+  if (_listenersAttached || typeof window === 'undefined') return
+  _listenersAttached = true
+
+  function tryFlush() {
+    if (isActive() && _pendingText) {
       doSpeak(_pendingText)
       _pendingText = null
     }
-  })
+  }
+
+  // window focus: กลับจาก app อื่น / click OS notification / กด taskbar
+  window.addEventListener('focus', tryFlush)
+  // visibilitychange: กลับจาก tab อื่น
+  document.addEventListener('visibilitychange', tryFlush)
 }
 
 /**
- * เรียกแทน SpeechSynthesisUtterance โดยตรง
- * - visible → เล่นทันที
- * - hidden  → queue แล้วเล่นเมื่อกลับมา
+ * เล่นเสียงพูดภาษาไทย
+ * - browser มี focus → เล่นทันที
+ * - ไม่มี focus     → queue ไว้ เล่นเมื่อ window ได้ focus กลับมา
  */
 export function speak(text: string) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-  attachVisibilityListener()
+  attachListeners()
 
-  if (document.visibilityState === 'visible') {
+  if (isActive()) {
     doSpeak(text)
   } else {
-    _pendingText = text   // เขียนทับถ้ามีอยู่แล้ว (เก็บแค่อันล่าสุด)
+    _pendingText = text
   }
 }
