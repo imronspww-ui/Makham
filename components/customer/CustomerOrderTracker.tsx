@@ -1,19 +1,15 @@
 'use client'
 /**
- * CustomerOrderTracker — invisible component ที่ register Service Worker
- * และส่ง order history ให้ SW track สถานะแบบ background
+ * CustomerOrderTracker — register Service Worker + ขอสิทธิ์ notification
+ * ฟัง SPEAK message จาก SW → เล่น TTS ภาษาไทย
  *
- * Mount ใน customer layout เพื่อทำงานในทุกหน้าของลูกค้า
+ * หน้า /order/[id] จะส่ง TRACK_ORDER พร้อมสถานะจริงเอง
+ * ไม่ต้องส่งจาก history ที่นี่ (เพราะไม่รู้สถานะปัจจุบัน → เสี่ยงแจ้งซ้ำ)
  */
 import { useEffect } from 'react'
-import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { useSWSpeak } from '@/lib/hooks/useSWSpeak'
 
-const MAX_TRACK_HOURS = 24
-
 export function CustomerOrderTracker() {
-  const orders = useOrderHistoryStore((s) => s.orders)
-
   // รับ SPEAK message จาก SW → เล่น TTS ภาษาไทย
   useSWSpeak()
 
@@ -22,38 +18,21 @@ export function CustomerOrderTracker() {
     if (!('serviceWorker' in navigator)) return
 
     async function setup() {
-      // ──── 1. ขอสิทธิ์ notification ────
+      // ขอสิทธิ์ notification (ครั้งแรกที่เปิดเว็บ)
       if ('Notification' in window && Notification.permission === 'default') {
         await Notification.requestPermission()
       }
 
-      // ──── 2. Register / reuse SW ────
+      // Register SW (ถ้ายังไม่ได้ register)
       try {
         await navigator.serviceWorker.register('/sw.js', { scope: '/' })
       } catch (err) {
         console.warn('[SW] register failed:', err)
-        return
-      }
-
-      // รอ SW พร้อม
-      const reg = await navigator.serviceWorker.ready
-
-      // ──── 3. ส่ง order history ให้ SW track ────
-      const cutoff = Date.now() - MAX_TRACK_HOURS * 60 * 60 * 1000
-      const recent = orders.filter((o) => new Date(o.createdAt).getTime() > cutoff)
-
-      for (const order of recent) {
-        reg.active?.postMessage({
-          type:          'TRACK_ORDER',
-          orderId:       order.id,
-          orderNumber:   order.orderNumber,
-          currentStatus: 'pending',   // SW จะ fetch สถานะจริงรอบแรก
-        })
       }
     }
 
     setup()
-  }, [orders]) // re-run ทุกครั้งที่มีออเดอร์ใหม่เข้า history
+  }, [])
 
   return null
 }

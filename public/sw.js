@@ -96,12 +96,28 @@ async function pollAdmin() {
     orders.forEach((o) => knownIds.add(o.id))
     await writeCache(ADMIN_CACHE, ADMIN_STATE_KEY, { ids: [...knownIds], initialized: true })
 
+    // ตรวจว่า admin tab เปิดอยู่ไหม
+    // ถ้าเปิดอยู่ → Firestore hook ใน useAdminOrderAlert จัดการ notification + TTS เองแล้ว
+    // SW แค่เป็น fallback กรณีไม่มี admin tab
+    const allClients  = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const hasAdminTab = allClients.some((c) => c.url.includes('/admin'))
+
     for (const order of freshPending) {
       const name  = order.customer?.name || 'ลูกค้า'
       const total = (order.total ?? 0).toLocaleString('th-TH')
       const type  = order.orderType === 'delivery' ? '🚗 Delivery' : '🛍️ Pickup'
+      const extra = freshPending.length > 1
+        ? ` และมีออเดอร์เพิ่มอีก ${freshPending.length - 1} รายการ`
+        : ''
+      const speech = `มีออเดอร์ใหม่เข้ามาจาก${name} ยอด${total}บาท${extra} กรุณาตรวจสอบด้วยครับ`
 
-      // ── Native notification (ทุกกรณี) ──
+      if (hasAdminTab) {
+        // admin tab เปิดอยู่ — hook จัดการแล้ว ไม่ต้องทำซ้ำ
+        // (Firestore onSnapshot ยิงทันที, SW ยิงช้า 20 วิ → จะซ้ำถ้าไม่ skip)
+        continue
+      }
+
+      // ไม่มี admin tab → SW แจ้งเตือนแทน
       await self.registration.showNotification(`📦 ออเดอร์ใหม่! #${order.orderNumber}`, {
         body:               `${name} · ฿${total} · ${type}`,
         icon:               '/favicon.ico',
@@ -111,14 +127,8 @@ async function pollAdmin() {
         data:               { type: 'admin', url: '/admin/orders' },
       })
 
-      // ── TTS: ส่งไป admin tab เท่านั้น ──
-      // ถ้าไม่มี admin tab (admin ไม่ได้เปิดอยู่) → ส่งไป tab อื่นก็ยังดี
-      const extra = freshPending.length > 1
-        ? ` และมีออเดอร์เพิ่มอีก ${freshPending.length - 1} รายการ`
-        : ''
-      const speech = `มีออเดอร์ใหม่เข้ามาจาก${name} ยอด${total}บาท${extra} กรุณาตรวจสอบด้วยครับ`
-
-      await broadcastSpeak(speech, (c) => c.url.includes('/admin'))
+      // TTS → ส่งไป tab ใดก็ได้ที่เปิดอยู่ (ทั้ง admin และ customer)
+      await broadcastSpeak(speech, null)
     }
   } catch { /* network error — retry next cycle */ }
 }

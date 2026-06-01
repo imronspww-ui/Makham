@@ -48,7 +48,7 @@ export function AdminServiceWorker() {
 
     // เมื่อ logout → reset state ใน SW
     return () => {
-      navigator.serviceWorker.controller?.postMessage({ type: 'RESET_STATE' })
+      navigator.serviceWorker.controller?.postMessage({ type: 'RESET_ADMIN_STATE' })
     }
   }, [])
 
