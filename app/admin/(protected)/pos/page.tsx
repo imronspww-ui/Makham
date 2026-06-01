@@ -1,10 +1,12 @@
 'use client'
 import { useState, useMemo } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
+import { useSettings } from '@/lib/hooks/useSettings'
 import { createOrder } from '@/lib/services/orderService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
+import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import type { MenuItem, OrderItem, SelectedOption } from '@/types'
@@ -34,6 +36,8 @@ function nextCartKey() {
 
 export default function PosPage() {
   const { items: menuItems, categories, loading } = useMenu()
+  const { settings } = useSettings()
+  const storeName = settings?.store.name ?? 'ร้านมะขาม'
 
   // ── Cart state ────────────────────────────────────────────────────────────
   const [cart, setCart]               = useState<PosCartItem[]>([])
@@ -49,7 +53,7 @@ export default function PosPage() {
   // ── Payment state ─────────────────────────────────────────────────────────
   const [cashInput, setCashInput] = useState('')
   const [saving,    setSaving]    = useState(false)
-  const [lastOrder, setLastOrder] = useState<{ number: string; total: number; change: number } | null>(null)
+  const [lastOrder, setLastOrder] = useState<{ number: string; total: number; change: number; receipt: ReceiptData } | null>(null)
 
   // ── Computed ──────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
@@ -184,7 +188,28 @@ export default function PosPage() {
       })
 
       const orderChange = change
-      setLastOrder({ number: orderNumber, total, change: orderChange })
+      const receipt: ReceiptData = {
+        orderNumber,
+        paidAt:         new Date(),
+        items:          cart.map((i) => ({
+          name:    i.name,
+          price:   i.price,
+          qty:     i.qty,
+          options: i.selectedOptions.length > 0
+            ? i.selectedOptions.map((o) => o.choiceName).join(', ')
+            : undefined,
+          note: i.itemNote || undefined,
+        })),
+        subtotal,
+        discountAmount,
+        discountLabel:  discountAmount > 0
+          ? (discountType === 'percent' ? `${discountInput}%` : formatCurrency(discountAmount))
+          : '',
+        total,
+        cashPaid:       parseFloat(cashInput) || 0,
+        change:         orderChange,
+      }
+      setLastOrder({ number: orderNumber, total, change: orderChange, receipt })
       setCart([])
       setDiscountInput('')
       setCashInput('')
@@ -321,6 +346,14 @@ export default function PosPage() {
                   </div>
                 )}
               </div>
+              {/* ── ปุ่มพิมพ์ใบเสร็จ ── */}
+              <button
+                onClick={() => printReceipt(lastOrder.receipt, storeName)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border border-green-300 text-green-700 text-sm font-semibold py-2 hover:bg-green-100 transition-colors"
+              >
+                <Printer size={15} />
+                พิมพ์ใบเสร็จ
+              </button>
               <button onClick={clearAll}
                 className="w-full rounded-xl bg-green-500 text-white text-sm font-semibold py-2 hover:bg-green-600 transition-colors">
                 ➕ รายการถัดไป
