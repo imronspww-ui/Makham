@@ -7,11 +7,15 @@
  */
 import { useEffect } from 'react'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
+import { useSWSpeak } from '@/lib/hooks/useSWSpeak'
 
 const MAX_TRACK_HOURS = 24
 
 export function CustomerOrderTracker() {
   const orders = useOrderHistoryStore((s) => s.orders)
+
+  // รับ SPEAK message จาก SW → เล่น TTS ภาษาไทย
+  useSWSpeak()
 
   useEffect(() => {
     if (typeof window === 'undefined') return

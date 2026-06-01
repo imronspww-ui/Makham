@@ -3,13 +3,16 @@
  *
  * Admin   : poll /api/orders ทุก 20 วิ → แจ้งออเดอร์ใหม่ pending
  * Customer: poll /api/orders/[id] สำหรับออเดอร์ที่ติดตาม → แจ้งเมื่อสถานะเปลี่ยน
+ *
+ * TTS: SW ไม่มี SpeechSynthesis → ส่ง { type:'SPEAK', text } ไปยัง tab ที่เปิดอยู่
+ * แล้วให้ tab นั้นเล่นเสียงพูดแทน (useSWSpeak hook)
  */
 'use strict'
 
-const POLL_MS           = 20_000
-const ADMIN_CACHE       = 'sw-admin-v1'
-const ADMIN_STATE_KEY   = '/sw-admin-state'
-const CUSTOMER_CACHE    = 'sw-customer-v1'
+const POLL_MS            = 20_000
+const ADMIN_CACHE        = 'sw-admin-v1'
+const ADMIN_STATE_KEY    = '/sw-admin-state'
+const CUSTOMER_CACHE     = 'sw-customer-v1'
 const CUSTOMER_STATE_KEY = '/sw-customer-state'
 
 // ─── Install / Activate ──────────────────────────────────────────────────────
@@ -40,6 +43,21 @@ async function writeCache(cacheName, key, data) {
   } catch { /* ignore */ }
 }
 
+// ─── Broadcast SPEAK → tabs ───────────────────────────────────────────────────
+/**
+ * ส่ง message { type: 'SPEAK', text } ไปยัง tab ที่เปิดอยู่
+ * filterFn: กรองว่า tab ไหนควรรับ (ถ้าไม่ระบุ = ทุก tab)
+ * ส่งเฉพาะ tab แรกที่ match เพื่อไม่ให้เสียงซ้ำ
+ */
+async function broadcastSpeak(text, filterFn) {
+  try {
+    const all     = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const targets = filterFn ? all.filter(filterFn) : all
+    const target  = targets[0] ?? all[0]   // prefer filtered, fallback any
+    if (target) target.postMessage({ type: 'SPEAK', text })
+  } catch { /* ignore */ }
+}
+
 // ─── Polling loop ─────────────────────────────────────────────────────────────
 
 let _polling = false
@@ -65,8 +83,8 @@ async function pollAdmin() {
     if (!res.ok) return
     const orders = await res.json()
 
-    const state      = await readCache(ADMIN_CACHE, ADMIN_STATE_KEY) ?? { ids: [], initialized: false }
-    const knownIds   = new Set(state.ids)
+    const state    = await readCache(ADMIN_CACHE, ADMIN_STATE_KEY) ?? { ids: [], initialized: false }
+    const knownIds = new Set(state.ids)
 
     if (!state.initialized) {
       orders.forEach((o) => knownIds.add(o.id))
@@ -82,14 +100,25 @@ async function pollAdmin() {
       const name  = order.customer?.name || 'ลูกค้า'
       const total = (order.total ?? 0).toLocaleString('th-TH')
       const type  = order.orderType === 'delivery' ? '🚗 Delivery' : '🛍️ Pickup'
+
+      // ── Native notification (ทุกกรณี) ──
       await self.registration.showNotification(`📦 ออเดอร์ใหม่! #${order.orderNumber}`, {
-        body:             `${name} · ฿${total} · ${type}`,
-        icon:             '/favicon.ico',
-        badge:            '/favicon.ico',
-        tag:              `admin-order-${order.id}`,
+        body:               `${name} · ฿${total} · ${type}`,
+        icon:               '/favicon.ico',
+        badge:              '/favicon.ico',
+        tag:                `admin-order-${order.id}`,
         requireInteraction: true,
-        data:             { type: 'admin', url: '/admin/orders' },
+        data:               { type: 'admin', url: '/admin/orders' },
       })
+
+      // ── TTS: ส่งไป admin tab เท่านั้น ──
+      // ถ้าไม่มี admin tab (admin ไม่ได้เปิดอยู่) → ส่งไป tab อื่นก็ยังดี
+      const extra = freshPending.length > 1
+        ? ` และมีออเดอร์เพิ่มอีก ${freshPending.length - 1} รายการ`
+        : ''
+      const speech = `มีออเดอร์ใหม่เข้ามาจาก${name} ยอด${total}บาท${extra} กรุณาตรวจสอบด้วยครับ`
+
+      await broadcastSpeak(speech, (c) => c.url.includes('/admin'))
     }
   } catch { /* network error — retry next cycle */ }
 }
@@ -98,15 +127,31 @@ async function pollAdmin() {
 // CUSTOMER — แจ้งเตือนสถานะออเดอร์ของลูกค้า
 // ══════════════════════════════════════════════════════════
 
-const CUSTOMER_STATUS_MESSAGES = {
-  cooking:    { title: 'กำลังทำอาหาร! 👨‍🍳', body: 'ร้านรับออเดอร์และกำลังทำอาหารให้คุณแล้ว' },
-  delivering: { title: 'กำลังจัดส่ง! 🛵',   body: 'อาหารของคุณกำลังเดินทางมาแล้ว' },
-  completed:  { title: 'พร้อมแล้ว! ✅',      body: 'อาหารของคุณเสร็จแล้ว มารับได้เลย' },
-  cancelled:  { title: 'ออเดอร์ถูกยกเลิก ❌', body: 'ออเดอร์ของคุณถูกยกเลิก กรุณาติดต่อร้าน' },
+const CUSTOMER_STATUS_INFO = {
+  cooking: {
+    title:  'กำลังทำอาหาร! 👨‍🍳',
+    body:   'ร้านรับออเดอร์และกำลังทำอาหารให้คุณแล้ว',
+    speech: 'ร้านรับออเดอร์แล้วครับ กำลังทำอาหารให้คุณ รอสักครู่นะครับ',
+  },
+  delivering: {
+    title:  'กำลังจัดส่ง! 🛵',
+    body:   'อาหารของคุณกำลังเดินทางมาแล้ว',
+    speech: 'อาหารของคุณกำลังส่งแล้วครับ รอรับได้เลยนะครับ',
+  },
+  completed: {
+    title:  'พร้อมแล้ว! ✅',
+    body:   'อาหารของคุณเสร็จแล้ว มารับได้เลย',
+    speech: 'อาหารที่คุณสั่งเสร็จเรียบร้อยแล้วครับ มารับได้เลยนะครับ ขอบคุณที่ใช้บริการครับ',
+  },
+  cancelled: {
+    title:  'ออเดอร์ถูกยกเลิก ❌',
+    body:   'ออเดอร์ของคุณถูกยกเลิก กรุณาติดต่อร้าน',
+    speech: 'ขออภัยครับ ออเดอร์ของคุณถูกยกเลิกแล้ว กรุณาติดต่อร้านครับ',
+  },
 }
 
 const TERMINAL_STATUSES = new Set(['completed', 'cancelled'])
-const MAX_TRACK_MS      = 24 * 60 * 60 * 1000  // 24 ชั่วโมง
+const MAX_TRACK_MS      = 24 * 60 * 60 * 1000   // 24 ชั่วโมง
 
 async function pollCustomerOrders() {
   const state = await readCache(CUSTOMER_CACHE, CUSTOMER_STATE_KEY)
@@ -130,23 +175,29 @@ async function pollCustomerOrders() {
       const order = await res.json()
 
       if (order.status !== info.lastStatus) {
-        // สถานะเปลี่ยน → แจ้งเตือน (ถ้าลูกค้าไม่ได้อยู่หน้า order อยู่แล้ว)
-        const msg = CUSTOMER_STATUS_MESSAGES[order.status]
-        if (msg) {
-          const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        const msgInfo = CUSTOMER_STATUS_INFO[order.status]
+        if (msgInfo) {
+          const clients     = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
           const onOrderPage = clients.some((c) => c.url.includes(`/order/${orderId}`))
 
           if (!onOrderPage) {
-            await self.registration.showNotification(`${msg.title}`, {
-              body:             `ออเดอร์ #${info.orderNumber} · ${msg.body}`,
-              icon:             '/favicon.ico',
-              badge:            '/favicon.ico',
-              tag:              `customer-order-${orderId}`,
-              requireInteraction: order.status !== 'completed',
-              data:             { type: 'customer', url: `/order/${orderId}`, orderId },
+            // ── ลูกค้าอยู่ tab อื่น → แสดง notification + เล่นเสียงพูด ──
+            await self.registration.showNotification(msgInfo.title, {
+              body:               `ออเดอร์ #${info.orderNumber} · ${msgInfo.body}`,
+              icon:               '/favicon.ico',
+              badge:              '/favicon.ico',
+              tag:                `customer-order-${orderId}`,
+              requireInteraction: !TERMINAL_STATUSES.has(order.status),
+              data:               { type: 'customer', url: `/order/${orderId}`, orderId },
             })
+
+            // TTS ไปยัง tab ใดก็ได้ของเว็บไซต์ (ไม่ใช่ admin)
+            await broadcastSpeak(
+              msgInfo.speech,
+              (c) => !c.url.includes('/admin'),
+            )
           } else {
-            // ลูกค้าอยู่ในหน้า order แล้ว → ส่ง message ให้หน้าจัดการเอง (hook จะทำงาน)
+            // ── ลูกค้าอยู่หน้า order อยู่แล้ว → ส่ง message ให้ hook จัดการ (เสียง+TTS) ──
             for (const client of clients) {
               if (client.url.includes(`/order/${orderId}`)) {
                 client.postMessage({ type: 'ORDER_STATUS_CHANGED', orderId, newStatus: order.status })
@@ -158,10 +209,9 @@ async function pollCustomerOrders() {
         updated[orderId] = { ...info, lastStatus: order.status }
         dirty = true
 
-        // หยุด track หลังสถานะ terminal
+        // force expire รอบถัดไปหลัง terminal
         if (TERMINAL_STATUSES.has(order.status)) {
-          // ยังเก็บ entry ไว้ รอรอบหน้าจะลบทิ้ง (เพื่อให้ notification แสดงก่อน)
-          updated[orderId].trackedAt = 0  // force expire next cycle
+          updated[orderId].trackedAt = 0
         }
       }
     } catch { /* ignore — network error */ }
@@ -179,14 +229,12 @@ self.addEventListener('message', async (event) => {
 
   switch (type) {
     case 'TRACK_ORDER': {
-      // ลูกค้าสั่งอาหารหรือ open หน้า order → เริ่ม track
       const { orderId, orderNumber, currentStatus } = event.data
       if (!orderId) return
 
-      const state   = await readCache(CUSTOMER_CACHE, CUSTOMER_STATE_KEY) ?? { orders: {} }
-      const orders  = { ...state.orders }
+      const state  = await readCache(CUSTOMER_CACHE, CUSTOMER_STATE_KEY) ?? { orders: {} }
+      const orders = { ...state.orders }
 
-      // ถ้ายัง track อยู่ไม่ต้อง reset (เก็บ status ที่รู้อยู่)
       if (!orders[orderId]) {
         orders[orderId] = {
           orderNumber: orderNumber || orderId,
@@ -227,10 +275,9 @@ self.addEventListener('notificationclick', (event) => {
     self.clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clients) => {
-        // หา tab ที่ตรงกับ URL ก่อน
         const match = clients.find((c) => c.url.includes(targetUrl))
         if (match && 'focus' in match) return match.focus()
-        // หา tab ที่ใกล้เคียง
+
         const anyMatch = clients.find((c) =>
           type === 'admin' ? c.url.includes('/admin') : !c.url.includes('/admin')
         )

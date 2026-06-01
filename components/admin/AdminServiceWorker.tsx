@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { BellOff, X } from 'lucide-react'
+import { useSWSpeak } from '@/lib/hooks/useSWSpeak'
 
 /**
  * Register Service Worker สำหรับ background order notifications
@@ -9,6 +10,9 @@ import { BellOff, X } from 'lucide-react'
 export function AdminServiceWorker() {
   const [blocked, setBlocked] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+
+  // รับ SPEAK message จาก SW → เล่น TTS ภาษาไทย
+  useSWSpeak()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
