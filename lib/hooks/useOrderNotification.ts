@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { speak } from '@/lib/utils/speak'
 import type { Order, OrderStatus } from '@/types'
 
 const STATUS_MESSAGES: Partial<Record<OrderStatus, { title: string; body: string; emoji: string; speech: string }>> = {
@@ -48,28 +49,7 @@ function playBeep(frequency: number) {
   }
 }
 
-function speak(text: string) {
-  try {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-    // Cancel any ongoing speech first
-    window.speechSynthesis.cancel()
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'th-TH'
-    utterance.rate = 0.88
-    utterance.pitch = 1.05
-    utterance.volume = 1.0
-
-    // Prefer a Thai voice if available, fall back to default
-    const voices = window.speechSynthesis.getVoices()
-    const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
-    if (thaiVoice) utterance.voice = thaiVoice
-
-    window.speechSynthesis.speak(utterance)
-  } catch {
-    // ignore — speech blocked or unsupported
-  }
-}
+// speak() imported from @/lib/utils/speak — รองรับ queue เมื่อ browser ไม่ focus
 
 export function useOrderNotification(order: Order | null, storeName = 'ร้านมะขาม') {
   const prevStatus = useRef<OrderStatus | null>(null)

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { subscribeToOrders } from '@/lib/services/orderService'
+import { speak } from '@/lib/utils/speak'
 import type { Order } from '@/types'
 
 // ─── Module-level AudioContext (ต้อง unlock ครั้งเดียวด้วย user gesture) ───────
@@ -76,21 +77,7 @@ function playAlarm() {
 }
 
 /** TTS ภาษาไทย */
-function speak(text: string) {
-  try {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang    = 'th-TH'
-    utterance.rate    = 0.9
-    utterance.pitch   = 1.0
-    utterance.volume  = 1.0
-    const voices = window.speechSynthesis.getVoices()
-    const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
-    if (thaiVoice) utterance.voice = thaiVoice
-    window.speechSynthesis.speak(utterance)
-  } catch { /* ignore */ }
-}
+// speak() imported from @/lib/utils/speak — รองรับ queue เมื่อ browser ไม่ focus
 
 /** กระพริบ title tab */
 function flashTitle(msg: string) {
