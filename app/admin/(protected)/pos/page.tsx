@@ -159,32 +159,34 @@ export default function PosPage() {
     setSaving(true)
     try {
       const orderNumber = generateOrderNumber()
+
+      // Firestore ไม่รับ undefined — ใช้ conditional spread แทน
       const orderItems: OrderItem[] = cart.map((i) => ({
-        menuItemId:      i.menuItemId,
-        name:            i.name,
-        price:           i.price,
-        qty:             i.qty,
-        subtotal:        i.price * i.qty,
-        imageUrl:        i.imageUrl,
-        selectedOptions: i.selectedOptions.length > 0 ? i.selectedOptions : undefined,
-        itemNote:        i.itemNote || undefined,
+        menuItemId: i.menuItemId,
+        name:       i.name,
+        price:      i.price,
+        qty:        i.qty,
+        subtotal:   i.price * i.qty,
+        imageUrl:   i.imageUrl || '',
+        ...(i.selectedOptions.length > 0 && { selectedOptions: i.selectedOptions }),
+        ...(i.itemNote && { itemNote: i.itemNote }),
       }))
 
       await createOrder({
         orderNumber,
-        orderType:    'pickup',
-        source:       'pos',
-        customer:     { name: 'หน้าร้าน', phone: '' },
-        items:        orderItems,
-        payment:      { method: 'cash', status: 'paid' },
+        orderType:   'pickup',
+        source:      'pos',
+        customer:    { name: 'หน้าร้าน', phone: '-' },
+        items:       orderItems,
+        payment:     { method: 'cash', status: 'paid' },
         subtotal,
-        deliveryFee:  0,
-        discount:     discountAmount > 0 ? discountAmount : undefined,
+        deliveryFee: 0,
         total,
-        note:         discountAmount > 0
+        note:        discountAmount > 0
           ? `ส่วนลด ${discountType === 'percent' ? discountInput + '%' : formatCurrency(discountAmount)}`
           : '',
-        status:       'completed',
+        status:      'completed',
+        ...(discountAmount > 0 && { discount: discountAmount }),
       })
 
       const orderChange = change
@@ -215,8 +217,9 @@ export default function PosPage() {
       setCashInput('')
       toast.success(`✅ บันทึกออเดอร์ ${orderNumber} สำเร็จ`)
     } catch (e) {
-      toast.error('บันทึกออเดอร์ไม่สำเร็จ')
-      console.error(e)
+      const msg = e instanceof Error ? e.message : String(e)
+      toast.error(`บันทึกไม่สำเร็จ: ${msg.slice(0, 80)}`)
+      console.error('[POS] createOrder error:', e)
     } finally {
       setSaving(false)
     }
