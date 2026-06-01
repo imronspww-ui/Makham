@@ -5,6 +5,7 @@ import { ShoppingCart, Store, ClipboardList } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { CartDrawer } from '@/components/customer/CartDrawer'
+import { CustomerOrderTracker } from '@/components/customer/CustomerOrderTracker'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { useStoreHours } from '@/lib/hooks/useStoreHours'
 
@@ -25,6 +26,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-fixed"
+      // CustomerOrderTracker ซ่อนอยู่ในนี้ — track order status ใน SW background
       style={bgImageUrl
         ? { backgroundImage: `url(${bgImageUrl})` }
         : { background: 'linear-gradient(165deg, #fef9f2 0%, #fff7ed 55%, #fef4e2 100%)' }
@@ -86,6 +88,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </div>
         </div>
       </header>
+
+      {/* Background order tracking via Service Worker */}
+      <CustomerOrderTracker />
 
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />

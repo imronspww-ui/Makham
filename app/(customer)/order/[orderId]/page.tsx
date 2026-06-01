@@ -1,5 +1,5 @@
 'use client'
-import { use, useState, useRef } from 'react'
+import { use, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift, MapPin, ExternalLink } from 'lucide-react'
@@ -91,6 +91,20 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
   const storeName = settings?.store.name ?? 'ร้านมะขาม'
 
   useOrderNotification(order, storeName)
+
+  // บอก SW ให้ track ออเดอร์นี้ตั้งแต่เปิดหน้า
+  useEffect(() => {
+    if (!orderId || !order) return
+    if (!('serviceWorker' in navigator)) return
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.active?.postMessage({
+        type:          'TRACK_ORDER',
+        orderId,
+        orderNumber:   order.orderNumber,
+        currentStatus: order.status,
+      })
+    })
+  }, [orderId, order?.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Spinner text="กำลังโหลดออเดอร์..." />
   if (!order) return (
