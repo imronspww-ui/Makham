@@ -9,7 +9,7 @@ interface Props {
 
 export function CategoryFilter({ categories, activeId, onChange }: Props) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="sticky top-[57px] z-20 -mx-4 px-4 py-2 bg-white/80 backdrop-blur-md border-b border-stone-100/80 flex gap-2 overflow-x-auto scrollbar-hide">
       <button
         onClick={() => onChange(null)}
         className={[

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Plus, UtensilsCrossed, Flame } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
@@ -12,39 +12,57 @@ interface Props {
 }
 
 export function MenuCard({ item, showPopularBadge = true }: Props) {
-  const { addItem, items, getItemEffectivePrice } = useCartStore()
-  const [imgError, setImgError] = useState(false)
+  const { addItem, items } = useCartStore()
+  const [imgError,    setImgError]    = useState(false)
   const [showOptions, setShowOptions] = useState(false)
 
-  const cartItem = items.find((i) => i.menuItemId === item.id)
-  const cartQty = cartItem?.qty ?? 0
+  const cartItem   = items.find((i) => i.menuItemId === item.id)
+  const cartQty    = cartItem?.qty ?? 0
   const unavailable = !item.isAvailable || item.isSoldOut
-  const hasOptions = (item.optionGroups ?? []).length > 0
+  const hasOptions  = (item.optionGroups ?? []).length > 0
 
-  function handleAdd() {
+  // ── ราคาเริ่มต้น สำหรับ item ที่ base price = ฿0 ────────────────────────────
+  // หาราคาต่ำสุดที่เป็นไปได้ (required group → cheapest choice)
+  const startingPrice = useMemo(() => {
+    if (item.price > 0 || !hasOptions) return null
+    const minFromRequired = item.optionGroups.reduce((acc, group) => {
+      if (!group.required) return acc
+      const cheapest = Math.min(...group.choices.map((c) => c.extraPrice))
+      return acc + cheapest
+    }, 0)
+    // ถ้าไม่มี required group ให้ใช้ราคาต่ำสุดจากทุก choice
+    if (minFromRequired === 0) {
+      const allPrices = item.optionGroups.flatMap((g) => g.choices.map((c) => c.extraPrice))
+      return allPrices.length > 0 ? Math.min(...allPrices) : null
+    }
+    return minFromRequired
+  }, [item.price, item.optionGroups, hasOptions])
+
+  // ── เปิด modal เสมอสำหรับ item ที่มี options (ทั้ง click การ์ดและปุ่ม +) ───
+  function handleClick() {
     if (unavailable) return
-    if (hasOptions && !cartItem) {
+    if (hasOptions) {
       setShowOptions(true)
       return
     }
     addItem({
-      menuItemId: item.id,
-      name: item.name,
-      price: item.price,
-      imageUrl: item.imageUrl,
+      menuItemId:      item.id,
+      name:            item.name,
+      price:           item.price,
+      imageUrl:        item.imageUrl,
       selectedOptions: [],
-      itemNote: '',
-      optionGroups: item.optionGroups,
+      itemNote:        '',
+      optionGroups:    item.optionGroups,
     })
   }
 
   function handleModalAdd(selectedOptions: SelectedOption[], itemNote: string, qty: number) {
     for (let i = 0; i < qty; i++) {
       addItem({
-        menuItemId: item.id,
-        name: item.name,
-        price: item.price,
-        imageUrl: item.imageUrl,
+        menuItemId:   item.id,
+        name:         item.name,
+        price:        item.price,
+        imageUrl:     item.imageUrl,
         selectedOptions,
         itemNote,
         optionGroups: item.optionGroups,
@@ -58,10 +76,13 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
   return (
     <>
       <div
+        onClick={handleClick}
         className={[
           'group relative flex flex-col rounded-2xl bg-white border border-stone-100 shadow-sm',
-          'overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5',
-          unavailable ? 'opacity-60' : '',
+          'overflow-hidden transition-all duration-200',
+          unavailable
+            ? 'opacity-60 cursor-not-allowed'
+            : 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:scale-[0.98]',
         ].join(' ')}
       >
         {/* Image */}
@@ -122,17 +143,22 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
             <p className="mt-0.5 text-xs text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
           )}
           <div className="mt-auto pt-2 flex items-center justify-between">
+            {/* Price — แสดง "ตั้งแต่ ฿X" ถ้า base = ฿0 */}
             <div>
-              <span className="font-bold text-orange-500 text-base">{formatCurrency(item.price)}</span>
-              {cartItem && (cartItem.selectedOptions?.length ?? 0) > 0 && (
-                <span className="ml-1 text-xs text-stone-400">
-                  (+{formatCurrency(getItemEffectivePrice(cartItem) - item.price)})
-                </span>
+              {startingPrice !== null && startingPrice > 0 ? (
+                <div className="flex flex-col leading-none">
+                  <span className="text-[10px] text-stone-400">ตั้งแต่</span>
+                  <span className="font-bold text-orange-500 text-base">{formatCurrency(startingPrice)}</span>
+                </div>
+              ) : (
+                <span className="font-bold text-orange-500 text-base">{formatCurrency(item.price)}</span>
               )}
             </div>
+            {/* + button — stopPropagation เพื่อไม่ให้ bubble ไป div onClick */}
             <button
-              onClick={handleAdd}
+              onClick={(e) => { e.stopPropagation(); handleClick() }}
               disabled={unavailable}
+              aria-label={`เพิ่ม ${item.name}`}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white shadow-sm transition-all hover:bg-orange-400 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus size={16} />
