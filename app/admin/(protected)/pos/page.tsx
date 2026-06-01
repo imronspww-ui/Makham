@@ -6,6 +6,7 @@ import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { createOrder } from '@/lib/services/orderService'
 import { getCustomer, upsertCustomerAfterOrder } from '@/lib/services/customerService'
+import { updateMenuItem } from '@/lib/services/menuService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { Spinner } from '@/components/ui/Spinner'
@@ -96,6 +97,9 @@ export default function PosPage() {
   const [memberProfile,  setMemberProfile]  = useState<CustomerProfile | null | 'not-found'>(null)
   const [memberSearching, setMemberSearching] = useState(false)
 
+  // ── Sold-out toggle state ─────────────────────────────────────────────────
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
   // ── Computed ──────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
 
@@ -116,10 +120,10 @@ export default function PosPage() {
     return Math.floor(total / 100 * (settings.loyalty.pointsPer100Baht ?? 5))
   }, [total, settings])
 
-  // ── Filtered menu ─────────────────────────────────────────────────────────
+  // ── Filtered menu (แสดงทั้ง available + soldOut ให้กดหมดได้จาก POS) ───────
   const filteredItems = useMemo(() => {
-    if (selectedCat === 'all') return menuItems.filter((m) => m.isAvailable && !m.isSoldOut)
-    return menuItems.filter((m) => m.isAvailable && !m.isSoldOut && m.categoryId === selectedCat)
+    if (selectedCat === 'all') return menuItems.filter((m) => m.isAvailable)
+    return menuItems.filter((m) => m.isAvailable && m.categoryId === selectedCat)
   }, [menuItems, selectedCat])
 
   // ── Quick cash buttons ────────────────────────────────────────────────────
@@ -148,6 +152,21 @@ export default function PosPage() {
       setMemberSearching(false)
     }
   }, [])
+
+  // ── Toggle sold-out ───────────────────────────────────────────────────────
+  async function toggleSoldOut(e: React.MouseEvent, item: MenuItem) {
+    e.stopPropagation()
+    if (togglingId === item.id) return
+    setTogglingId(item.id)
+    try {
+      await updateMenuItem(item.id, { isSoldOut: !item.isSoldOut })
+      toast.success(item.isSoldOut ? `✅ ${item.name} พร้อมขายแล้ว` : `🔴 ${item.name} ทำเครื่องหมายว่าหมดแล้ว`)
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
   // Auto-search เมื่อพิมพ์ครบ 10 หลัก
   useEffect(() => {
@@ -362,40 +381,85 @@ export default function PosPage() {
                   const totalQtyInCart = cart
                     .filter((c) => c.menuItemId === item.id)
                     .reduce((s, c) => s + c.qty, 0)
-                  const hasOptions = (item.optionGroups ?? []).length > 0
+                  const hasOptions  = (item.optionGroups ?? []).length > 0
+                  const soldOut     = item.isSoldOut
+                  const isToggling  = togglingId === item.id
                   return (
-                    <button
+                    <div
                       key={item.id}
-                      onClick={() => handleMenuItemClick(item)}
-                      className="relative flex flex-col rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden text-left hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95 group"
+                      className={[
+                        'relative flex flex-col rounded-2xl bg-white border shadow-sm overflow-hidden text-left transition-all group',
+                        soldOut
+                          ? 'border-gray-200 opacity-60'
+                          : 'border-gray-100 hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-95',
+                      ].join(' ')}
+                      onClick={() => !soldOut && handleMenuItemClick(item)}
                     >
+                      {/* Image */}
                       <div className="relative h-28 w-full bg-gray-100">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.imageUrl} alt={item.name}
-                            className="h-full w-full object-cover" />
+                            className={['h-full w-full object-cover', soldOut ? 'grayscale' : ''].join(' ')} />
                         ) : (
                           <div className="flex h-full items-center justify-center text-gray-200">
                             <UtensilsCrossed size={32} />
                           </div>
                         )}
-                        {totalQtyInCart > 0 && (
+
+                        {/* Sold-out overlay */}
+                        {soldOut && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                            <span className="rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 shadow">
+                              หมด
+                            </span>
+                          </div>
+                        )}
+
+                        {/* In-cart badge */}
+                        {!soldOut && totalQtyInCart > 0 && (
                           <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shadow-md">
                             {totalQtyInCart}
                           </div>
                         )}
-                        {hasOptions && (
+
+                        {/* Options indicator */}
+                        {!soldOut && hasOptions && (
                           <div className="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 text-white text-[10px] px-1.5 py-0.5">
                             เลือกตัวเลือก
                           </div>
                         )}
                       </div>
-                      <div className="p-2.5">
+
+                      {/* Info */}
+                      <div className="p-2.5 flex-1">
                         <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight">{item.name}</p>
-                        <p className="text-sm font-bold text-orange-500 mt-1">{formatCurrency(item.price)}</p>
+                        <p className={['text-sm font-bold mt-1', soldOut ? 'text-gray-400' : 'text-orange-500'].join(' ')}>
+                          {formatCurrency(item.price)}
+                        </p>
                       </div>
-                      <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/5 transition-colors pointer-events-none" />
-                    </button>
+
+                      {/* ── Toggle sold-out button ── */}
+                      <button
+                        type="button"
+                        onClick={(e) => toggleSoldOut(e, item)}
+                        disabled={isToggling}
+                        className={[
+                          'w-full py-1.5 text-[10px] font-semibold border-t transition-colors',
+                          isToggling ? 'opacity-50 cursor-wait' : '',
+                          soldOut
+                            ? 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'
+                            : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-red-50 hover:text-red-500',
+                        ].join(' ')}
+                      >
+                        {isToggling ? '...' : soldOut ? '✅ เปิดขายอีกครั้ง' : '🔴 กดหมด'}
+                      </button>
+
+                      {/* Hover overlay */}
+                      {!soldOut && (
+                        <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/5 transition-colors pointer-events-none" />
+                      )}
+                    </div>
                   )
                 })}
               </div>

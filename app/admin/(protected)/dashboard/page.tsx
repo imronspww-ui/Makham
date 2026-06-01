@@ -2,9 +2,11 @@
 import { useMemo, useState } from 'react'
 import {
   ClipboardList, TrendingUp, Clock, ChefHat, Truck,
-  CalendarDays, BarChart2, Trophy, ShoppingBag,
+  CalendarDays, BarChart2, Trophy, ShoppingBag, Bell,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
+import { useSettings } from '@/lib/hooks/useSettings'
 import { formatCurrency } from '@/lib/utils/format'
 import { OrderStatusBadge } from '@/components/admin/OrderStatusBadge'
 import { Spinner } from '@/components/ui/Spinner'
@@ -70,7 +72,9 @@ function BarChart({ data }: { data: { label: string; value: number; count: numbe
 
 export default function DashboardPage() {
   const { orders, loading } = useOrders()
+  const { settings } = useSettings()
   const [period, setPeriod] = useState<Period>('today')
+  const [notifSent, setNotifSent] = useState(false)
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -159,6 +163,51 @@ export default function DashboardPage() {
     }
   }, [orders, period])
 
+  // ── แจ้งเตือนสรุปยอดวันนี้ ────────────────────────────────────────────────
+  async function sendDailySummary() {
+    if (!('Notification' in window)) {
+      toast.error('Browser นี้ไม่รองรับการแจ้งเตือน')
+      return
+    }
+    let perm = Notification.permission
+    if (perm === 'default') perm = await Notification.requestPermission()
+    if (perm !== 'granted') {
+      toast.error('กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์ก่อน')
+      return
+    }
+
+    const storeName = settings?.store.name ?? 'ร้าน'
+    const avg       = stats.todayOrders > 0
+      ? formatCurrency(stats.todayRevenue / stats.todayOrders)
+      : '฿0'
+    const topItem   = stats.topItems[0]
+
+    const lines = [
+      `💰 รายได้: ${formatCurrency(stats.todayRevenue)}`,
+      `📋 ออเดอร์: ${stats.todayOrders} รายการ  •  เฉลี่ย ${avg}/ออเดอร์`,
+      topItem ? `🏆 ขายดี: ${topItem.name} (${topItem.qty} ชิ้น)` : '',
+    ].filter(Boolean).join('\n')
+
+    // ส่งผ่าน Service Worker ถ้ามี (ให้แสดงแม้ปิด tab แล้ว)
+    const swReg = 'serviceWorker' in navigator
+      ? await navigator.serviceWorker.getRegistration()
+      : undefined
+
+    if (swReg) {
+      await swReg.showNotification(`📊 สรุปยอดวันนี้ – ${storeName}`, {
+        body: lines,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'daily-summary',
+      })
+    } else {
+      new Notification(`📊 สรุปยอดวันนี้ – ${storeName}`, { body: lines })
+    }
+
+    setNotifSent(true)
+    toast.success('ส่งแจ้งเตือนสรุปยอดแล้ว')
+  }
+
   if (loading) return <Spinner text="กำลังโหลด..." />
 
   const periodLabel = period === 'today' ? 'วันนี้' : period === 'week' ? '7 วันที่ผ่านมา' : 'เดือนนี้'
@@ -167,6 +216,37 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <FirebaseBanner />
       <h1 className="text-2xl font-bold text-gray-800">ภาพรวมยอดขาย</h1>
+
+      {/* ── สรุปยอดวันนี้ + ปุ่มแจ้งเตือน ── */}
+      <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 p-4 shadow-md shadow-orange-100 flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-xs font-semibold text-orange-100 uppercase tracking-wider">สรุปวันนี้</p>
+          <p className="text-2xl font-extrabold text-white">{formatCurrency(stats.todayRevenue)}</p>
+          <p className="text-sm text-orange-100">
+            {stats.todayOrders} ออเดอร์
+            {stats.todayOrders > 0 && (
+              <span className="ml-2 opacity-80">
+                · เฉลี่ย {formatCurrency(stats.todayRevenue / stats.todayOrders)}
+              </span>
+            )}
+            {stats.topItems[0] && (
+              <span className="ml-2 opacity-80">· 🏆 {stats.topItems[0].name}</span>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={sendDailySummary}
+          className={[
+            'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all shrink-0',
+            notifSent
+              ? 'bg-white/20 text-white border border-white/30'
+              : 'bg-white text-orange-600 hover:bg-orange-50 shadow-sm',
+          ].join(' ')}
+        >
+          <Bell size={15} className={notifSent ? 'animate-none' : ''} />
+          {notifSent ? 'ส่งแล้ว' : 'แจ้งเตือน'}
+        </button>
+      </div>
 
       {/* ── Period tabs ── */}
       <div className="flex gap-2">
