@@ -191,10 +191,20 @@ export interface CustomerProfile {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface ReceiptSettings {
+  showLogo:      boolean   // แสดงโลโก้จาก store settings
+  showAddress:   boolean   // แสดงที่อยู่จาก store settings
+  phone:         string    // เบอร์โทรร้าน (สำหรับใบเสร็จ)
+  taxId:         string    // เลขที่ผู้เสียภาษี (ถ้าว่างไม่แสดง)
+  footerMessage: string    // ข้อความท้ายใบเสร็จ
+  noteLines:     string    // บรรทัดพิเศษ newline-separated (WiFi, LINE, social ฯลฯ)
+}
+
 export interface Settings {
   store: StoreSettings
   promptpay: PromptPaySettings
   delivery: DeliverySettings
   openingHours?: OpeningHoursSettings
   loyalty?: LoyaltySettings
+  receipt?: ReceiptSettings
 }

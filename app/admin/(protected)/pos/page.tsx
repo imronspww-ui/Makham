@@ -71,7 +71,9 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
 export default function PosPage() {
   const { items: menuItems, categories, loading } = useMenu()
   const { settings } = useSettings()
-  const storeName = settings?.store.name ?? 'ร้านมะขาม'
+  const storeName    = settings?.store.name ?? 'ร้านมะขาม'
+  const storeForReceipt  = settings?.store
+  const receiptSettings  = settings?.receipt
 
   // ── Cart state ────────────────────────────────────────────────────────────
   const [cart, setCart]               = useState<PosCartItem[]>([])
@@ -428,7 +430,7 @@ export default function PosPage() {
                 )}
               </div>
               <button
-                onClick={() => printReceipt(lastOrder.receipt, storeName)}
+                onClick={() => printReceipt(lastOrder.receipt, storeName, storeForReceipt, receiptSettings)}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border border-green-300 text-green-700 text-sm font-semibold py-2 hover:bg-green-100 transition-colors"
               >
                 <Printer size={15} />

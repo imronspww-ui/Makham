@@ -4,6 +4,7 @@
  */
 
 import { formatCurrency } from './format'
+import type { ReceiptSettings, StoreSettings } from '@/types'
 
 export interface ReceiptItem {
   name: string
@@ -25,12 +26,23 @@ export interface ReceiptData {
   change:         number
 }
 
-function padLine(left: string, right: string, width = 32): string {
-  const pad = width - left.length - right.length
-  return left + ' '.repeat(Math.max(1, pad)) + right
+// ค่าเริ่มต้นถ้าไม่ได้ตั้งค่า
+const DEFAULT_FOOTER = 'ขอบคุณที่ใช้บริการ 🙏'
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
-function generateReceiptHtml(data: ReceiptData, storeName: string): string {
+function generateReceiptHtml(
+  data:      ReceiptData,
+  storeName: string,
+  store?:    Pick<StoreSettings, 'logoUrl' | 'address'>,
+  receipt?:  ReceiptSettings,
+): string {
   const { orderNumber, paidAt, items, subtotal, discountAmount, discountLabel, total, cashPaid, change } = data
 
   const dateStr = paidAt.toLocaleDateString('th-TH', {
@@ -38,19 +50,31 @@ function generateReceiptHtml(data: ReceiptData, storeName: string): string {
   })
   const timeStr = paidAt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 
+  // ── ส่วนหัว ──
+  const logoUrl   = (receipt?.showLogo && store?.logoUrl) ? store.logoUrl : ''
+  const showAddr  = receipt?.showAddress && store?.address
+  const phone     = receipt?.phone?.trim() ?? ''
+  const taxId     = receipt?.taxId?.trim() ?? ''
+  const footerMsg = receipt?.footerMessage?.trim() || DEFAULT_FOOTER
+  const noteLines = (receipt?.noteLines ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+  // ── รายการสินค้า ──
   const itemRows = items.map((item) => {
     const lineTotal = formatCurrency(item.price * item.qty)
-    const unitStr   = item.qty > 1 ? `  ${item.qty} x ${formatCurrency(item.price)}` : ''
-    const optStr    = item.options ? `  [${item.options}]` : ''
-    const noteStr   = item.note   ? `  หมายเหตุ: ${item.note}` : ''
+    const unitStr   = item.qty > 1 ? `${item.qty} x ${formatCurrency(item.price)}` : ''
+    const optStr    = item.options ? `[${item.options}]` : ''
+    const noteStr   = item.note   ? `หมายเหตุ: ${item.note}` : ''
     return `
       <div class="row">
-        <div class="name">${item.name}</div>
+        <div class="name">${escHtml(item.name)}</div>
         <div class="amt">${lineTotal}</div>
       </div>
-      ${unitStr  ? `<div class="sub">${unitStr}</div>`  : ''}
-      ${optStr   ? `<div class="sub">${optStr}</div>`   : ''}
-      ${noteStr  ? `<div class="sub">${noteStr}</div>`  : ''}
+      ${unitStr ? `<div class="sub">&nbsp;&nbsp;${unitStr}</div>` : ''}
+      ${optStr  ? `<div class="sub">&nbsp;&nbsp;${escHtml(optStr)}</div>` : ''}
+      ${noteStr ? `<div class="sub">&nbsp;&nbsp;${escHtml(noteStr)}</div>` : ''}
     `
   }).join('')
 
@@ -73,14 +97,14 @@ function generateReceiptHtml(data: ReceiptData, storeName: string): string {
   .right   { text-align: right; }
   .bold    { font-weight: bold; }
   .lg      { font-size: 15px; }
-  .xl      { font-size: 19px; }
+  .sub     { font-size: 11px; color: #555; margin: 0 0 2px 0; }
   .dash    { border-top: 1px dashed #000; margin: 5px 0; }
   .row     { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; margin: 2px 0; }
   .name    { flex: 1; word-break: break-all; }
   .amt     { white-space: nowrap; font-weight: bold; }
-  .sub     { font-size: 11px; color: #555; margin: 0 0 2px 0; }
-  .total-row { font-size: 16px; font-weight: bold; margin: 4px 0; }
+  .total-row  { font-size: 16px; font-weight: bold; margin: 4px 0; }
   .change-row { font-size: 18px; font-weight: bold; }
+  .logo    { display: block; max-width: 28mm; max-height: 16mm; object-fit: contain; margin: 0 auto 4px; }
   @media print {
     body { margin: 0; padding: 2mm; }
     @page { margin: 0; size: 80mm auto; }
@@ -89,11 +113,15 @@ function generateReceiptHtml(data: ReceiptData, storeName: string): string {
 </head>
 <body>
 
-  <div class="center bold lg">${storeName}</div>
-  <div class="center" style="font-size:11px; margin-top:2px">${dateStr} ${timeStr}</div>
+  ${logoUrl ? `<img class="logo" src="${escHtml(logoUrl)}" alt="logo" />` : ''}
+  <div class="center bold lg">${escHtml(storeName)}</div>
+  ${showAddr ? `<div class="center sub">${escHtml(store!.address)}</div>` : ''}
+  ${phone    ? `<div class="center sub">โทร ${escHtml(phone)}</div>` : ''}
+  ${taxId    ? `<div class="center sub">เลขที่ผู้เสียภาษี: ${escHtml(taxId)}</div>` : ''}
 
   <div class="dash"></div>
   <div class="bold">เลขที่: ${orderNumber}</div>
+  <div class="sub">${dateStr} ${timeStr}</div>
   <div class="dash"></div>
 
   ${itemRows}
@@ -129,27 +157,32 @@ function generateReceiptHtml(data: ReceiptData, storeName: string): string {
   </div>
 
   <div class="dash"></div>
-  <div class="center" style="margin-top:4px">ขอบคุณที่ใช้บริการ 🙏</div>
-  <div class="center" style="font-size:10px; margin-top:2px; color:#666">POS หน้าร้าน</div>
+  <div class="center" style="margin-top:4px">${escHtml(footerMsg)}</div>
+  ${noteLines.map((l) => `<div class="center sub">${escHtml(l)}</div>`).join('')}
 
 </body>
 </html>`
 }
 
-export function printReceipt(data: ReceiptData, storeName: string) {
-  const html = generateReceiptHtml(data, storeName)
-  const win  = window.open('', '_blank', 'width=420,height=620,toolbar=0,menubar=0')
+export function printReceipt(
+  data:      ReceiptData,
+  storeName: string,
+  store?:    Pick<StoreSettings, 'logoUrl' | 'address'>,
+  receipt?:  ReceiptSettings,
+) {
+  const html = generateReceiptHtml(data, storeName, store, receipt)
+  const win  = window.open('', '_blank', 'width=420,height=680,toolbar=0,menubar=0')
   if (!win) {
     alert('กรุณาอนุญาต Pop-up เพื่อพิมพ์ใบเสร็จ')
     return
   }
   win.document.write(html)
   win.document.close()
-  // รอ fonts โหลดก่อน print
+  // รอ fonts + โลโก้โหลดก่อน print
   win.addEventListener('load', () => {
     setTimeout(() => {
       win.print()
       win.close()
-    }, 250)
+    }, receipt?.showLogo && store?.logoUrl ? 600 : 250)
   })
 }
