@@ -254,7 +254,7 @@ export default function CartPage() {
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="เช่น ไม่ใส่ผัก, ไม่ใส่น้ำแข็ง, ส่งด่วน"
-          className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 resize-none"
         />
       </div>
 
