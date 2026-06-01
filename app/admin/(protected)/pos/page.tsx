@@ -1,15 +1,16 @@
 'use client'
-import { useState, useMemo } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { createOrder } from '@/lib/services/orderService'
+import { getCustomer, upsertCustomerAfterOrder } from '@/lib/services/customerService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
-import type { MenuItem, OrderItem, SelectedOption } from '@/types'
+import type { MenuItem, OrderItem, SelectedOption, CustomerProfile } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,39 @@ type DiscountType = 'percent' | 'amount'
 let cartKeyCounter = 0
 function nextCartKey() {
   return `pos-${Date.now()}-${++cartKeyCounter}`
+}
+
+// ─── NumPad component ─────────────────────────────────────────────────────────
+
+function NumPad({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  function press(key: string) {
+    if (key === '⌫') { onChange(value.slice(0, -1)); return }
+    if (key === 'C')  { onChange(''); return }
+    // ห้าม leading zero
+    if (value === '' || value === '0') { onChange(key === '00' ? '0' : key); return }
+    if (value.length >= 7) return     // max ฿9,999,999
+    onChange(value + key)
+  }
+  const keys = ['1','2','3','4','5','6','7','8','9','00','0','⌫']
+  return (
+    <div className="grid grid-cols-3 gap-1.5">
+      {keys.map((k) => (
+        <button
+          key={k}
+          type="button"
+          onClick={() => press(k)}
+          className={[
+            'rounded-xl py-3 text-base font-bold select-none transition-all active:scale-95',
+            k === '⌫'
+              ? 'bg-red-50 text-red-400 border border-red-200 hover:bg-red-100'
+              : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-orange-50 hover:border-orange-300',
+          ].join(' ')}
+        >
+          {k === '⌫' ? <Delete size={15} className="mx-auto" /> : k}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 // ─── POS Page ─────────────────────────────────────────────────────────────────
@@ -55,6 +89,11 @@ export default function PosPage() {
   const [saving,    setSaving]    = useState(false)
   const [lastOrder, setLastOrder] = useState<{ number: string; total: number; change: number; receipt: ReceiptData } | null>(null)
 
+  // ── Member state ──────────────────────────────────────────────────────────
+  const [memberPhone,    setMemberPhone]    = useState('')
+  const [memberProfile,  setMemberProfile]  = useState<CustomerProfile | null | 'not-found'>(null)
+  const [memberSearching, setMemberSearching] = useState(false)
+
   // ── Computed ──────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
 
@@ -65,9 +104,15 @@ export default function PosPage() {
   }, [discountInput, discountType, subtotal])
 
   const total    = Math.max(0, subtotal - discountAmount)
-  const cashPaid = parseFloat(cashInput) || 0
+  const cashPaid = parseInt(cashInput, 10) || 0
   const change   = Math.max(0, cashPaid - total)
   const canPay   = cashPaid >= total && total > 0
+
+  // แต้มที่จะได้รับ
+  const pointsEarned = useMemo(() => {
+    if (!settings?.loyalty?.enabled || total <= 0) return 0
+    return Math.floor(total / 100 * (settings.loyalty.pointsPer100Baht ?? 5))
+  }, [total, settings])
 
   // ── Filtered menu ─────────────────────────────────────────────────────────
   const filteredItems = useMemo(() => {
@@ -75,13 +120,47 @@ export default function PosPage() {
     return menuItems.filter((m) => m.isAvailable && !m.isSoldOut && m.categoryId === selectedCat)
   }, [menuItems, selectedCat])
 
+  // ── Quick cash buttons ────────────────────────────────────────────────────
+  const quickAmounts = useMemo(() => {
+    if (total <= 0) return []
+    const rounded = [
+      Math.ceil(total / 20) * 20,
+      Math.ceil(total / 50) * 50,
+      Math.ceil(total / 100) * 100,
+      Math.ceil(total / 500) * 500,
+    ].filter((v, i, arr) => v > total && arr.indexOf(v) === i).slice(0, 4)
+    if (!rounded.includes(total)) rounded.unshift(total)
+    return [...new Set(rounded)].sort((a, b) => a - b).slice(0, 5)
+  }, [total])
+
+  // ── Member search ─────────────────────────────────────────────────────────
+  const searchMember = useCallback(async (phone: string) => {
+    if (phone.length < 9) return
+    setMemberSearching(true)
+    try {
+      const profile = await getCustomer(phone)
+      setMemberProfile(profile ?? 'not-found')
+    } catch {
+      setMemberProfile('not-found')
+    } finally {
+      setMemberSearching(false)
+    }
+  }, [])
+
+  // Auto-search เมื่อพิมพ์ครบ 10 หลัก
+  useEffect(() => {
+    if (memberPhone.length === 10) {
+      searchMember(memberPhone)
+    } else if (memberPhone.length < 9) {
+      setMemberProfile(null)
+    }
+  }, [memberPhone, searchMember])
+
   // ── Cart helpers ──────────────────────────────────────────────────────────
   function handleMenuItemClick(item: MenuItem) {
     if ((item.optionGroups ?? []).length > 0) {
-      // เมนูมี option groups → เปิด modal
       setPendingItem(item)
     } else {
-      // ไม่มี option → เพิ่มเลย (รวมกับ line เดิมถ้ามี)
       addDirectToCart(item, [], '', 1)
     }
   }
@@ -92,7 +171,6 @@ export default function PosPage() {
 
     setCart((prev) => {
       if (selectedOptions.length === 0) {
-        // ไม่มีตัวเลือก: รวมกับ line เดิมที่ไม่มีตัวเลือกได้เลย
         const existing = prev.find((i) => i.menuItemId === item.id && i.selectedOptions.length === 0)
         if (existing) {
           return prev.map((i) =>
@@ -100,7 +178,6 @@ export default function PosPage() {
           )
         }
       }
-      // มีตัวเลือก หรือยังไม่มี line ว่าง → เพิ่ม line ใหม่
       return [
         ...prev,
         {
@@ -138,20 +215,9 @@ export default function PosPage() {
     setDiscountInput('')
     setCashInput('')
     setLastOrder(null)
+    setMemberPhone('')
+    setMemberProfile(null)
   }
-
-  // ── Quick cash buttons ────────────────────────────────────────────────────
-  const quickAmounts = useMemo(() => {
-    if (total <= 0) return []
-    const rounded = [
-      Math.ceil(total / 20) * 20,
-      Math.ceil(total / 50) * 50,
-      Math.ceil(total / 100) * 100,
-      Math.ceil(total / 500) * 500,
-    ].filter((v, i, arr) => v > total && arr.indexOf(v) === i).slice(0, 4)
-    if (!rounded.includes(total)) rounded.unshift(total)  // พอดี
-    return [...new Set(rounded)].sort((a, b) => a - b).slice(0, 5)
-  }, [total])
 
   // ── Save order ────────────────────────────────────────────────────────────
   async function handleSave() {
@@ -159,8 +225,8 @@ export default function PosPage() {
     setSaving(true)
     try {
       const orderNumber = generateOrderNumber()
+      const member = memberProfile && memberProfile !== 'not-found' ? memberProfile : null
 
-      // Firestore ไม่รับ undefined — ใช้ conditional spread แทน
       const orderItems: OrderItem[] = cart.map((i) => ({
         menuItemId: i.menuItemId,
         name:       i.name,
@@ -176,7 +242,10 @@ export default function PosPage() {
         orderNumber,
         orderType:   'pickup',
         source:      'pos',
-        customer:    { name: 'หน้าร้าน', phone: '-' },
+        customer: {
+          name:  member?.name ?? 'หน้าร้าน',
+          phone: member?.phone ?? '-',
+        },
         items:       orderItems,
         payment:     { method: 'cash', status: 'paid' },
         subtotal,
@@ -187,7 +256,20 @@ export default function PosPage() {
           : '',
         status:      'completed',
         ...(discountAmount > 0 && { discount: discountAmount }),
+        ...(pointsEarned > 0 && member && { pointsEarned }),
       })
+
+      // สะสมแต้มสมาชิก
+      if (member && settings?.loyalty?.enabled && pointsEarned > 0) {
+        await upsertCustomerAfterOrder({
+          phone:        member.phone,
+          name:         member.name,
+          pointsEarned,
+          pointsUsed:   0,
+          orderTotal:   total,
+          expiryMonths: settings.loyalty.expiryMonths ?? 3,
+        })
+      }
 
       const orderChange = change
       const receipt: ReceiptData = {
@@ -208,14 +290,15 @@ export default function PosPage() {
           ? (discountType === 'percent' ? `${discountInput}%` : formatCurrency(discountAmount))
           : '',
         total,
-        cashPaid:       parseFloat(cashInput) || 0,
+        cashPaid,
         change:         orderChange,
       }
       setLastOrder({ number: orderNumber, total, change: orderChange, receipt })
       setCart([])
       setDiscountInput('')
       setCashInput('')
-      toast.success(`✅ บันทึกออเดอร์ ${orderNumber} สำเร็จ`)
+      // คง member ไว้เผื่อออเดอร์ต่อเนื่อง
+      toast.success(`✅ บันทึกออเดอร์ ${orderNumber} สำเร็จ${member ? ` (+${pointsEarned} แต้ม)` : ''}`)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       toast.error(`บันทึกไม่สำเร็จ: ${msg.slice(0, 80)}`)
@@ -284,7 +367,6 @@ export default function PosPage() {
                       onClick={() => handleMenuItemClick(item)}
                       className="relative flex flex-col rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden text-left hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95 group"
                     >
-                      {/* Image */}
                       <div className="relative h-28 w-full bg-gray-100">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -295,25 +377,21 @@ export default function PosPage() {
                             <UtensilsCrossed size={32} />
                           </div>
                         )}
-                        {/* In-cart badge */}
                         {totalQtyInCart > 0 && (
                           <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shadow-md">
                             {totalQtyInCart}
                           </div>
                         )}
-                        {/* Has options indicator */}
                         {hasOptions && (
                           <div className="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 text-white text-[10px] px-1.5 py-0.5">
                             เลือกตัวเลือก
                           </div>
                         )}
                       </div>
-                      {/* Info */}
                       <div className="p-2.5">
                         <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight">{item.name}</p>
                         <p className="text-sm font-bold text-orange-500 mt-1">{formatCurrency(item.price)}</p>
                       </div>
-                      {/* Hover overlay */}
                       <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/5 transition-colors pointer-events-none" />
                     </button>
                   )
@@ -324,11 +402,11 @@ export default function PosPage() {
         </div>
 
         {/* ══════════ RIGHT: Cart + Payment ══════════ */}
-        <div className="w-80 xl:w-96 flex flex-col gap-3 shrink-0 overflow-hidden">
+        <div className="w-80 xl:w-96 flex flex-col gap-2.5 shrink-0 overflow-y-auto pb-2">
 
           {/* ── Success state ── */}
           {lastOrder && (
-            <div className="rounded-2xl bg-green-50 border border-green-200 p-4 flex flex-col gap-3">
+            <div className="rounded-2xl bg-green-50 border border-green-200 p-4 flex flex-col gap-3 shrink-0">
               <div className="flex items-center gap-2 text-green-700">
                 <CheckCircle2 size={20} />
                 <span className="font-bold text-sm">บันทึกออเดอร์แล้ว</span>
@@ -349,7 +427,6 @@ export default function PosPage() {
                   </div>
                 )}
               </div>
-              {/* ── ปุ่มพิมพ์ใบเสร็จ ── */}
               <button
                 onClick={() => printReceipt(lastOrder.receipt, storeName)}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border border-green-300 text-green-700 text-sm font-semibold py-2 hover:bg-green-100 transition-colors"
@@ -365,9 +442,9 @@ export default function PosPage() {
           )}
 
           {/* ── Cart ── */}
-          <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0">
+          <div className="flex flex-col gap-2 shrink-0">
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 h-32 text-gray-300 rounded-2xl bg-white border border-dashed border-gray-200">
+              <div className="flex flex-col items-center justify-center gap-2 h-28 text-gray-300 rounded-2xl bg-white border border-dashed border-gray-200">
                 <ShoppingBagIcon />
                 <p className="text-xs">กดเมนูเพื่อเพิ่มรายการ</p>
               </div>
@@ -377,7 +454,6 @@ export default function PosPage() {
                   className="flex items-start gap-2 rounded-xl bg-white border border-gray-100 px-3 py-2.5 shadow-sm">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
-                    {/* Selected options */}
                     {item.selectedOptions.length > 0 && (
                       <p className="text-xs text-gray-400 mt-0.5 leading-snug">
                         {item.selectedOptions.map((o) => o.choiceName).join(', ')}
@@ -393,7 +469,6 @@ export default function PosPage() {
                     )}
                     <p className="text-xs text-orange-500 font-semibold mt-0.5">{formatCurrency(item.price)} / ชิ้น</p>
                   </div>
-                  {/* Qty */}
                   <div className="flex items-center gap-1 shrink-0 mt-0.5">
                     <button onClick={() => setQty(item.cartKey, item.qty - 1)}
                       className="h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100 text-gray-600">
@@ -405,7 +480,6 @@ export default function PosPage() {
                       <Plus size={10} />
                     </button>
                   </div>
-                  {/* Subtotal */}
                   <p className="text-sm font-bold text-gray-700 w-14 text-right shrink-0 mt-0.5">{formatCurrency(item.price * item.qty)}</p>
                   <button onClick={() => removeFromCart(item.cartKey)}
                     className="text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-1">
@@ -423,7 +497,6 @@ export default function PosPage() {
               <span className="text-xs font-semibold text-gray-700">ส่วนลด</span>
             </div>
             <div className="flex gap-2">
-              {/* Type toggle */}
               <button
                 onClick={() => { setDiscountType('amount'); setDiscountInput('') }}
                 className={[
@@ -463,74 +536,147 @@ export default function PosPage() {
             )}
           </div>
 
-          {/* ── Summary + Payment ── */}
-          <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm flex flex-col gap-2.5 shrink-0">
-            {/* Subtotal */}
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>ยอดรวม</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-orange-500">
-                <span>ส่วนลด</span>
-                <span>-{formatCurrency(discountAmount)}</span>
+          {/* ── Member lookup ── */}
+          {settings?.loyalty?.enabled && (
+            <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm flex flex-col gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <Star size={14} className="text-orange-400" />
+                <span className="text-xs font-semibold text-gray-700">สมาชิก (ไม่บังคับ)</span>
               </div>
-            )}
-            <div className="flex justify-between font-bold text-base border-t border-gray-100 pt-2">
-              <span>ยอดสุทธิ</span>
-              <span className="text-orange-500">{formatCurrency(total)}</span>
-            </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={memberPhone}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 10)
+                      setMemberPhone(v)
+                    }}
+                    placeholder="เบอร์โทร 10 หลัก"
+                    className="w-full rounded-lg border border-gray-200 pl-7 pr-2.5 py-1.5 text-sm outline-none focus:border-orange-400"
+                  />
+                </div>
+                <button
+                  onClick={() => searchMember(memberPhone)}
+                  disabled={memberSearching || memberPhone.length < 9}
+                  className="rounded-lg bg-orange-500 text-white px-3 text-xs font-semibold hover:bg-orange-600 disabled:opacity-40 transition-colors"
+                >
+                  {memberSearching ? '...' : 'ค้นหา'}
+                </button>
+                {memberProfile && (
+                  <button
+                    onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
+                    className="rounded-lg border border-gray-200 text-gray-400 px-2 text-xs hover:bg-gray-50"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-            {/* Cash received */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-gray-500 font-medium">รับเงินมา (บาท)</label>
-              <input
-                type="number"
-                min="0"
-                value={cashInput}
-                onChange={(e) => setCashInput(e.target.value)}
-                placeholder="0"
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-lg font-bold text-gray-800 outline-none focus:border-orange-400 text-right"
-              />
-              {/* Quick amounts */}
-              {quickAmounts.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {quickAmounts.map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => setCashInput(String(amt))}
-                      className={[
-                        'rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors',
-                        amt === total
-                          ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-orange-300',
-                      ].join(' ')}
-                    >
-                      {amt === total ? '💵 พอดี' : formatCurrency(amt)}
-                    </button>
-                  ))}
+              {/* Member card */}
+              {memberProfile && memberProfile !== 'not-found' && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-amber-800">👤 {memberProfile.name}</p>
+                    <p className="text-xs text-amber-600 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
+                  </div>
+                  {pointsEarned > 0 && (
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-amber-600">จะได้รับ</p>
+                      <p className="text-base font-extrabold text-amber-700">+{pointsEarned}</p>
+                      <p className="text-[10px] text-amber-500">แต้ม</p>
+                    </div>
+                  )}
                 </div>
               )}
+              {memberProfile === 'not-found' && (
+                <p className="text-xs text-gray-400 text-center py-1">ไม่พบข้อมูลสมาชิก</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Summary + Payment ── */}
+          <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm flex flex-col gap-2.5 shrink-0">
+            {/* Summary row */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>ยอดรวม</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-orange-500">
+                  <span>ส่วนลด</span>
+                  <span>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg border-t border-gray-100 pt-1.5">
+                <span className="text-gray-700">ยอดสุทธิ</span>
+                <span className="text-orange-500">{formatCurrency(total)}</span>
+              </div>
             </div>
 
-            {/* Change */}
+            {/* Cash display */}
+            <div className={[
+              'rounded-xl px-3 py-2.5 flex items-center justify-between',
+              cashPaid > 0
+                ? canPay
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+                : 'bg-gray-50 border border-gray-200',
+            ].join(' ')}>
+              <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-600' : 'text-red-500') : 'text-gray-400'}`}>
+                รับเงินมา
+              </span>
+              <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-700' : 'text-red-600') : 'text-gray-300'}`}>
+                {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
+              </span>
+            </div>
+
+            {/* Change / shortage */}
             {cashPaid > 0 && total > 0 && (
               <div className={[
-                'flex justify-between items-center rounded-xl px-3 py-2.5 font-bold',
+                'flex justify-between items-center rounded-xl px-3 py-2 font-bold',
                 canPay
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-red-50 border border-red-200 text-red-600',
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-600',
               ].join(' ')}>
-                <span className="text-sm">{canPay ? '💰 เงินทอน' : '⚠️ รับเงินไม่พอ'}</span>
-                <span className="text-lg">{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
+                <span className="text-sm">{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
+                <span className="text-xl">{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
               </div>
             )}
 
+            {/* Quick amount buttons */}
+            {quickAmounts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {quickAmounts.map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => setCashInput(String(amt))}
+                    className={[
+                      'rounded-lg px-3 py-1.5 text-xs font-bold border transition-all active:scale-95',
+                      amt === cashPaid
+                        ? 'ring-2 ring-orange-400 border-orange-400 bg-orange-50 text-orange-700'
+                        : amt === total
+                          ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-orange-300',
+                    ].join(' ')}
+                  >
+                    {amt === total ? '💵 พอดี' : formatCurrency(amt)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* NumPad */}
+            <NumPad value={cashInput} onChange={setCashInput} />
+
             {/* Action buttons */}
-            <div className="flex gap-2 pt-1">
+            <div className="flex gap-2 pt-0.5">
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
               >
                 <RotateCcw size={13} />
                 ล้าง
@@ -545,14 +691,14 @@ export default function PosPage() {
                     : 'bg-gray-100 text-gray-300 cursor-not-allowed',
                 ].join(' ')}
               >
-                {saving ? '⏳ กำลังบันทึก...' : '✅ ชำระเงิน'}
+                {saving ? '⏳ กำลังบันทึก...' : `✅ ชำระเงิน${total > 0 ? ` ${formatCurrency(total)}` : ''}`}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Option modal (rendered outside the flex layout to prevent clipping) ── */}
+      {/* ── Option modal ── */}
       {pendingItem && (
         <ItemOptionsModal
           item={pendingItem}
@@ -564,7 +710,6 @@ export default function PosPage() {
   )
 }
 
-// tiny inline icon to avoid import issue
 function ShoppingBagIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
