@@ -2,6 +2,7 @@
 import { Sidebar } from '@/components/admin/Sidebar'
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { AudioUnlockBanner } from '@/components/admin/AudioUnlockBanner'
+import { AdminServiceWorker } from '@/components/admin/AdminServiceWorker'
 import { useAdminOrderAlert } from '@/lib/hooks/useAdminOrderAlert'
 
 /** Mount hook + แสดง iOS audio unlock banner */
@@ -18,6 +19,8 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
       {/* Main column */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Service Worker — background order polling (ทำงานแม้ไม่ได้เปิดหน้า admin) */}
+        <AdminServiceWorker />
         {/* iOS audio unlock banner (หายไปเองหลังแตะ) */}
         <AdminAlertProvider />
         <AdminHeader />
