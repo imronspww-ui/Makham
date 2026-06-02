@@ -30,9 +30,8 @@ export interface MenuItem {
   isSoldOut: boolean
   isPopular?: boolean
   optionGroups: OptionGroup[]
-  dailyStock?: number    // 0 หรือ undefined = ไม่จำกัด
-  currentStock?: number  // เหลือวันนี้ (null/undefined = เต็ม)
-  stockDate?: string     // วันที่รีเซ็ตล่าสุด YYYY-MM-DD
+  stockQty?: number      // จำนวนสินค้าคงเหลือ (ชิ้น), undefined/0 = ไม่จำกัด
+  packSize?: number      // จำนวนชิ้นต่อ 1 แพ็ค (สำหรับช่วยคำนวณ)
   avgRating?: number     // ค่าเฉลี่ยดาว 1-5 (คำนวณจาก reviews)
   ratingCount?: number   // จำนวนรีวิว
   createdAt: string

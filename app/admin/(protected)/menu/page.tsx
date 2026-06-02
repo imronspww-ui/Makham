@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2, PackageX, Package, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
-import { deleteMenuItem, updateMenuItem, setDailyStock } from '@/lib/services/menuService'
+import { deleteMenuItem, updateMenuItem, setStock } from '@/lib/services/menuService'
 import { deleteCategory } from '@/lib/services/categoryService'
 import { MenuFormModal } from '@/components/admin/MenuFormModal'
 import { CategoryFormModal } from '@/components/admin/CategoryFormModal'
@@ -20,8 +20,10 @@ export default function MenuPage() {
   const [editItem,     setEditItem]     = useState<MenuItem | null>(null)
   const [catModalOpen, setCatModalOpen] = useState(false)
   const [editCategory, setEditCategory] = useState<Category | null>(null)
-  const [stockEditing, setStockEditing] = useState<string | null>(null)  // itemId กำลังแก้สต็อก
-  const [stockInput,   setStockInput]   = useState('')
+  const [stockEditing, setStockEditing] = useState<string | null>(null)
+  const [stockQtyInput,  setStockQtyInput]  = useState('')   // จำนวนชิ้นรวม
+  const [packCountInput, setPackCountInput] = useState('')   // จำนวนแพ็ค
+  const [packSizeInput,  setPackSizeInput]  = useState('')   // ชิ้น/แพ็ค
 
   function openAdd() { setEditItem(null); setModalOpen(true) }
   function openEdit(item: MenuItem) { setEditItem(item); setModalOpen(true) }
@@ -61,15 +63,33 @@ export default function MenuPage() {
     } catch { toast.error('อัปเดตไม่สำเร็จ') }
   }
 
+  // คำนวณ totalQty จาก pack หรือจาก direct input
+  const computedTotal = (() => {
+    const packs = parseInt(packCountInput, 10)
+    const size  = parseInt(packSizeInput,  10)
+    if (!isNaN(packs) && !isNaN(size) && packs > 0 && size > 0) return packs * size
+    const direct = parseInt(stockQtyInput, 10)
+    return isNaN(direct) ? 0 : direct
+  })()
+
   async function handleSaveStock(item: MenuItem) {
-    const val = parseInt(stockInput, 10)
-    if (isNaN(val) || val < 0) { toast.error('จำนวนต้องเป็นตัวเลข ≥ 0'); return }
+    if (computedTotal < 0) { toast.error('จำนวนต้องเป็นตัวเลข ≥ 0'); return }
+    const packSize = parseInt(packSizeInput, 10)
     try {
-      await setDailyStock(item.id, val)
-      toast.success(val === 0 ? 'ยกเลิกสต็อก (ไม่จำกัด)' : `ตั้งสต็อก ${val} ชิ้น/วัน`)
+      await setStock(item.id, computedTotal, isNaN(packSize) ? undefined : packSize)
+      toast.success(computedTotal === 0 ? 'ยกเลิกสต็อก (ไม่จำกัด)' : `ตั้งสต็อก ${computedTotal} ชิ้น`)
       setStockEditing(null)
       reload()
     } catch { toast.error('บันทึกไม่สำเร็จ') }
+  }
+
+  function openStockEditor(item: MenuItem) {
+    setStockEditing(item.id)
+    setStockQtyInput(String(item.stockQty ?? 0))
+    setPackSizeInput(String(item.packSize ?? ''))
+    setPackCountInput(
+      item.stockQty && item.packSize ? String(Math.round(item.stockQty / item.packSize)) : ''
+    )
   }
 
   function openAddCategory() {
@@ -209,35 +229,65 @@ export default function MenuPage() {
                       )}
                     </td>
 
-                    {/* ── สต็อกรายวัน ── */}
+                    {/* ── สต็อกสินค้า ── */}
                     <td className="px-4 py-3">
                       {stockEditing === item.id ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="0"
-                            value={stockInput}
-                            onChange={(e) => setStockInput(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveStock(item); if (e.key === 'Escape') setStockEditing(null) }}
-                            autoFocus
-                            placeholder="0=ไม่จำกัด"
-                            className="w-20 rounded-lg border border-orange-300 px-2 py-1 text-xs focus:outline-none"
-                          />
-                          <button onClick={() => handleSaveStock(item)} className="text-green-600 text-xs font-bold hover:text-green-700">✓</button>
-                          <button onClick={() => setStockEditing(null)} className="text-gray-400 text-xs hover:text-gray-600">✕</button>
+                        <div className="flex flex-col gap-1.5 min-w-[160px]">
+                          {/* แพ็ค × ชิ้น/แพ็ค */}
+                          <div className="flex items-center gap-1 text-xs">
+                            <input
+                              type="number" min="0"
+                              value={packCountInput}
+                              onChange={(e) => { setPackCountInput(e.target.value); setStockQtyInput('') }}
+                              placeholder="แพ็ค"
+                              className="w-14 rounded-lg border border-orange-300 px-2 py-1 text-xs focus:outline-none"
+                            />
+                            <span className="text-gray-400">×</span>
+                            <input
+                              type="number" min="1"
+                              value={packSizeInput}
+                              onChange={(e) => { setPackSizeInput(e.target.value); setStockQtyInput('') }}
+                              placeholder="ชิ้น/แพ็ค"
+                              className="w-16 rounded-lg border border-orange-300 px-2 py-1 text-xs focus:outline-none"
+                            />
+                          </div>
+                          {/* หรือกรอกตรงๆ */}
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <span>หรือ</span>
+                            <input
+                              type="number" min="0"
+                              value={stockQtyInput}
+                              onChange={(e) => { setStockQtyInput(e.target.value); setPackCountInput(''); setPackSizeInput('') }}
+                              placeholder="รวม (ชิ้น)"
+                              className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs focus:outline-none"
+                            />
+                          </div>
+                          {/* preview */}
+                          <p className="text-[10px] text-blue-600 font-semibold">
+                            รวม: {computedTotal > 0 ? `${computedTotal} ชิ้น` : '0 = ไม่จำกัด'}
+                          </p>
+                          <div className="flex gap-1">
+                            <button onClick={() => handleSaveStock(item)} className="rounded-md bg-green-500 px-2 py-0.5 text-white text-xs font-bold hover:bg-green-600">บันทึก</button>
+                            <button onClick={() => setStockEditing(null)} className="rounded-md border border-gray-200 px-2 py-0.5 text-gray-500 text-xs hover:bg-gray-50">ยกเลิก</button>
+                          </div>
                         </div>
                       ) : (
                         <button
-                          onClick={() => { setStockEditing(item.id); setStockInput(String(item.dailyStock ?? 0)) }}
+                          onClick={() => openStockEditor(item)}
                           className="flex flex-col items-start gap-0.5 text-xs text-gray-500 hover:text-orange-500 transition-colors"
-                          title="คลิกเพื่อตั้งสต็อกรายวัน (0 = ไม่จำกัด)"
+                          title="คลิกเพื่อตั้งสต็อก"
                         >
                           <div className="flex items-center gap-1">
                             <Package size={12} />
-                            {item.dailyStock
-                              ? <span className="font-semibold text-blue-600">{item.currentStock ?? item.dailyStock}/{item.dailyStock}</span>
+                            {item.stockQty
+                              ? <span className="font-semibold text-blue-600">{item.stockQty} ชิ้น</span>
                               : <span className="text-gray-300">ไม่จำกัด</span>}
                           </div>
+                          {item.stockQty && item.packSize ? (
+                            <span className="text-[10px] text-gray-400">
+                              ({Math.ceil(item.stockQty / item.packSize)} แพ็ค × {item.packSize})
+                            </span>
+                          ) : null}
                           {item.updatedAt && (
                             <span className="text-[10px] text-gray-300">
                               {new Date(item.updatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
