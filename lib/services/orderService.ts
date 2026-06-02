@@ -59,7 +59,8 @@ export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'update
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<void> {
   requireFirebase()
-  await updateDoc(doc(db, COL, id), { status, updatedAt: Timestamp.now() })
+  const extra = status === 'completed' ? { 'payment.status': 'paid' } : {}
+  await updateDoc(doc(db, COL, id), { status, ...extra, updatedAt: Timestamp.now() })
 }
 
 export async function updatePaymentStatus(id: string, status: 'pending' | 'paid'): Promise<void> {

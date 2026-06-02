@@ -85,7 +85,9 @@ export default function DashboardPage() {
 
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const validOrders = orders.filter((o) => o.status !== 'cancelled')
+    const validOrders = orders.filter((o) =>
+      o.status !== 'cancelled' && o.payment.status === 'paid'
+    )
 
     // ── Period orders ──
     const inPeriod = (date: Date) => {
