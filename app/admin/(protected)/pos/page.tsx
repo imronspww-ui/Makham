@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -28,6 +28,21 @@ interface PosCartItem {
 }
 
 type DiscountType = 'percent' | 'amount'
+
+interface HeldOrder {
+  id:            string
+  label:         string          // ชื่อคิว เช่น "คุณนาม" หรือ "คิว 1"
+  cart:          PosCartItem[]
+  discountType:  DiscountType
+  discountInput: string
+  memberPhone:   string
+  memberProfile: CustomerProfile | null | 'not-found'
+  total:         number          // pre-computed สำหรับแสดงในแท็บ
+  heldAt:        number          // Date.now()
+}
+
+const HELD_KEY = 'pos-held-orders'
+let heldCounter = 0
 
 let cartKeyCounter = 0
 function nextCartKey() {
@@ -102,6 +117,24 @@ export default function PosPage() {
 
   // ── Sold-out toggle state ─────────────────────────────────────────────────
   const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  // ── Held orders (พักคิว) ─────────────────────────────────────────────────
+  const [heldOrders,   setHeldOrders]   = useState<HeldOrder[]>([])
+  const [holdLabel,    setHoldLabel]    = useState('')
+  const [showHoldForm, setShowHoldForm] = useState(false)
+
+  // โหลดจาก localStorage ตอน mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HELD_KEY)
+      if (raw) setHeldOrders(JSON.parse(raw) as HeldOrder[])
+    } catch { /* ignore */ }
+  }, [])
+
+  function saveHeld(orders: HeldOrder[]) {
+    setHeldOrders(orders)
+    try { localStorage.setItem(HELD_KEY, JSON.stringify(orders)) } catch { /* ignore */ }
+  }
 
   // ── Computed ──────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
@@ -262,6 +295,85 @@ export default function PosPage() {
     setMemberProfile(null)
     setAddingNew(false)
     setNewName('')
+    setShowHoldForm(false)
+    setHoldLabel('')
+  }
+
+  // ── พักคิว: บันทึก cart ปัจจุบัน → เปิดออเดอร์ใหม่ ─────────────────────
+  function confirmHold() {
+    if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return }
+    const member     = memberProfile && memberProfile !== 'not-found' ? memberProfile : null
+    const autoLabel  = member?.name || `คิว ${++heldCounter}`
+    const label      = holdLabel.trim() || autoLabel
+    const newHeld: HeldOrder = {
+      id:            `held-${Date.now()}`,
+      label,
+      cart:          [...cart],
+      discountType,
+      discountInput,
+      memberPhone,
+      memberProfile,
+      total,
+      heldAt:        Date.now(),
+    }
+    saveHeld([...heldOrders, newHeld])
+    toast.success(`📋 พักคิว "${label}" แล้ว`)
+    clearAll()
+  }
+
+  // ── กู้คืนคิว: นำกลับมาใน cart ──────────────────────────────────────────
+  function restoreHeld(id: string) {
+    if (cart.length > 0) {
+      if (!confirm('Cart ปัจจุบันมีรายการอยู่ — ยืนยันพักแล้วสลับคิวไหม?')) return
+      // พักคิวปัจจุบันก่อน
+      const member    = memberProfile && memberProfile !== 'not-found' ? memberProfile : null
+      const autoLabel = member?.name || `คิว ${++heldCounter}`
+      const curHeld: HeldOrder = {
+        id:            `held-${Date.now()}`,
+        label:         autoLabel,
+        cart:          [...cart],
+        discountType,
+        discountInput,
+        memberPhone,
+        memberProfile,
+        total,
+        heldAt:        Date.now(),
+      }
+      const target   = heldOrders.find((h) => h.id === id)!
+      const filtered = heldOrders.filter((h) => h.id !== id)
+      saveHeld([...filtered, curHeld])
+      // restore target
+      setCart(target.cart)
+      setDiscountType(target.discountType)
+      setDiscountInput(target.discountInput)
+      setMemberPhone(target.memberPhone)
+      setMemberProfile(target.memberProfile)
+      setCashInput('')
+      setLastOrder(null)
+      setAddingNew(false)
+      setNewName('')
+    } else {
+      const target   = heldOrders.find((h) => h.id === id)!
+      const filtered = heldOrders.filter((h) => h.id !== id)
+      saveHeld(filtered)
+      setCart(target.cart)
+      setDiscountType(target.discountType)
+      setDiscountInput(target.discountInput)
+      setMemberPhone(target.memberPhone)
+      setMemberProfile(target.memberProfile)
+      setCashInput('')
+      setLastOrder(null)
+      setAddingNew(false)
+      setNewName('')
+    }
+    toast.success('🔄 กู้คืนคิวแล้ว')
+  }
+
+  // ── ยกเลิกคิวที่พัก ──────────────────────────────────────────────────────
+  function cancelHeld(id: string) {
+    if (!confirm('ยกเลิกคิวนี้ใช่ไหม?')) return
+    saveHeld(heldOrders.filter((h) => h.id !== id))
+    toast.success('ยกเลิกคิวแล้ว')
   }
 
   // ── Save order ────────────────────────────────────────────────────────────
@@ -493,6 +605,36 @@ export default function PosPage() {
 
         {/* ══════════ RIGHT: Cart + Payment ══════════ */}
         <div className="w-80 xl:w-96 flex flex-col gap-2.5 shrink-0 overflow-y-auto pb-2">
+
+          {/* ── Held orders tabs ── */}
+          {heldOrders.length > 0 && (
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <ClipboardList size={13} className="text-blue-400" />
+                <span className="text-xs font-semibold text-gray-500">คิวรอ ({heldOrders.length})</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-0.5">
+                {heldOrders.map((h) => (
+                  <div key={h.id}
+                    className="flex items-center gap-1.5 rounded-xl border-2 border-blue-200 bg-blue-50 px-3 py-1.5 shrink-0 cursor-pointer hover:border-blue-400 transition-colors group"
+                    onClick={() => restoreHeld(h.id)}
+                  >
+                    <div className="flex flex-col leading-none">
+                      <span className="text-xs font-bold text-blue-700">{h.label}</span>
+                      <span className="text-[10px] text-blue-400">{formatCurrency(h.total)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); cancelHeld(h.id) }}
+                      className="text-blue-300 hover:text-red-400 transition-colors ml-0.5"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Success state ── */}
           {lastOrder && (
@@ -804,6 +946,36 @@ export default function PosPage() {
             {/* NumPad */}
             <NumPad value={cashInput} onChange={setCashInput} />
 
+            {/* ── Hold form — ถามชื่อคิวก่อนพัก ── */}
+            {showHoldForm && (
+              <div className="flex flex-col gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2.5">
+                <p className="text-xs font-semibold text-blue-700">ตั้งชื่อคิว (ไม่บังคับ)</p>
+                <input
+                  type="text"
+                  autoFocus
+                  value={holdLabel}
+                  onChange={(e) => setHoldLabel(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') confirmHold(); if (e.key === 'Escape') setShowHoldForm(false) }}
+                  placeholder={
+                    (memberProfile && memberProfile !== 'not-found')
+                      ? memberProfile.name
+                      : `คิว ${heldOrders.length + 1}`
+                  }
+                  className="rounded-lg border border-blue-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500"
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => { setShowHoldForm(false); setHoldLabel('') }}
+                    className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
+                    ยกเลิก
+                  </button>
+                  <button onClick={confirmHold}
+                    className="flex-1 rounded-lg bg-blue-500 text-white py-1.5 text-xs font-bold hover:bg-blue-600 transition-colors">
+                    📋 พักคิว
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-2 pt-0.5">
               <button
@@ -812,6 +984,22 @@ export default function PosPage() {
               >
                 <RotateCcw size={13} />
                 ล้าง
+              </button>
+              {/* พักคิว */}
+              <button
+                onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowHoldForm((v) => !v); setHoldLabel('') }}
+                disabled={cart.length === 0}
+                title="พักคิวนี้ไว้ก่อน แล้วเปิดออเดอร์ใหม่"
+                className={[
+                  'flex items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all',
+                  showHoldForm
+                    ? 'border-blue-400 bg-blue-100 text-blue-700'
+                    : 'border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50',
+                  cart.length === 0 ? 'opacity-40 cursor-not-allowed' : '',
+                ].join(' ')}
+              >
+                <BookmarkPlus size={13} />
+                พักคิว
               </button>
               <button
                 onClick={handleSave}
