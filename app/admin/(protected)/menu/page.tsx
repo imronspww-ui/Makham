@@ -229,13 +229,20 @@ export default function MenuPage() {
                       ) : (
                         <button
                           onClick={() => { setStockEditing(item.id); setStockInput(String(item.dailyStock ?? 0)) }}
-                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-orange-500 transition-colors"
+                          className="flex flex-col items-start gap-0.5 text-xs text-gray-500 hover:text-orange-500 transition-colors"
                           title="คลิกเพื่อตั้งสต็อกรายวัน (0 = ไม่จำกัด)"
                         >
-                          <Package size={12} />
-                          {item.dailyStock
-                            ? <span className="font-semibold text-blue-600">{item.currentStock ?? item.dailyStock}/{item.dailyStock}</span>
-                            : <span className="text-gray-300">ไม่จำกัด</span>}
+                          <div className="flex items-center gap-1">
+                            <Package size={12} />
+                            {item.dailyStock
+                              ? <span className="font-semibold text-blue-600">{item.currentStock ?? item.dailyStock}/{item.dailyStock}</span>
+                              : <span className="text-gray-300">ไม่จำกัด</span>}
+                          </div>
+                          {item.updatedAt && (
+                            <span className="text-[10px] text-gray-300">
+                              {new Date(item.updatedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
                         </button>
                       )}
                     </td>
