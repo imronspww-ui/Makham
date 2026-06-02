@@ -62,54 +62,61 @@ function isIOS(): boolean {
 }
 
 /**
- * เล่นเสียงกริ๊งยาว — จำลองเสียงกริ่งโทรศัพท์
- * แต่ละ "กริ๊ง" = เสียงสั่น 25Hz นาน 0.7s แล้วหยุด 0.35s
- * เล่น 3 รอบ รวม ~3.5 วินาที
+ * เล่นเสียงแจ้งเตือนดัง — square wave 2 ความถี่สลับกัน
+ * pattern: สูง-ต่ำ-สูง-ต่ำ × 3 รอบ รวม ~2.4 วินาที
+ * ใช้ DynamicsCompressor เพื่อให้เสียงเต็มและดังสุด
  */
 function playAlarm() {
   if (!_unlocked) return
   const ctx = getCtx()
   if (!ctx || ctx.state !== 'running') return
   try {
-    const ringDuration = 0.7    // ความยาวแต่ละกริ๊ง (วินาที)
-    const ringGap      = 0.35   // เว้นระหว่างกริ๊ง
-    const rings        = 3      // จำนวนกริ๊ง
-    const freq         = 1050   // ความถี่เสียงกริ๊ง (Hz)
-    const tremoloRate  = 25     // ความเร็วสั่น (Hz) — ให้ฟังดูเหมือนกริ่งโทรศัพท์
-    const volume       = 0.75
+    // compressor — ทำให้เสียงเต็มและดังขึ้นโดยไม่แตก
+    const comp = ctx.createDynamicsCompressor()
+    comp.threshold.value = -6
+    comp.knee.value      = 3
+    comp.ratio.value     = 4
+    comp.attack.value    = 0.001
+    comp.release.value   = 0.1
+    comp.connect(ctx.destination)
 
-    for (let r = 0; r < rings; r++) {
-      const startTime = ctx.currentTime + r * (ringDuration + ringGap)
+    // pattern: [freq(Hz), startSec, duration]
+    const beepDur = 0.12   // ความยาวแต่ละ beep
+    const gap     = 0.06   // ช่องว่างระหว่าง beep
+    const pause   = 0.25   // หยุดระหว่างรอบ
+    const hiFreq  = 1400
+    const loFreq  = 950
+    const vol     = 1.0
 
-      // oscillator หลัก (เสียง)
+    // สร้าง pattern: hi lo hi lo pause × 3 รอบ
+    const schedule: [number, number][] = []
+    for (let r = 0; r < 3; r++) {
+      const base = r * ((beepDur + gap) * 4 + pause)
+      schedule.push(
+        [hiFreq, base],
+        [loFreq, base + (beepDur + gap)],
+        [hiFreq, base + (beepDur + gap) * 2],
+        [loFreq, base + (beepDur + gap) * 3],
+      )
+    }
+
+    schedule.forEach(([freq, offset]) => {
       const osc  = ctx.createOscillator()
-      osc.type            = 'sine'
+      const gain = ctx.createGain()
+      osc.type            = 'square'   // square wave = คมชัด ได้ยินง่าย
       osc.frequency.value = freq
 
-      // gain หลัก — fade in เล็กน้อย แล้ว fade out ช่วงท้าย
-      const gain = ctx.createGain()
-      gain.gain.setValueAtTime(0, startTime)
-      gain.gain.linearRampToValueAtTime(volume, startTime + 0.02)
-      gain.gain.setValueAtTime(volume, startTime + ringDuration - 0.1)
-      gain.gain.linearRampToValueAtTime(0, startTime + ringDuration)
+      const t = ctx.currentTime + offset
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(vol, t + 0.005)   // attack เร็ว
+      gain.gain.setValueAtTime(vol, t + beepDur - 0.02)
+      gain.gain.linearRampToValueAtTime(0, t + beepDur)   // release สั้น
 
-      // LFO — สร้างเอฟเฟกต์สั่น "กริ๊งๆ"
-      const lfo      = ctx.createOscillator()
-      lfo.type            = 'sine'
-      lfo.frequency.value = tremoloRate
-      const lfoGain  = ctx.createGain()
-      lfoGain.gain.value  = 0.5   // ความลึกของการสั่น
-
-      lfo.connect(lfoGain)
-      lfoGain.connect(gain.gain)
       osc.connect(gain)
-      gain.connect(ctx.destination)
-
-      osc.start(startTime)
-      osc.stop(startTime + ringDuration)
-      lfo.start(startTime)
-      lfo.stop(startTime + ringDuration)
-    }
+      gain.connect(comp)
+      osc.start(t)
+      osc.stop(t + beepDur)
+    })
   } catch { /* ignore */ }
 }
 
