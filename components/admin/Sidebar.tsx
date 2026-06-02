@@ -58,17 +58,35 @@ export function Sidebar() {
       {/* ── Nav ── */}
       <nav className="flex flex-1 flex-col gap-1 p-3">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
+          const isPOS   = href === '/admin/pos'
+          const active  = pathname === href || pathname.startsWith(href + '/')
+          const cls     = [
+            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+            active
+              ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
+              : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100',
+          ].join(' ')
+
+          // POS เปิด tab ใหม่แบบเต็มจอ
+          if (isPOS) return (
+            <a
+              key={href}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className={cls}
+            >
+              <Icon size={17} className="shrink-0" />
+              {label}
+              <span className="ml-auto text-[10px] opacity-50">↗</span>
+            </a>
+          )
+
           return (
             <Link
               key={href}
               href={href}
-              className={[
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-                active
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100',
-              ].join(' ')}
+              className={cls}
             >
               <Icon size={17} className="shrink-0" />
               {label}
