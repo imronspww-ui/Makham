@@ -11,12 +11,10 @@ function AdminAlertProvider() {
 /** Layout สำหรับหน้าเต็มจอ (ไม่มี Sidebar / Header) */
 export default function FullscreenLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-50 flex flex-col">
+    <div className="h-[100dvh] w-screen overflow-hidden bg-gray-50 flex flex-col">
       <AdminServiceWorker />
       <AdminAlertProvider />
-      <div className="flex-1 overflow-hidden">
-        {children}
-      </div>
+      {children}
     </div>
   )
 }

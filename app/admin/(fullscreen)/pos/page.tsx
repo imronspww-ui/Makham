@@ -478,7 +478,7 @@ export default function PosPage() {
 
   return (
     <>
-      <div className="flex gap-4 h-[calc(100vh-88px)]">
+      <div className="flex gap-4 h-[100dvh] p-4">
 
         {/* ══════════ LEFT: Menu browser ══════════ */}
         <div className="flex flex-col flex-1 min-w-0 gap-3 overflow-hidden">
