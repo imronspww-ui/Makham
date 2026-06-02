@@ -92,6 +92,12 @@ export async function updateStoreCosts(costs: CostItem[]): Promise<void> {
   cacheClear('settings:')
 }
 
+export async function updateReservePercent(reservePercent: number): Promise<void> {
+  requireFirebase()
+  await setDoc(doc(db, 'settings', 'main'), { reservePercent }, { merge: true })
+  cacheClear('settings:')
+}
+
 /** Real-time subscription — fires immediately then on every change */
 export function subscribeToSettings(callback: (s: Settings) => void): () => void {
   if (!isFirebaseConfigured) { callback(DEFAULT_SETTINGS); return () => {} }

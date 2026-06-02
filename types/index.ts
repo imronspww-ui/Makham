@@ -239,5 +239,6 @@ export interface Settings {
   openingHours?: OpeningHoursSettings
   loyalty?: LoyaltySettings
   receipt?: ReceiptSettings
-  costs?: CostItem[]   // ค่าใช้จ่ายร้านรายเดือน
+  costs?: CostItem[]       // ค่าใช้จ่ายร้านรายเดือน
+  reservePercent?: number  // % เงินสำรองร้าน (0-100), default 20
 }

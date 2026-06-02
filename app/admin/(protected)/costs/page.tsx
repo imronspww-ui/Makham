@@ -1,11 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, TrendingDown, Package, Zap, Flame } from 'lucide-react'
+import { Plus, Trash2, Save, TrendingDown, Package, Zap, Flame, PiggyBank } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { updateMenuItem } from '@/lib/services/menuService'
-import { updateStoreCosts } from '@/lib/services/settingsService'
+import { updateStoreCosts, updateReservePercent } from '@/lib/services/settingsService'
 import { formatCurrency } from '@/lib/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import type { CostItem } from '@/types'
@@ -237,13 +237,72 @@ function StoreCostsForm({ initial, onSaved }: { initial: CostItem[]; onSaved: ()
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Reserve % form ───────────────────────────────────────────────────────────
+
+function ReserveForm({ initial, onSaved }: { initial: number; onSaved: () => void }) {
+  const [pct,    setPct]    = useState(String(initial))
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { setPct(String(initial)) }, [initial])
+
+  async function handleSave() {
+    const val = parseFloat(pct)
+    if (isNaN(val) || val < 0 || val > 100) { toast.error('กรอก 0-100'); return }
+    setSaving(true)
+    try {
+      await updateReservePercent(val)
+      toast.success('บันทึกแล้ว')
+      onSaved()
+    } catch { toast.error('บันทึกไม่สำเร็จ') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2">
+        <input
+          type="number" min="0" max="100" step="1"
+          value={pct}
+          onChange={(e) => setPct(e.target.value)}
+          className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-orange-300"
+        />
+        <span className="text-sm text-gray-500">% ของกำไรสุทธิ/เดือน</span>
+      </div>
+      <div className="flex gap-2">
+        {[10, 20, 30].map((p) => (
+          <button
+            key={p}
+            onClick={() => setPct(String(p))}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              pct === String(p) ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-500 hover:border-orange-300'
+            }`}
+          >
+            {p}%
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="flex items-center gap-1.5 rounded-xl bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+      >
+        <Save size={13} />
+        {saving ? '...' : 'บันทึก'}
+      </button>
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function CostsPage() {
   const { items, loading: menuLoading, reload } = useAdminMenu()
   const { settings, loading: settingsLoading, reload: reloadSettings } = useSettings()
 
   if (menuLoading || settingsLoading) return <Spinner text="กำลังโหลด..." />
 
-  const totalMonthCost = (settings?.costs ?? []).reduce((s, c) => s + c.amount, 0)
+  const totalMonthCost   = (settings?.costs ?? []).reduce((s, c) => s + c.amount, 0)
+  const reservePct       = settings?.reservePercent ?? 20
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
@@ -310,6 +369,40 @@ export default function CostsPage() {
           initial={settings?.costs ?? []}
           onSaved={reloadSettings}
         />
+      </div>
+
+      {/* Reserve % */}
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <PiggyBank size={18} className="text-pink-500" />
+          <div>
+            <h2 className="font-semibold text-gray-700">เงินสำรองร้าน</h2>
+            <p className="text-xs text-gray-400">% ที่กันไว้จากกำไรสุทธิรายเดือน ส่วนที่เหลือคือเงินเก็บส่วนตัว</p>
+          </div>
+        </div>
+        <ReserveForm
+          initial={reservePct}
+          onSaved={reloadSettings}
+        />
+      </div>
+
+      {/* โครงสร้างกำไร (อธิบาย) */}
+      <div className="rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 p-5 text-white">
+        <p className="text-sm font-semibold mb-3 text-gray-300">โครงสร้างกำไร (ตัวอย่าง)</p>
+        {[
+          { label: 'รายได้รวม',                     color: 'bg-green-400',  sign: '' },
+          { label: '− ต้นทุนวัตถุดิบ',              color: 'bg-red-400',    sign: '' },
+          { label: '= กำไรขั้นต้น',                  color: 'bg-blue-400',   sign: '' },
+          { label: '− ค่าใช้จ่ายร้าน (ไฟ/แก๊ส/เช่า)', color: 'bg-orange-400', sign: '' },
+          { label: '= กำไรสุทธิ',                    color: 'bg-purple-400', sign: '' },
+          { label: `− เงินสำรองร้าน (${reservePct}%)`, color: 'bg-pink-400',   sign: '' },
+          { label: '= เงินเก็บส่วนตัว 💰',           color: 'bg-yellow-400', sign: '' },
+        ].map((r) => (
+          <div key={r.label} className="flex items-center gap-2 py-1.5 border-b border-white/10 last:border-0">
+            <div className={`h-2 w-2 rounded-full ${r.color} shrink-0`} />
+            <span className="text-sm text-gray-200">{r.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )

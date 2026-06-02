@@ -173,6 +173,11 @@ export default function DashboardPage() {
     // กำไรสุทธิเดือนนี้ = gross - store cost
     const monthNet = monthGross - monthStoreCost
 
+    // เงินสำรองและเงินเก็บส่วนตัว
+    const reservePct     = settings?.reservePercent ?? 20
+    const monthReserve   = monthNet > 0 ? monthNet * (reservePct / 100) : 0
+    const monthPersonal  = monthNet > 0 ? monthNet - monthReserve : 0
+
     return {
       todayOrders: todayOrders.length,
       todayRevenue,
@@ -193,6 +198,9 @@ export default function DashboardPage() {
       pending,
       cooking,
       delivering,
+      reservePct,
+      monthReserve,
+      monthPersonal,
       hasCostData: Object.keys(cpuMap).length > 0,
     }
   }, [orders, period, menuItems, settings?.costs])
@@ -398,6 +406,29 @@ export default function DashboardPage() {
                 <p className={`text-lg font-bold ${stats.monthNet >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                   {formatCurrency(stats.monthNet)}
                 </p>
+              </div>
+            </div>
+          )}
+          {/* เงินสำรอง + เงินเก็บส่วนตัว */}
+          {stats.monthStoreCost > 0 && stats.monthNet > 0 && (
+            <div className="border-t border-gray-100 grid grid-cols-2 divide-x divide-gray-100">
+              <div className="px-5 py-3 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-pink-50 text-pink-500 shrink-0">
+                  <TrendingDown size={14} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">เงินสำรองร้าน ({stats.reservePct}%)</p>
+                  <p className="text-base font-bold text-pink-500">{formatCurrency(stats.monthReserve)}</p>
+                </div>
+              </div>
+              <div className="px-5 py-3 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-50 text-yellow-500 shrink-0">
+                  <Wallet size={14} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">เงินเก็บส่วนตัว</p>
+                  <p className="text-base font-bold text-yellow-600">{formatCurrency(stats.monthPersonal)}</p>
+                </div>
               </div>
             </div>
           )}
