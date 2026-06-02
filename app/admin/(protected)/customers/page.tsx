@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Users, Search, TrendingUp, Star, X, Loader2, ChevronUp, ChevronDown, UserPlus } from 'lucide-react'
+import { Users, Search, TrendingUp, Star, X, Loader2, ChevronUp, ChevronDown, UserPlus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { subscribeToCustomers, adjustCustomerPoints, createCustomer } from '@/lib/services/customerService'
+import { subscribeToCustomers, adjustCustomerPoints, createCustomer, deleteCustomer } from '@/lib/services/customerService'
 import { formatCurrency } from '@/lib/utils/format'
 import type { CustomerProfile } from '@/types'
 
@@ -223,6 +223,20 @@ export default function CustomersPage() {
   const [search,        setSearch]        = useState('')
   const [adjusting,     setAdjusting]     = useState<CustomerProfile | null>(null)
   const [addingCustomer, setAddingCustomer] = useState(false)
+  const [deleting,      setDeleting]      = useState<string | null>(null)
+
+  async function handleDelete(c: CustomerProfile) {
+    if (!confirm(`ลบข้อมูล "${c.name}" (${c.phone}) ออกจากระบบ?\nการลบนี้ไม่สามารถย้อนกลับได้`)) return
+    setDeleting(c.phone)
+    try {
+      await deleteCustomer(c.phone)
+      toast.success(`ลบข้อมูล ${c.name} สำเร็จ`)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'ลบข้อมูลไม่สำเร็จ')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   useEffect(() => {
     return subscribeToCustomers(setCustomers)
@@ -365,12 +379,24 @@ export default function CustomersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setAdjusting(c)}
-                          className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-amber-100 hover:text-amber-700 transition-colors whitespace-nowrap"
-                        >
-                          ปรับแต้ม
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setAdjusting(c)}
+                            className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-amber-100 hover:text-amber-700 transition-colors whitespace-nowrap"
+                          >
+                            ปรับแต้ม
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c)}
+                            disabled={deleting === c.phone}
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-40"
+                          >
+                            {deleting === c.phone
+                              ? <Loader2 size={14} className="animate-spin" />
+                              : <Trash2 size={14} />
+                            }
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )

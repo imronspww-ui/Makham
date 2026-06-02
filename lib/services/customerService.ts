@@ -6,6 +6,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   orderBy,
   onSnapshot,
@@ -166,6 +167,15 @@ export async function getCustomers(): Promise<CustomerProfile[]> {
   } catch {
     return []
   }
+}
+
+/** ลบข้อมูลลูกค้าโดย admin */
+export async function deleteCustomer(phone: string): Promise<void> {
+  if (!isFirebaseConfigured) throw new Error('Firebase ไม่ได้ตั้งค่า')
+  const ref = doc(db, COL, phone)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('ไม่พบข้อมูลลูกค้า')
+  await deleteDoc(ref)
 }
 
 /** Real-time subscription สำหรับหน้า admin */
