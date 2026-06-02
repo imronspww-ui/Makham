@@ -37,14 +37,31 @@ async function doSpeak(text: string) {
       window.speechSynthesis.resume()
     }
 
-    const voices    = await loadVoices()
-    const utt       = new SpeechSynthesisUtterance(text)
-    utt.lang        = 'th-TH'
-    utt.rate        = 0.88
-    utt.pitch       = 1.05
-    utt.volume      = 1.0
+    const voices = await loadVoices()
+
+    // แปลงข้อความเป็น English สำหรับ fallback
     const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
-    if (thaiVoice) utt.voice = thaiVoice
+    const engVoice  = voices.find((v) => v.lang.startsWith('en'))
+
+    const utt    = new SpeechSynthesisUtterance()
+    utt.volume   = 1.0
+
+    if (thaiVoice) {
+      // มี Thai voice → พูดไทยตามปกติ
+      utt.voice = thaiVoice
+      utt.lang  = 'th-TH'
+      utt.rate  = 0.88
+      utt.pitch = 1.05
+      utt.text  = text
+    } else {
+      // ไม่มี Thai voice → fallback พูด English
+      utt.voice = engVoice ?? null
+      utt.lang  = 'en-US'
+      utt.rate  = 0.9
+      utt.pitch = 1.0
+      utt.text  = 'New order received. Please check.'
+    }
+
     window.speechSynthesis.speak(utt)
   } catch { /* ignore */ }
 }
