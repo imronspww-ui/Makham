@@ -5,6 +5,12 @@ import { ToastProvider } from '@/components/ui/ToastProvider'
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม',
   description: 'สั่งอาหารออนไลน์',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม',
+    startupImage: '/icons/icon-512.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
