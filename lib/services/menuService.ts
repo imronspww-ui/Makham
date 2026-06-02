@@ -14,7 +14,7 @@ import {
 } from '@/lib/firebase/firestore'
 import { isFirebaseConfigured } from '@/lib/firebase/config'
 import { cacheGet, cacheSet, cacheClear } from '@/lib/utils/cache'
-import type { MenuItem } from '@/types'
+import type { MenuItem, OptionGroup } from '@/types'
 
 const COL = 'menuItems'
 const CACHE_KEY = 'menu:all'
@@ -73,6 +73,37 @@ export async function updateMenuItem(
 export async function deleteMenuItem(id: string): Promise<void> {
   requireFirebase()
   await deleteDoc(doc(db, COL, id))
+  cacheClear('menu:')
+}
+
+// ─── Choice-level sold-out ────────────────────────────────────────────────────
+
+/**
+ * ตั้งสถานะหมดเฉพาะตัวเลือกย่อย เช่น "ไก่ยอ หมด" โดยไม่กระทบตัวเลือกอื่น
+ */
+export async function toggleChoiceSoldOut(
+  menuItemId: string,
+  groupId:    string,
+  choiceId:   string,
+  soldOut:    boolean,
+): Promise<void> {
+  requireFirebase()
+  const ref  = doc(db, COL, menuItemId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+
+  const data    = snap.data() as Record<string, unknown>
+  const groups  = (data.optionGroups as OptionGroup[]) ?? []
+  const updated = groups.map((g) => {
+    if (g.id !== groupId) return g
+    return {
+      ...g,
+      choices: g.choices.map((c) =>
+        c.id === choiceId ? { ...c, isSoldOut: soldOut } : c,
+      ),
+    }
+  })
+  await updateDoc(ref, { optionGroups: updated, updatedAt: Timestamp.now() })
   cacheClear('menu:')
 }
 

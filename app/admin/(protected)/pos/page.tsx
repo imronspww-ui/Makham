@@ -11,6 +11,7 @@ import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
+import { ChoiceSoldOutModal } from '@/components/admin/ChoiceSoldOutModal'
 import type { MenuItem, OrderItem, SelectedOption, CustomerProfile } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -116,7 +117,8 @@ export default function PosPage() {
   const [creatingMember,  setCreatingMember]  = useState(false)
 
   // ── Sold-out toggle state ─────────────────────────────────────────────────
-  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [togglingId,      setTogglingId]      = useState<string | null>(null)
+  const [managingChoices, setManagingChoices] = useState<MenuItem | null>(null)
 
   // ── Held orders (พักคิว) ─────────────────────────────────────────────────
   const [heldOrders,   setHeldOrders]   = useState<HeldOrder[]>([])
@@ -222,6 +224,13 @@ export default function PosPage() {
       setTogglingId(null)
     }
   }
+
+  // Sync managingChoices ให้แสดงข้อมูลล่าสุดเมื่อ menuItems อัปเดต (Firestore listener)
+  useEffect(() => {
+    if (!managingChoices) return
+    const fresh = menuItems.find((m) => m.id === managingChoices.id)
+    if (fresh) setManagingChoices(fresh)
+  }, [menuItems]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-search เมื่อพิมพ์ครบ 10 หลัก
   useEffect(() => {
@@ -575,21 +584,37 @@ export default function PosPage() {
                         </p>
                       </div>
 
-                      {/* ── Toggle sold-out button ── */}
-                      <button
-                        type="button"
-                        onClick={(e) => toggleSoldOut(e, item)}
-                        disabled={isToggling}
-                        className={[
-                          'w-full py-1.5 text-[10px] font-semibold border-t transition-colors',
-                          isToggling ? 'opacity-50 cursor-wait' : '',
-                          soldOut
-                            ? 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'
-                            : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-red-50 hover:text-red-500',
-                        ].join(' ')}
-                      >
-                        {isToggling ? '...' : soldOut ? '✅ เปิดขายอีกครั้ง' : '🔴 กดหมด'}
-                      </button>
+                      {/* ── Bottom action strip ── */}
+                      <div className={['flex border-t', soldOut ? 'border-green-100' : 'border-gray-100'].join(' ')}>
+                        {/* Toggle whole-item sold-out */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleSoldOut(e, item)}
+                          disabled={isToggling}
+                          className={[
+                            'flex-1 py-1.5 text-[10px] font-semibold transition-colors',
+                            isToggling ? 'opacity-50 cursor-wait' : '',
+                            soldOut
+                              ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                              : 'bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500',
+                            hasOptions ? 'border-r border-gray-100' : '',
+                          ].join(' ')}
+                        >
+                          {isToggling ? '...' : soldOut ? '✅ เปิดขาย' : '🔴 หมดทั้งหมด'}
+                        </button>
+
+                        {/* Toggle choice-level (เฉพาะเมนูที่มี options) */}
+                        {hasOptions && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setManagingChoices(item) }}
+                            className="px-2 py-1.5 text-[10px] font-semibold bg-gray-50 text-gray-400 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                            title="เลือกตัวเลือกที่หมด"
+                          >
+                            ⚙️ ตัวเลือก
+                          </button>
+                        )}
+                      </div>
 
                       {/* Hover overlay */}
                       {!soldOut && (
@@ -1024,6 +1049,21 @@ export default function PosPage() {
           item={pendingItem}
           onClose={() => setPendingItem(null)}
           onAdd={handleModalAdd}
+        />
+      )}
+
+      {/* ── Choice sold-out modal ── */}
+      {managingChoices && (
+        <ChoiceSoldOutModal
+          item={managingChoices}
+          onClose={() => setManagingChoices(null)}
+          onDone={() => {
+            // menuItems จะ update จาก useMenu hook อัตโนมัติ
+            // อัปเดต managingChoices ให้แสดงสถานะล่าสุด
+            setManagingChoices((prev) =>
+              prev ? { ...prev } : null
+            )
+          }}
         />
       )}
     </>
