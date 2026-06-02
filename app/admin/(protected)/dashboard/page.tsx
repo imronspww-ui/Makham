@@ -2,11 +2,12 @@
 import { useMemo, useState } from 'react'
 import {
   ClipboardList, TrendingUp, Clock, ChefHat, Truck,
-  CalendarDays, BarChart2, Trophy, ShoppingBag, Bell,
+  CalendarDays, BarChart2, Trophy, ShoppingBag, Bell, TrendingDown, Wallet,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { useSettings } from '@/lib/hooks/useSettings'
+import { useAdminMenu } from '@/lib/hooks/useMenu'
 import { formatCurrency } from '@/lib/utils/format'
 import { OrderStatusBadge } from '@/components/admin/OrderStatusBadge'
 import { Spinner } from '@/components/ui/Spinner'
@@ -73,6 +74,7 @@ function BarChart({ data }: { data: { label: string; value: number; count: numbe
 export default function DashboardPage() {
   const { orders, loading } = useOrders()
   const { settings } = useSettings()
+  const { items: menuItems } = useAdminMenu()
   const [period, setPeriod] = useState<Period>('today')
   const [notifSent, setNotifSent] = useState(false)
 
@@ -148,6 +150,29 @@ export default function DashboardPage() {
     const cooking = orders.filter((o) => o.status === 'cooking').length
     const delivering = orders.filter((o) => o.status === 'delivering').length
 
+    // ── Gross profit (รายได้ - ต้นทุนวัตถุดิบ) ──
+    // สร้าง map menuItemId → costPerUnit
+    const cpuMap: Record<string, number> = {}
+    menuItems.forEach((m) => {
+      if (m.costPerPack && m.packSize && m.packSize > 0) {
+        cpuMap[m.id] = m.costPerPack / m.packSize
+      }
+    })
+    function calcCogs(orderList: typeof periodOrders) {
+      return orderList.reduce((sum, o) =>
+        sum + o.items.reduce((s, i) => s + (cpuMap[i.menuItemId] ?? 0) * i.qty, 0), 0)
+    }
+    const periodCogs   = calcCogs(periodOrders)
+    const monthCogs    = calcCogs(monthOrders)
+    const periodGross  = periodRevenue - periodCogs
+    const monthGross   = monthRevenue  - monthCogs
+
+    // ค่าใช้จ่ายร้านรายเดือน
+    const monthStoreCost = (settings?.costs ?? []).reduce((s, c) => s + c.amount, 0)
+
+    // กำไรสุทธิเดือนนี้ = gross - store cost
+    const monthNet = monthGross - monthStoreCost
+
     return {
       todayOrders: todayOrders.length,
       todayRevenue,
@@ -157,13 +182,20 @@ export default function DashboardPage() {
       monthRevenue,
       periodOrders: periodOrders.length,
       periodRevenue,
+      periodCogs,
+      periodGross,
+      monthCogs,
+      monthGross,
+      monthStoreCost,
+      monthNet,
       dailyData,
       topItems,
       pending,
       cooking,
       delivering,
+      hasCostData: Object.keys(cpuMap).length > 0,
     }
-  }, [orders, period])
+  }, [orders, period, menuItems, settings?.costs])
 
   // ── แจ้งเตือนสรุปยอดวันนี้ ────────────────────────────────────────────────
   async function sendDailySummary() {
@@ -309,6 +341,68 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Profit section ── */}
+      {stats.hasCostData && (
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+            <Wallet size={16} className="text-green-500" />
+            <h2 className="font-semibold text-gray-700">กำไร</h2>
+            <span className="text-xs text-gray-400 ml-1">เดือนนี้</span>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-gray-100">
+            {[
+              {
+                label:    'รายได้',
+                value:    stats.monthRevenue,
+                sub:      `${stats.monthOrders} ออเดอร์`,
+                color:    'text-gray-800',
+                icon:     <TrendingUp  size={14} className="text-green-500" />,
+              },
+              {
+                label:    'ต้นทุนวัตถุดิบ',
+                value:    stats.monthCogs,
+                sub:      stats.monthRevenue > 0
+                  ? `${((stats.monthCogs / stats.monthRevenue) * 100).toFixed(1)}% ของรายได้`
+                  : '—',
+                color:    'text-red-500',
+                icon:     <TrendingDown size={14} className="text-red-400" />,
+              },
+              {
+                label:    'กำไรขั้นต้น',
+                value:    stats.monthGross,
+                sub:      stats.monthRevenue > 0
+                  ? `margin ${((stats.monthGross / stats.monthRevenue) * 100).toFixed(1)}%`
+                  : '—',
+                color:    stats.monthGross >= 0 ? 'text-green-600' : 'text-red-500',
+                icon:     <Wallet size={14} className="text-blue-400" />,
+              },
+            ].map((c) => (
+              <div key={c.label} className="px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-1">{c.icon}<p className="text-xs text-gray-400">{c.label}</p></div>
+                <p className={`text-xl font-bold ${c.color}`}>{formatCurrency(c.value)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{c.sub}</p>
+              </div>
+            ))}
+          </div>
+          {/* กำไรสุทธิ */}
+          {stats.monthStoreCost > 0 && (
+            <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between bg-gray-50/60">
+              <div className="flex items-center gap-3 text-sm text-gray-500">
+                <span>กำไรขั้นต้น {formatCurrency(stats.monthGross)}</span>
+                <span className="text-gray-300">−</span>
+                <span>ค่าใช้จ่ายร้าน {formatCurrency(stats.monthStoreCost)}</span>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">กำไรสุทธิเดือนนี้</p>
+                <p className={`text-lg font-bold ${stats.monthNet >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  {formatCurrency(stats.monthNet)}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Status in progress ── */}
       <div className="grid grid-cols-3 gap-3">

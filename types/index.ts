@@ -32,6 +32,7 @@ export interface MenuItem {
   optionGroups: OptionGroup[]
   stockQty?: number      // จำนวนสินค้าคงเหลือ (ชิ้น), undefined/0 = ไม่จำกัด
   packSize?: number      // จำนวนชิ้นต่อ 1 แพ็ค (สำหรับช่วยคำนวณ)
+  costPerPack?: number   // ราคาซื้อต่อแพ็ค (บาท) สำหรับคำนวณต้นทุน
   avgRating?: number     // ค่าเฉลี่ยดาว 1-5 (คำนวณจาก reviews)
   ratingCount?: number   // จำนวนรีวิว
   createdAt: string
@@ -222,6 +223,15 @@ export interface Review {
   createdAt: string
 }
 
+// ─── Store Costs ─────────────────────────────────────────────────────────────
+
+export interface CostItem {
+  id: string
+  name: string    // เช่น "ค่าไฟ", "ค่าแก๊ส"
+  amount: number  // บาท/เดือน
+  type: 'fixed' | 'variable'
+}
+
 export interface Settings {
   store: StoreSettings
   promptpay: PromptPaySettings
@@ -229,4 +239,5 @@ export interface Settings {
   openingHours?: OpeningHoursSettings
   loyalty?: LoyaltySettings
   receipt?: ReceiptSettings
+  costs?: CostItem[]   // ค่าใช้จ่ายร้านรายเดือน
 }
