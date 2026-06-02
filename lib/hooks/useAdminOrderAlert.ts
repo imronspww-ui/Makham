@@ -54,26 +54,41 @@ export async function unlockAdminAudio(): Promise<boolean> {
   }
 }
 
-/** เล่นกริ่ง 4 tone — ใช้ context ที่ unlock แล้ว */
+/** ตรวจว่าเป็น iOS/iPadOS */
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+/** เล่นกริ่ง — iOS เล่น 3 รอบ ดังกว่า เพื่อชดเชย TTS ที่ไม่ทำงาน */
 function playAlarm() {
-  if (!_unlocked) return                // iOS: ยังไม่ unlock → skip
+  if (!_unlocked) return
   const ctx = getCtx()
   if (!ctx || ctx.state !== 'running') return
   try {
-    const tones: [number, number][] = [[880, 0], [1100, 0.18], [880, 0.36], [1100, 0.54]]
-    tones.forEach(([freq, delay]) => {
-      const osc  = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.value = freq
-      const t = ctx.currentTime + delay
-      gain.gain.setValueAtTime(0.35, t)
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28)
-      osc.start(t)
-      osc.stop(t + 0.28)
-    })
+    const ios    = isIOS()
+    const volume = ios ? 0.7 : 0.35
+    const rounds = ios ? 3 : 1
+    // tones: [freq, offsetSec]
+    const pattern: [number, number][] = [[880, 0], [1100, 0.18], [880, 0.36], [1100, 0.54]]
+
+    for (let r = 0; r < rounds; r++) {
+      const roundOffset = r * 0.9
+      pattern.forEach(([freq, delay]) => {
+        const osc  = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = 'sine'
+        osc.frequency.value = freq
+        const t = ctx.currentTime + delay + roundOffset
+        gain.gain.setValueAtTime(volume, t)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28)
+        osc.start(t)
+        osc.stop(t + 0.28)
+      })
+    }
   } catch { /* ignore */ }
 }
 

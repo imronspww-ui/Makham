@@ -18,7 +18,6 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   })
 }
 
-/** iOS Safari: ตรวจว่าเป็น iOS หรือเปล่า */
 function isIOS(): boolean {
   if (typeof navigator === 'undefined') return false
   return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
@@ -26,6 +25,8 @@ function isIOS(): boolean {
 }
 
 async function doSpeak(text: string) {
+  // iOS/iPadOS: SpeechSynthesis ไม่น่าเชื่อถือ → ข้ามไป (ใช้เสียงกริ่งแทน)
+  if (isIOS()) return
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
   try {
     window.speechSynthesis.cancel()
