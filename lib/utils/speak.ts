@@ -18,10 +18,25 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   })
 }
 
+/** iOS Safari: ตรวจว่าเป็น iOS หรือเปล่า */
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
 async function doSpeak(text: string) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
   try {
     window.speechSynthesis.cancel()
+
+    // iOS bug: SpeechSynthesis หยุดทำงานเองหลังใช้งานไปสักพัก
+    // ต้อง pause/resume ก่อนพูดทุกครั้ง
+    if (isIOS()) {
+      window.speechSynthesis.pause()
+      window.speechSynthesis.resume()
+    }
+
     const voices    = await loadVoices()
     const utt       = new SpeechSynthesisUtterance(text)
     utt.lang        = 'th-TH'
@@ -34,9 +49,11 @@ async function doSpeak(text: string) {
   } catch { /* ignore */ }
 }
 
-/** Chrome block SpeechSynthesis เมื่อ window ไม่มี focus (ไม่ใช่แค่ tab hidden) */
+/** Chrome block SpeechSynthesis เมื่อ window ไม่มี focus (ไม่ใช่แค่ tab hidden)
+ *  iOS: hasFocus() ไม่น่าเชื่อถือ → ถือว่า active เสมอ */
 function isActive(): boolean {
   if (typeof document === 'undefined') return false
+  if (isIOS()) return true          // iOS: พยายามพูดเสมอ
   return document.hasFocus()
 }
 

@@ -38,12 +38,13 @@ export async function unlockAdminAudio(): Promise<boolean> {
     src.start(0)
 
     // prime SpeechSynthesis ด้วย user gesture เดียวกัน
+    // iOS ต้องการข้อความจริง (ไม่ใช่ string ว่าง) ถึงจะ unlock ได้
     if ('speechSynthesis' in window) {
       window.speechSynthesis.getVoices()
-      const dummy = new SpeechSynthesisUtterance('')
+      const dummy = new SpeechSynthesisUtterance(' ')
       dummy.volume = 0
+      dummy.lang   = 'th-TH'
       window.speechSynthesis.speak(dummy)
-      window.speechSynthesis.cancel()
     }
 
     _unlocked = true
