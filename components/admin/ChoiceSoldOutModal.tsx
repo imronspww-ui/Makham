@@ -2,33 +2,64 @@
 /**
  * ChoiceSoldOutModal — จัดการสถานะ "หมด" ระดับตัวเลือกย่อย (OptionChoice)
  * เช่น ยำวุ้นเส้น → กลุ่ม "โปรตีน" → ไก่ยอ หมด
+ *
+ * ใช้ optimistic update เพื่อให้ UI ตอบสนองทันทีโดยไม่รอ Firestore
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { toggleChoiceSoldOut } from '@/lib/services/menuService'
-import type { MenuItem } from '@/types'
+import type { MenuItem, OptionGroup } from '@/types'
 
 interface Props {
   item:    MenuItem
   onClose: () => void
-  onDone:  () => void   // reload menu หลังเปลี่ยน
+  onDone:  () => void   // เรียกหลังสำเร็จ (POS ใช้ reload menu)
 }
 
 export function ChoiceSoldOutModal({ item, onClose, onDone }: Props) {
-  const [loading, setLoading] = useState<string | null>(null)  // choiceId ที่กำลัง toggle
+  // ── local state — optimistic update ──────────────────────────────────────
+  const [groups,  setGroups]  = useState<OptionGroup[]>(item.optionGroups ?? [])
+  const [loading, setLoading] = useState<string | null>(null)  // groupId-choiceId
 
-  const groups = item.optionGroups ?? []
+  // sync เมื่อ item prop เปลี่ยน (พ่อแม่ reload menu แล้วส่ง item ใหม่มา)
+  useEffect(() => {
+    setGroups(item.optionGroups ?? [])
+  }, [item])
 
   async function handleToggle(groupId: string, choiceId: string, currentSoldOut: boolean) {
-    const key = `${groupId}-${choiceId}`
+    const key     = `${groupId}-${choiceId}`
+    const next    = !currentSoldOut
+
+    // ── optimistic update ทันที ──
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id !== groupId ? g : {
+          ...g,
+          choices: g.choices.map((c) =>
+            c.id !== choiceId ? c : { ...c, isSoldOut: next },
+          ),
+        },
+      ),
+    )
+
     setLoading(key)
     try {
-      await toggleChoiceSoldOut(item.id, groupId, choiceId, !currentSoldOut)
-      onDone()
-      // อย่า close — ให้ admin toggle ได้ต่อเนื่อง
+      await toggleChoiceSoldOut(item.id, groupId, choiceId, next)
+      onDone()   // บอก POS ให้ reload menu
     } catch {
-      toast.error('บันทึกไม่สำเร็จ')
+      // revert optimistic update
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id !== groupId ? g : {
+            ...g,
+            choices: g.choices.map((c) =>
+              c.id !== choiceId ? c : { ...c, isSoldOut: currentSoldOut },
+            ),
+          },
+        ),
+      )
+      toast.error('บันทึกไม่สำเร็จ กรุณาลองใหม่')
     } finally {
       setLoading(null)
     }
@@ -70,11 +101,11 @@ export function ChoiceSoldOutModal({ item, onClose, onDone }: Props) {
                       <button
                         key={choice.id}
                         type="button"
-                        onClick={() => handleToggle(group.id, choice.id, soldOut)}
+                        onClick={() => !busy && handleToggle(group.id, choice.id, soldOut)}
                         disabled={busy}
                         className={[
                           'flex items-center justify-between rounded-xl px-3 py-2.5 border-2 text-sm font-medium transition-all active:scale-95',
-                          busy ? 'opacity-50 cursor-wait' : '',
+                          busy ? 'opacity-60 cursor-wait' : 'cursor-pointer',
                           soldOut
                             ? 'border-red-300 bg-red-50 text-red-600'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-orange-300 hover:bg-orange-50',
@@ -83,7 +114,7 @@ export function ChoiceSoldOutModal({ item, onClose, onDone }: Props) {
                         <div className="flex items-center gap-2">
                           {/* Status dot */}
                           <div className={[
-                            'h-2.5 w-2.5 rounded-full flex-shrink-0',
+                            'h-2.5 w-2.5 rounded-full flex-shrink-0 transition-colors',
                             soldOut ? 'bg-red-400' : 'bg-green-400',
                           ].join(' ')} />
                           <span className={soldOut ? 'line-through text-red-400' : ''}>
@@ -96,7 +127,7 @@ export function ChoiceSoldOutModal({ item, onClose, onDone }: Props) {
 
                         {/* Badge */}
                         <span className={[
-                          'text-xs font-bold rounded-full px-2.5 py-0.5',
+                          'text-xs font-bold rounded-full px-2.5 py-0.5 min-w-[48px] text-center',
                           soldOut
                             ? 'bg-red-100 text-red-600'
                             : 'bg-green-100 text-green-700',

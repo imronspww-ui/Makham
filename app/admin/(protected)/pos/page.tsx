@@ -86,7 +86,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
 // ─── POS Page ─────────────────────────────────────────────────────────────────
 
 export default function PosPage() {
-  const { items: menuItems, categories, loading } = useMenu()
+  const { items: menuItems, categories, loading, reload: reloadMenu } = useMenu()
   const { settings } = useSettings()
   const storeName    = settings?.store.name ?? 'ร้านมะขาม'
   const storeForReceipt  = settings?.store
@@ -1057,13 +1057,7 @@ export default function PosPage() {
         <ChoiceSoldOutModal
           item={managingChoices}
           onClose={() => setManagingChoices(null)}
-          onDone={() => {
-            // menuItems จะ update จาก useMenu hook อัตโนมัติ
-            // อัปเดต managingChoices ให้แสดงสถานะล่าสุด
-            setManagingChoices((prev) =>
-              prev ? { ...prev } : null
-            )
-          }}
+          onDone={reloadMenu}
         />
       )}
     </>
