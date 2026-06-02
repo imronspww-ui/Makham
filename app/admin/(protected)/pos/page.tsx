@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { createOrder } from '@/lib/services/orderService'
-import { getCustomer, upsertCustomerAfterOrder } from '@/lib/services/customerService'
+import { getCustomer, upsertCustomerAfterOrder, createCustomer } from '@/lib/services/customerService'
 import { updateMenuItem } from '@/lib/services/menuService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
@@ -93,9 +93,12 @@ export default function PosPage() {
   const [lastOrder, setLastOrder] = useState<{ number: string; total: number; change: number; receipt: ReceiptData } | null>(null)
 
   // ── Member state ──────────────────────────────────────────────────────────
-  const [memberPhone,    setMemberPhone]    = useState('')
-  const [memberProfile,  setMemberProfile]  = useState<CustomerProfile | null | 'not-found'>(null)
+  const [memberPhone,     setMemberPhone]     = useState('')
+  const [memberProfile,   setMemberProfile]   = useState<CustomerProfile | null | 'not-found'>(null)
   const [memberSearching, setMemberSearching] = useState(false)
+  const [addingNew,       setAddingNew]       = useState(false)
+  const [newName,         setNewName]         = useState('')
+  const [creatingMember,  setCreatingMember]  = useState(false)
 
   // ── Sold-out toggle state ─────────────────────────────────────────────────
   const [togglingId, setTogglingId] = useState<string | null>(null)
@@ -152,6 +155,25 @@ export default function PosPage() {
       setMemberSearching(false)
     }
   }, [])
+
+  // ── Create new member ─────────────────────────────────────────────────────
+  async function handleCreateMember() {
+    if (!newName.trim()) { toast.error('กรุณากรอกชื่อสมาชิก'); return }
+    setCreatingMember(true)
+    try {
+      const expiryMonths = settings?.loyalty?.expiryMonths ?? 3
+      await createCustomer(memberPhone, newName.trim(), 0, expiryMonths)
+      const profile = await getCustomer(memberPhone)
+      setMemberProfile(profile ?? 'not-found')
+      setAddingNew(false)
+      setNewName('')
+      toast.success(`✅ เพิ่มสมาชิก "${newName.trim()}" แล้ว`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'เพิ่มสมาชิกไม่สำเร็จ')
+    } finally {
+      setCreatingMember(false)
+    }
+  }
 
   // ── Toggle sold-out ───────────────────────────────────────────────────────
   async function toggleSoldOut(e: React.MouseEvent, item: MenuItem) {
@@ -238,6 +260,8 @@ export default function PosPage() {
     setLastOrder(null)
     setMemberPhone('')
     setMemberProfile(null)
+    setAddingNew(false)
+    setNewName('')
   }
 
   // ── Save order ────────────────────────────────────────────────────────────
@@ -657,8 +681,50 @@ export default function PosPage() {
                   )}
                 </div>
               )}
-              {memberProfile === 'not-found' && (
-                <p className="text-xs text-gray-400 text-center py-1">ไม่พบข้อมูลสมาชิก</p>
+              {memberProfile === 'not-found' && !addingNew && (
+                <div className="flex items-center justify-between rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+                  <p className="text-xs text-gray-400">ไม่พบข้อมูลสมาชิก</p>
+                  <button
+                    onClick={() => setAddingNew(true)}
+                    className="flex items-center gap-1 rounded-lg bg-orange-500 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-600 transition-colors"
+                  >
+                    <Plus size={11} />
+                    เพิ่มสมาชิก
+                  </button>
+                </div>
+              )}
+
+              {/* ── Inline new member form ── */}
+              {memberProfile === 'not-found' && addingNew && (
+                <div className="flex flex-col gap-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
+                  <p className="text-xs font-semibold text-orange-700">
+                    เพิ่มสมาชิกใหม่ — {memberPhone}
+                  </p>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateMember()}
+                    placeholder="ชื่อสมาชิก *"
+                    autoFocus
+                    className="rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-orange-500"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setAddingNew(false); setNewName('') }}
+                      className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      onClick={handleCreateMember}
+                      disabled={creatingMember || !newName.trim()}
+                      className="flex-1 rounded-lg bg-orange-500 text-white py-1.5 text-xs font-bold hover:bg-orange-600 disabled:opacity-50 transition-colors"
+                    >
+                      {creatingMember ? '...' : '✅ บันทึก'}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
