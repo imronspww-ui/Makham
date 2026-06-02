@@ -30,6 +30,11 @@ export interface MenuItem {
   isSoldOut: boolean
   isPopular?: boolean
   optionGroups: OptionGroup[]
+  dailyStock?: number    // 0 หรือ undefined = ไม่จำกัด
+  currentStock?: number  // เหลือวันนี้ (null/undefined = เต็ม)
+  stockDate?: string     // วันที่รีเซ็ตล่าสุด YYYY-MM-DD
+  avgRating?: number     // ค่าเฉลี่ยดาว 1-5 (คำนวณจาก reviews)
+  ratingCount?: number   // จำนวนรีวิว
   createdAt: string
   updatedAt: string
 }
@@ -115,6 +120,7 @@ export interface Order {
   note: string
   status: OrderStatus
   source?: 'online' | 'pos'          // ช่องทางออเดอร์: ออนไลน์ หรือ POS หน้าร้าน
+  tableNumber?: string               // หมายเลขโต๊ะ (ถ้าสั่งจากโต๊ะผ่าน QR)
   discount?: number                   // ส่วนลดรวม (บาท) สำหรับ POS
   categoryAddons?: CategoryAddon[]   // category-level sauce/addon selections
   pointsEarned?: number              // แต้มที่ได้รับจากออเดอร์นี้
@@ -198,6 +204,19 @@ export interface ReceiptSettings {
   taxId:         string    // เลขที่ผู้เสียภาษี (ถ้าว่างไม่แสดง)
   footerMessage: string    // ข้อความท้ายใบเสร็จ
   noteLines:     string    // บรรทัดพิเศษ newline-separated (WiFi, LINE, social ฯลฯ)
+}
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+
+export interface Review {
+  id: string
+  menuItemId: string
+  menuItemName: string
+  orderId: string
+  orderNumber: string
+  rating: number      // 1-5
+  comment?: string
+  createdAt: string
 }
 
 export interface Settings {

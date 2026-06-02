@@ -1,16 +1,33 @@
 'use client'
-import { QrCode, Store, Truck, Clock, ShieldAlert, Star, Receipt } from 'lucide-react'
+import { QrCode, Store, Truck, Clock, ShieldAlert, Star, Receipt, UtensilsCrossed, RefreshCw } from 'lucide-react'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
+import { resetAllStock } from '@/lib/services/menuService'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { PromptPaySettingsForm, DeliverySettingsForm, StoreSettingsForm } from '@/components/admin/SettingsForm'
 import { OpeningHoursForm } from '@/components/admin/OpeningHoursForm'
 import { LoyaltySettingsForm } from '@/components/admin/LoyaltySettingsForm'
 import { ReceiptSettingsForm } from '@/components/admin/ReceiptSettingsForm'
+import { TableQRManager } from '@/components/admin/TableQRManager'
 import { DangerZoneForm } from '@/components/admin/DangerZoneForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
 
 export default function SettingsPage() {
   const { settings, loading, reload } = useSettings()
+  const [resetting, setResetting] = useState(false)
+
+  async function handleResetStock() {
+    setResetting(true)
+    try {
+      await resetAllStock()
+      toast.success('รีเซ็ตสต็อกทุกเมนูแล้ว ✅')
+    } catch {
+      toast.error('รีเซ็ตไม่สำเร็จ')
+    } finally {
+      setResetting(false)
+    }
+  }
 
   if (loading) return <Spinner text="กำลังโหลดการตั้งค่า..." />
   if (!settings) return <div className="py-10 text-center text-gray-400">ไม่สามารถโหลดการตั้งค่าได้</div>
@@ -72,6 +89,43 @@ export default function SettingsPage() {
           </div>
         </div>
         <LoyaltySettingsForm settings={settings} onSaved={reload} />
+      </div>
+
+      {/* ── Table QR codes ── */}
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+            <UtensilsCrossed size={16} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-700">QR Code ประจำโต๊ะ</h2>
+            <p className="text-xs text-gray-400">สร้าง QR ให้ลูกค้าสแกนสั่งอาหารจากโต๊ะได้เลย</p>
+          </div>
+        </div>
+        <TableQRManager />
+      </div>
+
+      {/* ── Stock reset ── */}
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-green-600">
+              <RefreshCw size={16} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-700">รีเซ็ตสต็อกประจำวัน</h2>
+              <p className="text-xs text-gray-400">กดตอนเปิดร้านใหม่ — รีเซ็ตจำนวนขายของทุกเมนูที่ตั้งสต็อกไว้</p>
+            </div>
+          </div>
+          <button
+            onClick={handleResetStock}
+            disabled={resetting}
+            className="flex items-center gap-2 rounded-xl bg-green-500 text-white px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:opacity-60 transition-colors"
+          >
+            <RefreshCw size={14} className={resetting ? 'animate-spin' : ''} />
+            {resetting ? 'กำลังรีเซ็ต...' : 'รีเซ็ตสต็อก'}
+          </button>
+        </div>
       </div>
 
       {/* ── Receipt settings ── */}

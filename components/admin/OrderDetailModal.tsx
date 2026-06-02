@@ -70,7 +70,14 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
           </div>
           <div className="rounded-xl bg-gray-50 p-3">
             <p className="text-xs text-gray-400 mb-1">ประเภท</p>
-            <p className="font-medium">{order.orderType === 'pickup' ? '🛍️ รับหน้าร้าน' : '🚚 จัดส่ง'}</p>
+            <p className="font-medium flex items-center gap-2 flex-wrap">
+              {order.orderType === 'pickup' ? '🛍️ รับหน้าร้าน' : '🚚 จัดส่ง'}
+              {order.tableNumber && (
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                  🍽️ โต๊ะ {order.tableNumber}
+                </span>
+              )}
+            </p>
             {order.delivery && (
               <div className="mt-1.5 flex flex-col gap-1">
                 <p className="text-xs text-gray-600 leading-relaxed">{order.delivery.address}</p>

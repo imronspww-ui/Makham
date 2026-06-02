@@ -1,37 +1,43 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, Store, ClipboardList } from 'lucide-react'
+import { ShoppingCart, Store, ClipboardList, UtensilsCrossed } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { CartDrawer } from '@/components/customer/CartDrawer'
 import { CustomerOrderTracker } from '@/components/customer/CustomerOrderTracker'
+import { TableNumberTracker } from '@/components/customer/TableNumberTracker'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { useStoreHours } from '@/lib/hooks/useStoreHours'
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const [cartOpen, setCartOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [mounted,  setMounted]  = useState(false)
   const getTotalItems = useCartStore((s) => s.getTotalItems)
   const historyOrders = useOrderHistoryStore((s) => s.orders)
   const { settings } = useSettings()
-  const { isOpen } = useStoreHours(settings)
+  const { isOpen }   = useStoreHours(settings)
 
   useEffect(() => { setMounted(true) }, [])
 
-  const storeName = settings?.store.name ?? process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม'
-  const logoUrl = settings?.store.logoUrl
-  const bgImageUrl = settings?.store.bgImageUrl
+  const storeName   = settings?.store.name ?? process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม'
+  const logoUrl     = settings?.store.logoUrl
+  const bgImageUrl  = settings?.store.bgImageUrl
+  const tableNumber = mounted ? (sessionStorage.getItem('tableNumber') ?? '') : ''
 
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-fixed"
-      // CustomerOrderTracker ซ่อนอยู่ในนี้ — track order status ใน SW background
       style={bgImageUrl
         ? { backgroundImage: `url(${bgImageUrl})` }
         : { background: 'linear-gradient(165deg, #fef9f2 0%, #fff7ed 55%, #fef4e2 100%)' }
       }
     >
+      {/* อ่าน ?table=X จาก URL — ต้อง Suspense เพราะใช้ useSearchParams */}
+      <Suspense fallback={null}>
+        <TableNumberTracker />
+      </Suspense>
+
       {/* ── Closed banner ── */}
       {!isOpen && (
         <div className="bg-red-600 text-white text-center py-2 px-4 text-sm font-medium z-40 relative">
@@ -58,6 +64,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </Link>
 
           <div className="flex items-center gap-2">
+            {/* Table badge */}
+            {tableNumber && (
+              <div className="flex items-center gap-1.5 rounded-xl border border-amber-700/40 bg-amber-900/40 px-3 py-2 text-sm font-semibold text-amber-200">
+                <UtensilsCrossed size={14} />
+                โต๊ะ {tableNumber}
+              </div>
+            )}
             {/* My orders button */}
             {mounted && historyOrders.length > 0 && (
               <Link

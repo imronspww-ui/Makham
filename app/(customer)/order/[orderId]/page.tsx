@@ -7,10 +7,12 @@ import { useOrder } from '@/lib/hooks/useOrder'
 import { useOrderNotification } from '@/lib/hooks/useOrderNotification'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { updateOrderSlip } from '@/lib/services/orderService'
+import { hasReviewed } from '@/lib/services/reviewService'
 import { uploadImage } from '@/lib/firebase/storage'
 import { formatCurrency, formatDate, formatDistance } from '@/lib/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { StarRatingForm } from '@/components/customer/StarRatingForm'
 import type { OrderStatus } from '@/types'
 
 const statusInfo: Record<OrderStatus, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
@@ -89,8 +91,17 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
   const { order, loading } = useOrder(orderId)
   const { settings } = useSettings()
   const storeName = settings?.store.name ?? 'ร้านมะขาม'
+  const [showRating,  setShowRating]  = useState(true)
+  const [alreadyRated, setAlreadyRated] = useState(false)
 
   useOrderNotification(order, storeName)
+
+  // เช็คว่าเคยรีวิวแล้วหรือยัง
+  useEffect(() => {
+    if (order?.status === 'completed') {
+      hasReviewed(orderId).then(setAlreadyRated).catch(() => {})
+    }
+  }, [orderId, order?.status])
 
   // บอก SW ให้ track ออเดอร์นี้ตั้งแต่เปิดหน้า
   useEffect(() => {
@@ -328,6 +339,16 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Rating form — แสดงเมื่อ completed และยังไม่ได้รีวิว ── */}
+      {order.status === 'completed' && showRating && !alreadyRated && (
+        <StarRatingForm
+          orderId={orderId}
+          orderNumber={order.orderNumber}
+          items={order.items}
+          onDone={() => setShowRating(false)}
+        />
       )}
 
       {/* CTA — สั่งอาหารใหม่ */}

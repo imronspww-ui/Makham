@@ -1,9 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2, PackageX } from 'lucide-react'
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2, PackageX, Package, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
-import { deleteMenuItem, updateMenuItem } from '@/lib/services/menuService'
+import { deleteMenuItem, updateMenuItem, setDailyStock } from '@/lib/services/menuService'
 import { deleteCategory } from '@/lib/services/categoryService'
 import { MenuFormModal } from '@/components/admin/MenuFormModal'
 import { CategoryFormModal } from '@/components/admin/CategoryFormModal'
@@ -16,10 +16,12 @@ import type { Category, MenuItem } from '@/types'
 
 export default function MenuPage() {
   const { items, categories, loading, reload } = useAdminMenu()
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editItem, setEditItem] = useState<MenuItem | null>(null)
+  const [modalOpen,    setModalOpen]    = useState(false)
+  const [editItem,     setEditItem]     = useState<MenuItem | null>(null)
   const [catModalOpen, setCatModalOpen] = useState(false)
   const [editCategory, setEditCategory] = useState<Category | null>(null)
+  const [stockEditing, setStockEditing] = useState<string | null>(null)  // itemId กำลังแก้สต็อก
+  const [stockInput,   setStockInput]   = useState('')
 
   function openAdd() { setEditItem(null); setModalOpen(true) }
   function openEdit(item: MenuItem) { setEditItem(item); setModalOpen(true) }
@@ -57,6 +59,17 @@ export default function MenuPage() {
       toast.success(item.isPopular ? 'ยกเลิกเมนูยอดนิยม' : '🔥 เพิ่มเป็นเมนูยอดนิยมแล้ว')
       reload()
     } catch { toast.error('อัปเดตไม่สำเร็จ') }
+  }
+
+  async function handleSaveStock(item: MenuItem) {
+    const val = parseInt(stockInput, 10)
+    if (isNaN(val) || val < 0) { toast.error('จำนวนต้องเป็นตัวเลข ≥ 0'); return }
+    try {
+      await setDailyStock(item.id, val)
+      toast.success(val === 0 ? 'ยกเลิกสต็อก (ไม่จำกัด)' : `ตั้งสต็อก ${val} ชิ้น/วัน`)
+      setStockEditing(null)
+      reload()
+    } catch { toast.error('บันทึกไม่สำเร็จ') }
   }
 
   function openAddCategory() {
@@ -180,6 +193,50 @@ export default function MenuPage() {
                         </span>
                       ) : (
                         <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+
+                    {/* ── ดาว Rating ── */}
+                    <td className="px-4 py-3">
+                      {item.avgRating ? (
+                        <div className="flex items-center gap-1">
+                          <Star size={12} className="text-yellow-400 fill-yellow-400" />
+                          <span className="text-xs font-semibold text-gray-700">{item.avgRating.toFixed(1)}</span>
+                          <span className="text-xs text-gray-400">({item.ratingCount})</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+
+                    {/* ── สต็อกรายวัน ── */}
+                    <td className="px-4 py-3">
+                      {stockEditing === item.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            value={stockInput}
+                            onChange={(e) => setStockInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveStock(item); if (e.key === 'Escape') setStockEditing(null) }}
+                            autoFocus
+                            placeholder="0=ไม่จำกัด"
+                            className="w-20 rounded-lg border border-orange-300 px-2 py-1 text-xs focus:outline-none"
+                          />
+                          <button onClick={() => handleSaveStock(item)} className="text-green-600 text-xs font-bold hover:text-green-700">✓</button>
+                          <button onClick={() => setStockEditing(null)} className="text-gray-400 text-xs hover:text-gray-600">✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setStockEditing(item.id); setStockInput(String(item.dailyStock ?? 0)) }}
+                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-orange-500 transition-colors"
+                          title="คลิกเพื่อตั้งสต็อกรายวัน (0 = ไม่จำกัด)"
+                        >
+                          <Package size={12} />
+                          {item.dailyStock
+                            ? <span className="font-semibold text-blue-600">{item.currentStock ?? item.dailyStock}/{item.dailyStock}</span>
+                            : <span className="text-gray-300">ไม่จำกัด</span>}
+                        </button>
                       )}
                     </td>
 

@@ -178,6 +178,9 @@ export default function CheckoutPage() {
       if (pointsEarned > 0) {
         orderData.pointsEarned = pointsEarned
       }
+      // แนบหมายเลขโต๊ะถ้ามี (จาก QR โต๊ะ)
+      const tableNumber = sessionStorage.getItem('tableNumber')
+      if (tableNumber) orderData.tableNumber = tableNumber
 
       const id = await createOrder(orderData)
       addOrderToHistory({ id, orderNumber: orderData.orderNumber, createdAt: new Date().toISOString() })
