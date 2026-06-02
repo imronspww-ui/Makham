@@ -126,6 +126,10 @@ export interface Order {
   pointsEarned?: number              // แต้มที่ได้รับจากออเดอร์นี้
   pointsUsed?: number                // แต้มที่ใช้แลกเมนูฟรี
   redeemedItemId?: string            // menuItemId ของเมนูที่แลก
+  cancelRequest?: {                  // คำขอยกเลิกจากลูกค้า
+    reason: string
+    requestedAt: string
+  }
   createdAt: string
   updatedAt: string
 }

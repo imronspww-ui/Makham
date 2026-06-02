@@ -215,8 +215,20 @@ export default function OrdersPage() {
             </thead>
             <tbody>
               {filtered.map((order) => (
-                <tr key={order.id} className="border-t border-gray-50 hover:bg-orange-50/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs font-medium">{order.orderNumber}</td>
+                <tr key={order.id} className={[
+                  'border-t border-gray-50 hover:bg-orange-50/30 transition-colors',
+                  order.cancelRequest ? 'bg-red-50/40' : '',
+                ].join(' ')}>
+                  <td className="px-4 py-3 font-mono text-xs font-medium">
+                    <div className="flex flex-col gap-1">
+                      {order.orderNumber}
+                      {order.cancelRequest && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-100 rounded-full px-1.5 py-0.5 w-fit">
+                          🚨 ขอยกเลิก
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{order.customer.name}</p>
                     <p className="text-xs text-gray-400">{order.customer.phone}</p>

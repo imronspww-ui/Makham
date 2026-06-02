@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { OrderStatusBadge, statusConfig } from './OrderStatusBadge'
-import { updateOrderStatus, updatePaymentStatus } from '@/lib/services/orderService'
+import { updateOrderStatus, updatePaymentStatus, respondToCancelRequest } from '@/lib/services/orderService'
 import { formatCurrency, formatDate, formatDistance } from '@/lib/utils/format'
 import type { Order, OrderStatus } from '@/types'
 
@@ -31,6 +31,21 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
       onClose()
     } catch {
       toast.error('อัปเดตสถานะไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleCancelResponse(approve: boolean) {
+    if (!order) return
+    setSaving(true)
+    try {
+      await respondToCancelRequest(order.id, approve)
+      toast.success(approve ? 'ยืนยันยกเลิกออเดอร์แล้ว' : 'ปฏิเสธคำขอยกเลิกแล้ว')
+      onUpdated()
+      onClose()
+    } catch {
+      toast.error('ดำเนินการไม่สำเร็จ')
     } finally {
       setSaving(false)
     }
@@ -149,6 +164,39 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
                   <span className="font-medium text-gray-800">{addon.choiceName}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── คำขอยกเลิกจากลูกค้า ── */}
+        {order.cancelRequest && (
+          <div className="rounded-xl bg-red-50 border border-red-300 p-4 flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-bold text-red-600 mb-1">🚨 ลูกค้าขอยกเลิกออเดอร์</p>
+              <p className="text-sm text-gray-700">สาเหตุ: <span className="font-medium">{order.cancelRequest.reason}</span></p>
+              <p className="text-xs text-gray-400 mt-1">
+                ส่งคำขอเมื่อ {new Date(order.cancelRequest.requestedAt).toLocaleString('th-TH', {
+                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                })}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                size="sm"
+                loading={saving}
+                onClick={() => handleCancelResponse(true)}
+              >
+                ✅ อนุมัติยกเลิก
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={saving}
+                onClick={() => handleCancelResponse(false)}
+              >
+                ❌ ปฏิเสธ
+              </Button>
             </div>
           </div>
         )}

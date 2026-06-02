@@ -94,6 +94,35 @@ export async function deleteAllOrders(): Promise<number> {
   return snap.docs.length
 }
 
+/** ลูกค้าขอยกเลิกออเดอร์ — บันทึก cancelRequest รอ admin ยืนยัน */
+export async function requestCancelOrder(id: string, reason: string): Promise<void> {
+  requireFirebase()
+  await updateDoc(doc(db, COL, id), {
+    cancelRequest: { reason, requestedAt: new Date().toISOString() },
+    updatedAt: Timestamp.now(),
+  })
+}
+
+/** admin อนุมัติ/ปฏิเสธคำขอยกเลิก */
+export async function respondToCancelRequest(
+  id: string,
+  approve: boolean,
+): Promise<void> {
+  requireFirebase()
+  if (approve) {
+    await updateDoc(doc(db, COL, id), {
+      status: 'cancelled' as OrderStatus,
+      cancelRequest: null,
+      updatedAt: Timestamp.now(),
+    })
+  } else {
+    await updateDoc(doc(db, COL, id), {
+      cancelRequest: null,
+      updatedAt: Timestamp.now(),
+    })
+  }
+}
+
 export function subscribeToOrder(id: string, callback: (order: Order | null) => void): () => void {
   if (!isFirebaseConfigured) { callback(null); return () => {} }
   return onSnapshot(doc(db, COL, id), (snap) => {

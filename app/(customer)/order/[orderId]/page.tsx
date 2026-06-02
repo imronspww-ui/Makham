@@ -6,7 +6,7 @@ import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, G
 import { useOrder } from '@/lib/hooks/useOrder'
 import { useOrderNotification } from '@/lib/hooks/useOrderNotification'
 import { useSettings } from '@/lib/hooks/useSettings'
-import { updateOrderSlip } from '@/lib/services/orderService'
+import { updateOrderSlip, requestCancelOrder } from '@/lib/services/orderService'
 import { hasReviewed } from '@/lib/services/reviewService'
 import { uploadImage } from '@/lib/firebase/storage'
 import { formatCurrency, formatDate, formatDistance } from '@/lib/utils/format'
@@ -91,8 +91,26 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
   const { order, loading } = useOrder(orderId)
   const { settings } = useSettings()
   const storeName = settings?.store.name ?? 'ร้านมะขาม'
-  const [showRating,  setShowRating]  = useState(true)
-  const [alreadyRated, setAlreadyRated] = useState(false)
+  const [showRating,    setShowRating]    = useState(true)
+  const [alreadyRated,  setAlreadyRated]  = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason,    setCancelReason]    = useState('')
+  const [cancelling,      setCancelling]      = useState(false)
+
+  async function handleRequestCancel() {
+    if (!cancelReason.trim()) { toast.error('กรุณาระบุสาเหตุการยกเลิก'); return }
+    setCancelling(true)
+    try {
+      await requestCancelOrder(orderId, cancelReason.trim())
+      toast.success('ส่งคำขอยกเลิกแล้ว รอร้านยืนยัน')
+      setShowCancelModal(false)
+      setCancelReason('')
+    } catch {
+      toast.error('ส่งคำขอไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   useOrderNotification(order, storeName)
 
@@ -351,10 +369,65 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
         />
       )}
 
+      {/* ── ขอยกเลิกออเดอร์ (เฉพาะ pending และยังไม่ได้ขอไว้) ── */}
+      {order.status === 'pending' && !order.cancelRequest && (
+        <button
+          onClick={() => setShowCancelModal(true)}
+          className="text-sm text-red-400 hover:text-red-600 underline underline-offset-2 text-center"
+        >
+          ขอยกเลิกออเดอร์
+        </button>
+      )}
+
+      {/* ── แสดงสถานะรอยืนยันการยกเลิก ── */}
+      {order.cancelRequest && order.status !== 'cancelled' && (
+        <div className="rounded-2xl bg-red-50 border border-red-200 p-4 flex flex-col gap-1.5">
+          <p className="text-sm font-semibold text-red-600">⏳ รอร้านยืนยันการยกเลิก</p>
+          <p className="text-xs text-red-500">สาเหตุ: {order.cancelRequest.reason}</p>
+          <p className="text-xs text-gray-400">
+            ส่งคำขอเมื่อ {new Date(order.cancelRequest.requestedAt).toLocaleString('th-TH', {
+              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+            })}
+          </p>
+        </div>
+      )}
+
       {/* CTA — สั่งอาหารใหม่ */}
       <Link href="/">
         <Button size="lg" fullWidth>🍱 สั่งอาหารใหม่</Button>
       </Link>
+
+      {/* ── Modal ขอยกเลิก ── */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-5 flex flex-col gap-4">
+            <h3 className="font-bold text-gray-800">ขอยกเลิกออเดอร์</h3>
+            <p className="text-sm text-gray-500">กรุณาระบุสาเหตุ ร้านจะได้รับแจ้งและยืนยันการยกเลิก</p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="เช่น สั่งผิด, เปลี่ยนใจ, มีเหตุฉุกเฉิน..."
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowCancelModal(false); setCancelReason('') }}
+                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleRequestCancel}
+                disabled={cancelling || !cancelReason.trim()}
+                className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {cancelling ? 'กำลังส่ง...' : 'ส่งคำขอ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
