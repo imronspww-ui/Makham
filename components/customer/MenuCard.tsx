@@ -78,15 +78,17 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
       <div
         onClick={handleClick}
         className={[
-          'group relative flex flex-col rounded-2xl bg-white border border-stone-100 shadow-sm',
+          'group relative flex rounded-2xl bg-white border border-stone-100 shadow-sm',
           'overflow-hidden transition-all duration-200',
+          // mobile: landscape (row), sm+: portrait (col)
+          'flex-row sm:flex-col',
           unavailable
             ? 'opacity-60 cursor-not-allowed'
             : 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:scale-[0.98]',
         ].join(' ')}
       >
-        {/* Image */}
-        <div className="relative h-44 w-full bg-stone-100">
+        {/* Image — mobile: สี่เหลี่ยมซ้าย, sm+: เต็มความกว้าง */}
+        <div className="relative w-36 shrink-0 sm:w-full h-auto sm:h-52 bg-stone-100 aspect-square sm:aspect-auto">
           {showImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -113,13 +115,6 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
             </div>
           )}
 
-          {/* Cart qty badge */}
-          {cartQty > 0 && (
-            <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white shadow-md">
-              {cartQty}
-            </div>
-          )}
-
           {/* Popular badge */}
           {item.isPopular && showPopularBadge && (
             <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-sm px-2.5 py-0.5 shadow-sm">
@@ -127,23 +122,31 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
               <span className="text-[10px] font-bold text-white">ยอดนิยม</span>
             </div>
           )}
-
-          {/* Has options badge */}
-          {hasOptions && (
-            <div className="absolute bottom-2 left-2 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-medium text-stone-600 px-2 py-0.5 border border-stone-200">
-              มีตัวเลือก
-            </div>
-          )}
         </div>
 
         {/* Card body */}
-        <div className="flex flex-1 flex-col p-3">
-          <h3 className="font-semibold text-stone-800 line-clamp-1 text-[0.9rem]">{item.name}</h3>
+        <div className="flex flex-1 flex-col p-3 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-stone-800 line-clamp-2 text-[0.9rem] leading-snug">{item.name}</h3>
+            {/* Cart qty badge */}
+            {cartQty > 0 && (
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shadow-md">
+                {cartQty}
+              </div>
+            )}
+          </div>
+
           {item.description && (
-            <p className="mt-0.5 text-xs text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
+            <p className="mt-1 text-xs text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
           )}
+
+          {hasOptions && (
+            <span className="mt-1.5 self-start rounded-full bg-stone-100 text-[10px] font-medium text-stone-500 px-2 py-0.5">
+              มีตัวเลือก
+            </span>
+          )}
+
           <div className="mt-auto pt-2 flex items-center justify-between">
-            {/* Price — แสดง "ตั้งแต่ ฿X" ถ้า base = ฿0 */}
             <div>
               {startingPrice !== null && startingPrice > 0 ? (
                 <div className="flex flex-col leading-none">
@@ -154,14 +157,13 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
                 <span className="font-bold text-orange-500 text-base">{formatCurrency(item.price)}</span>
               )}
             </div>
-            {/* + button — stopPropagation เพื่อไม่ให้ bubble ไป div onClick */}
             <button
               onClick={(e) => { e.stopPropagation(); handleClick() }}
               disabled={unavailable}
               aria-label={`เพิ่ม ${item.name}`}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white shadow-sm transition-all hover:bg-orange-400 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500 text-white shadow-sm transition-all hover:bg-orange-400 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Plus size={16} />
+              <Plus size={18} />
             </button>
           </div>
         </div>
