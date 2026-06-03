@@ -78,17 +78,15 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
       <div
         onClick={handleClick}
         className={[
-          'group relative flex rounded-2xl bg-white border border-stone-100 shadow-sm',
+          'group relative flex flex-col rounded-2xl bg-white border border-stone-100 shadow-sm',
           'overflow-hidden transition-all duration-200',
-          // mobile: landscape (row), sm+: portrait (col)
-          'flex-row sm:flex-col',
           unavailable
             ? 'opacity-60 cursor-not-allowed'
             : 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:scale-[0.98]',
         ].join(' ')}
       >
-        {/* Image — mobile: สี่เหลี่ยมซ้าย, sm+: เต็มความกว้าง */}
-        <div className="relative w-40 shrink-0 sm:w-full h-auto sm:h-72 bg-stone-100 aspect-square sm:aspect-auto">
+        {/* Image — เต็มความกว้างทุก breakpoint */}
+        <div className="relative h-56 sm:h-72 w-full bg-stone-100">
           {showImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
