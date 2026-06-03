@@ -3,8 +3,11 @@ import { useState } from 'react'
 import { Flame, Search, X } from 'lucide-react'
 import { MenuCard } from './MenuCard'
 import { CategoryFilter } from './CategoryFilter'
+import { HeroBanner } from './HeroBanner'
+import { ItemOptionsModal } from './ItemOptionsModal'
 import { MenuGridSkeleton } from '@/components/ui/Skeleton'
-import type { MenuItem, Category } from '@/types'
+import { useCartStore } from '@/store/cartStore'
+import type { MenuItem, Category, SelectedOption } from '@/types'
 
 interface Props {
   items: MenuItem[]
@@ -16,6 +19,16 @@ interface Props {
 export function MenuGrid({ items, categories, loading, error }: Props) {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [bannerItem, setBannerItem] = useState<MenuItem | null>(null)
+  const { addItem } = useCartStore()
+
+  function handleBannerAdd(selectedOptions: SelectedOption[], itemNote: string, qty: number) {
+    if (!bannerItem) return
+    for (let i = 0; i < qty; i++) {
+      addItem({ menuItemId: bannerItem.id, name: bannerItem.name, price: bannerItem.price, imageUrl: bannerItem.imageUrl, selectedOptions, itemNote, optionGroups: bannerItem.optionGroups })
+    }
+    setBannerItem(null)
+  }
 
   const isSearching = search.trim().length > 0
   const q = search.toLowerCase()
@@ -52,6 +65,20 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* ── #10 Hero Banner ── */}
+      {!loading && items.length > 0 && (
+        <HeroBanner items={items} onSelect={setBannerItem} />
+      )}
+
+      {/* Banner item modal */}
+      {bannerItem && (
+        <ItemOptionsModal
+          item={bannerItem}
+          onClose={() => setBannerItem(null)}
+          onAdd={handleBannerAdd}
+        />
+      )}
+
       {/* ── Search bar ── */}
       <div className="relative">
         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
@@ -60,7 +87,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="ค้นหาเมนู..."
-          className="w-full rounded-2xl border border-stone-200 bg-white pl-10 pr-10 py-2.5 text-sm text-stone-800 placeholder-stone-400 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all shadow-sm"
+          className="search-input w-full rounded-2xl border border-stone-200 bg-white pl-10 pr-10 py-2.5 text-sm text-stone-800 placeholder-stone-400 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all shadow-sm"
         />
         {isSearching && (
           <button
@@ -101,7 +128,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <Flame size={18} className="text-orange-500" />
-                <h2 className="text-base font-bold text-stone-800">เมนูยอดนิยม</h2>
+                <h2 className="page-title text-base font-bold text-stone-800">เมนูยอดนิยม</h2>
               </div>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
                 {popularItems.map((item) => (

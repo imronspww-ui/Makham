@@ -99,7 +99,7 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
         <div className="flex items-start justify-between p-4 border-b border-gray-100">
           <div>
             <h2 className="font-bold text-gray-800 text-lg">{item.name}</h2>
-            <p className="text-sm text-orange-500 font-semibold">{formatCurrency(item.price)}</p>
+            <p className="text-sm text-orange-600 font-semibold">{formatCurrency(item.price)}</p>
           </div>
           <button onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
@@ -138,7 +138,7 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
                         soldOut
                           ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
                           : isSelected
-                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                            ? 'border-orange-600 bg-orange-50 text-orange-700'
                             : 'border-gray-200 text-gray-600 hover:border-orange-200',
                       ].join(' ')}
                     >
@@ -146,7 +146,7 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
                         <div className={[
                           'w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
                           soldOut ? 'border-gray-200 bg-gray-100'
-                            : isSelected ? 'border-orange-500 bg-orange-500'
+                            : isSelected ? 'border-orange-600 bg-orange-600'
                             : 'border-gray-300',
                         ].join(' ')}>
                           {isSelected && !soldOut && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -157,7 +157,7 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
                         )}
                       </div>
                       {choice.extraPrice > 0 && !soldOut && (
-                        <span className="text-xs text-orange-500 font-medium">+{formatCurrency(choice.extraPrice)}</span>
+                        <span className="text-xs text-orange-600 font-medium">+{formatCurrency(choice.extraPrice)}</span>
                       )}
                     </button>
                   )
@@ -197,7 +197,7 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
                 <button
                   type="button"
                   onClick={() => setQty((q) => q + 1)}
-                  className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600"
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-600 text-white hover:bg-orange-700"
                 >
                   <Plus size={14} />
                 </button>
@@ -213,3 +213,4 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
     </div>
   )
 }
+

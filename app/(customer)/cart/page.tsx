@@ -136,10 +136,10 @@ export default function CartPage() {
                 )}
                 {item.itemNote && <p className="text-xs text-stone-400 mt-0.5">📝 {item.itemNote}</p>}
                 <div className="flex items-center gap-3 mt-1">
-                  <p className="text-orange-500 text-sm font-medium">{formatCurrency(unitPrice)} / ชิ้น</p>
+                  <p className="text-orange-600 text-sm font-medium">{formatCurrency(unitPrice)} / ชิ้น</p>
                   {hasOptions && (
                     <button onClick={() => setEditingItem(item)}
-                      className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700 transition-colors">
+                      className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 transition-colors">
                       <Pencil size={11} /> แก้ไขตัวเลือก
                     </button>
                   )}
@@ -150,7 +150,7 @@ export default function CartPage() {
                   className="h-8 w-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-stone-100 text-lg font-bold">−</button>
                 <span className="w-6 text-center font-semibold">{item.qty}</span>
                 <button onClick={() => updateQty(item.menuItemId, item.qty + 1)}
-                  className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600 text-lg font-bold">+</button>
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-orange-600 text-white hover:bg-orange-700 text-lg font-bold">+</button>
               </div>
               <button onClick={() => removeItem(item.menuItemId)}
                 className="text-red-400 text-xs hover:text-red-600 mt-1">ลบ</button>
@@ -208,21 +208,21 @@ export default function CartPage() {
                             className={[
                               'flex items-center justify-between px-3 py-2.5 rounded-xl border-2 text-sm text-left transition-all',
                               isSelected
-                                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                ? 'border-orange-600 bg-orange-50 text-orange-700'
                                 : 'border-gray-200 text-stone-600 hover:border-orange-200',
                             ].join(' ')}
                           >
                             <div className="flex items-center gap-2">
                               <div className={[
                                 'w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                                isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300',
+                                isSelected ? 'border-orange-600 bg-orange-600' : 'border-gray-300',
                               ].join(' ')}>
                                 {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                               </div>
                               <span>{choice.name}</span>
                             </div>
                             {choice.extraPrice > 0 && (
-                              <span className="text-xs text-orange-500 font-medium">+{formatCurrency(choice.extraPrice)}</span>
+                              <span className="text-xs text-orange-600 font-medium">+{formatCurrency(choice.extraPrice)}</span>
                             )}
                           </button>
                         )
@@ -266,7 +266,7 @@ export default function CartPage() {
         </div>
         <div className="border-t border-gray-100 pt-3 flex justify-between font-bold text-base">
           <span>รวม</span>
-          <span className="text-orange-500">{formatCurrency(cartTotal)}</span>
+          <span className="text-orange-600">{formatCurrency(cartTotal)}</span>
         </div>
 
         {/* ── แจ้งเตือนยอดขั้นต่ำ ── */}
@@ -303,3 +303,4 @@ export default function CartPage() {
     </div>
   )
 }
+

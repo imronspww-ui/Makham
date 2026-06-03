@@ -74,7 +74,7 @@ export interface CartItem {
   optionGroups?: OptionGroup[]   // kept for in-cart option editing
 }
 
-export type OrderType = 'pickup' | 'delivery'
+export type OrderType = 'pickup' | 'delivery' | 'dine-in'
 export type OrderStatus = 'pending' | 'cooking' | 'delivering' | 'completed' | 'cancelled'
 export type PaymentMethod = 'promptpay' | 'cash'
 export type PaymentStatus = 'pending' | 'paid'

@@ -1,8 +1,63 @@
 @import "tailwindcss";
 
+/* ── Dark mode: class-based (Tailwind v4) ── */
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #f9fafb;
   --foreground: #111827;
+}
+
+/* ── Dark mode card & text overrides (data-theme="dark" on wrapper div) ── */
+[data-theme="dark"] .menu-card {
+  background: #1e1409 !important;
+  border-color: #3d2a10 !important;
+}
+[data-theme="dark"] .menu-card h3,
+[data-theme="dark"] .menu-card .item-name { color: #fef3c7 !important; }
+[data-theme="dark"] .menu-card .item-desc { color: #a8825a !important; }
+[data-theme="dark"] .menu-card .item-price { color: #f59e0b !important; }
+[data-theme="dark"] .menu-card .item-tag   { background: #2a1e0f !important; color: #c4956a !important; }
+
+[data-theme="dark"] .search-input {
+  background: #1e1409 !important;
+  border-color: #3d2a10 !important;
+  color: #fef3c7 !important;
+}
+[data-theme="dark"] .search-input::placeholder { color: #6b4c2a !important; }
+
+[data-theme="dark"] .category-filter-bar {
+  background: rgba(15,10,5,0.95) !important;
+  border-color: #3d2a10 !important;
+}
+[data-theme="dark"] .category-filter-bar .chip-inactive {
+  background: rgba(30,20,9,0.7) !important;
+  border-color: #3d2a10 !important;
+  color: #a8825a !important;
+}
+
+[data-theme="dark"] .cart-drawer {
+  background: #150e06 !important;
+  color: #fef3c7 !important;
+}
+[data-theme="dark"] .cart-drawer-header { border-color: #3d2a10 !important; }
+[data-theme="dark"] .cart-item-row { border-color: #3d2a10 !important; }
+[data-theme="dark"] .cart-footer    { border-color: #3d2a10 !important; }
+
+[data-theme="dark"] .page-title    { color: #fef3c7 !important; text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+[data-theme="dark"] .page-subtitle { color: #d4a96a !important; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+
+/* เมนูยอดนิยม heading + icon + section separators */
+[data-theme="dark"] h2.text-stone-800,
+[data-theme="dark"] h2.text-base { color: #fef3c7 !important; }
+[data-theme="dark"] .text-stone-800 { color: #fef3c7 !important; }
+[data-theme="dark"] .text-stone-500 { color: #d4a96a !important; }
+[data-theme="dark"] .text-stone-400 { color: #a8825a !important; }
+[data-theme="dark"] .border-stone-100 { border-color: #3d2a10 !important; }
+
+[data-theme="dark"] .section-card {
+  background: #1e1409 !important;
+  border-color: #3d2a10 !important;
 }
 
 body {
@@ -18,4 +73,53 @@ body {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* ── #9 Cart animations ── */
+@keyframes badge-bounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.5); }
+  60%  { transform: scale(0.85); }
+  80%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.animate-badge-bounce {
+  animation: badge-bounce 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes btn-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.animate-btn-pop {
+  animation: btn-pop 0.3s ease-out;
+}
+
+/* ── #10 Hero banner slide ── */
+@keyframes banner-fade-in {
+  from { opacity: 0; transform: scale(1.03); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-banner-in {
+  animation: banner-fade-in 0.5s ease-out forwards;
+}
+
+/* ── #15 Receipt ── */
+@keyframes receipt-drop {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-receipt-drop {
+  animation: receipt-drop 0.4s ease-out forwards;
+}
+.receipt-font {
+  font-family: 'Courier New', 'Courier', monospace;
+}
+.receipt-dash {
+  background-image: repeating-linear-gradient(90deg, #d1d5db 0, #d1d5db 6px, transparent 0, transparent 12px);
+  background-size: 12px 1px;
+  background-repeat: repeat-x;
+  height: 1px;
 }

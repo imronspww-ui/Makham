@@ -10,8 +10,10 @@ import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { useCustomerStore } from '@/store/customerStore'
+import { useMenu } from '@/lib/hooks/useMenu'
 import { LocationPicker } from '@/components/customer/LocationPicker'
 import { PaymentSection } from '@/components/customer/PaymentSection'
+import { UpsellModal } from '@/components/customer/UpsellModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createOrder } from '@/lib/services/orderService'
@@ -27,6 +29,9 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const [slipUrl, setSlipUrl] = useState('')
   const [uploadingSlip, setUploadingSlip] = useState(false)
+  const [showUpsell, setShowUpsell] = useState(false)
+  const [pendingFormData, setPendingFormData] = useState<CheckoutFormData | null>(null)
+  const { items: menuItems } = useMenu()
 
   // ── Loyalty state ────────────────────────────────────────────────────────
   const [loyalty,          setLoyalty]          = useState<LoyaltySettings | null>(null)
@@ -115,7 +120,25 @@ export default function CheckoutPage() {
     )
   }
 
+  // Items to suggest as upsell: cheap popular items not already in cart
+  const upsellSuggestions = menuItems
+    .filter((m) => m.isAvailable && !m.isSoldOut && m.price > 0 && m.price <= 20)
+    .filter((m) => !items.find((ci) => ci.menuItemId === m.id))
+    .slice(0, 3)
+
   async function onSubmit(formData: CheckoutFormData) {
+    // Show upsell once — ถ้ายังไม่เคยเห็นและมีของแนะนำ
+    if (!showUpsell && !pendingFormData && upsellSuggestions.length > 0) {
+      setPendingFormData(formData)
+      setShowUpsell(true)
+      return
+    }
+    await doSubmit(formData)
+  }
+
+  async function doSubmit(formData: CheckoutFormData) {
+    setShowUpsell(false)
+    setPendingFormData(null)
     if (orderType === 'delivery' && (!lat || !lng)) {
       toast.error('กรุณาระบุตำแหน่งจัดส่ง')
       return
@@ -211,6 +234,20 @@ export default function CheckoutPage() {
   }
 
   return (
+    <>
+    {showUpsell && (
+      <UpsellModal
+        suggestions={upsellSuggestions}
+        onConfirm={() => { if (pendingFormData) doSubmit(pendingFormData) }}
+        onClose={() => {
+          // "ข้ามไปเลย" → submit โดยไม่เพิ่มรายการ
+          const form = pendingFormData
+          setShowUpsell(false)
+          setPendingFormData(null)
+          if (form) doSubmit(form)
+        }}
+      />
+    )}
     <div className="max-w-lg mx-auto flex flex-col gap-5">
       <div className="flex items-center gap-3">
         <Link href="/cart" className="p-2 hover:bg-gray-100 rounded-xl">
@@ -421,7 +458,7 @@ export default function CheckoutPage() {
               {categoryAddons.map((addon, i) => (
                 <div key={i} className="flex justify-between text-xs text-stone-500">
                   <span>🍢 {addon.groupName}: {addon.choiceName}</span>
-                  {addon.extraPrice > 0 && <span className="text-orange-500">+{formatCurrency(addon.extraPrice)}</span>}
+                  {addon.extraPrice > 0 && <span className="text-orange-600">+{formatCurrency(addon.extraPrice)}</span>}
                 </div>
               ))}
             </div>
@@ -442,7 +479,7 @@ export default function CheckoutPage() {
             )}
             <div className="flex justify-between font-bold text-base mt-1">
               <span>รวมทั้งสิ้น</span>
-              <span className="text-orange-500">{formatCurrency(total)}</span>
+              <span className="text-orange-600">{formatCurrency(total)}</span>
             </div>
             {pointsEarned > 0 && (
               <div className="flex justify-between text-xs text-amber-500 mt-0.5">
@@ -458,5 +495,7 @@ export default function CheckoutPage() {
         </Button>
       </form>
     </div>
+    </>
   )
 }
+

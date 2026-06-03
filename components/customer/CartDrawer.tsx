@@ -66,15 +66,15 @@ export function CartDrawer({ open, onClose }: Props) {
       )}
       <div
         className={[
-          'fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300',
+          'cart-drawer fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300',
           open ? 'translate-x-0' : 'translate-x-full',
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="cart-drawer-header flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
-            <ShoppingCart size={20} className="text-orange-500" />
-            <h2 className="text-lg font-semibold">ตะกร้า {mounted ? `(${getTotalItems()})` : ''}</h2>
+            <ShoppingCart size={20} className="text-orange-600" />
+            <h2 className="text-lg font-semibold dark:text-amber-50">ตะกร้า {mounted ? `(${getTotalItems()})` : ''}</h2>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-gray-100">
             <X size={20} />
@@ -95,11 +95,11 @@ export function CartDrawer({ open, onClose }: Props) {
                 const liveMenuItem = getLiveMenuItem(item)
                 const hasOptions = (liveMenuItem.optionGroups ?? []).length > 0
                 return (
-                  <div key={item.menuItemId} className="rounded-xl border border-gray-100 p-3 flex flex-col gap-1.5">
+                  <div key={item.menuItemId} className="cart-item-row rounded-xl border border-gray-100 p-3 flex flex-col gap-1.5">
                     {/* Name + controls row */}
                     <div className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-800 line-clamp-1">{item.name}</p>
+                        <p className="font-medium text-sm text-gray-800 dark:text-amber-50 line-clamp-1">{item.name}</p>
                         {/* Selected options */}
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
                           <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
@@ -117,11 +117,11 @@ export function CartDrawer({ open, onClose }: Props) {
                         )}
                         {/* Price + edit */}
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-orange-500 text-sm font-semibold">{formatCurrency(unitPrice)}</span>
+                          <span className="text-orange-600 text-sm font-semibold">{formatCurrency(unitPrice)}</span>
                           {hasOptions && (
                             <button
                               onClick={() => setEditingItem(item)}
-                              className="flex items-center gap-0.5 text-xs text-orange-400 hover:text-orange-600 transition-colors"
+                              className="flex items-center gap-0.5 text-xs text-orange-500 hover:text-orange-700 transition-colors"
                             >
                               <Pencil size={10} />
                               แก้ไข
@@ -140,7 +140,7 @@ export function CartDrawer({ open, onClose }: Props) {
                         <span className="w-5 text-center text-sm font-semibold">{item.qty}</span>
                         <button
                           onClick={() => updateQty(item.menuItemId, item.qty + 1)}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600"
+                          className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-white hover:bg-orange-700"
                         >
                           <Plus size={12} />
                         </button>
@@ -166,10 +166,10 @@ export function CartDrawer({ open, onClose }: Props) {
 
         {/* Footer */}
         {mounted && items.length > 0 && (
-          <div className="border-t px-5 py-4 flex flex-col gap-3">
+          <div className="cart-footer border-t px-5 py-4 flex flex-col gap-3">
             <div className="flex items-center justify-between text-base font-semibold">
               <span>รวม</span>
-              <span className="text-orange-500">{formatCurrency(getTotalPrice())}</span>
+              <span className="text-orange-600">{formatCurrency(getTotalPrice())}</span>
             </div>
             <Link href="/cart" onClick={onClose}>
               <Button fullWidth>ดูตะกร้า / เลือกตัวเลือก</Button>

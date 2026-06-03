@@ -46,7 +46,7 @@ export function PaymentSection() {
             className={[
               'flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all',
               paymentMethod === opt.value
-                ? 'border-orange-500 bg-orange-50 text-orange-600'
+                ? 'border-orange-600 bg-orange-50 text-orange-600'
                 : 'border-gray-200 text-gray-600 hover:border-orange-300',
             ].join(' ')}
           >
@@ -90,3 +90,4 @@ export function PaymentSection() {
     </div>
   )
 }
+

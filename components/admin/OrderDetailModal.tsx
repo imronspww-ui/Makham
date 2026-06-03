@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { AlertTriangle, CheckCheck, XCircle, Clock } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { OrderStatusBadge, statusConfig } from './OrderStatusBadge'
@@ -169,34 +170,49 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
         )}
 
         {/* ── คำขอยกเลิกจากลูกค้า ── */}
-        {order.cancelRequest && (
-          <div className="rounded-xl bg-red-50 border border-red-300 p-4 flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-bold text-red-600 mb-1">🚨 ลูกค้าขอยกเลิกออเดอร์</p>
-              <p className="text-sm text-gray-700">สาเหตุ: <span className="font-medium">{order.cancelRequest.reason}</span></p>
-              <p className="text-xs text-gray-400 mt-1">
-                ส่งคำขอเมื่อ {new Date(order.cancelRequest.requestedAt).toLocaleString('th-TH', {
+        {order.cancelRequest && order.status !== 'cancelled' && (
+          <div className="rounded-2xl border-2 border-red-400 overflow-hidden shadow-sm">
+            {/* Banner */}
+            <div className="flex items-center gap-2 bg-red-500 px-4 py-2.5 text-white">
+              <AlertTriangle size={16} />
+              <span className="font-bold text-sm">ลูกค้าขอยกเลิกออเดอร์</span>
+              <span className="ml-auto flex items-center gap-1 text-xs opacity-80">
+                <Clock size={11} />
+                {new Date(order.cancelRequest.requestedAt).toLocaleString('th-TH', {
                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                 })}
-              </p>
+              </span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="danger"
-                size="sm"
-                loading={saving}
-                onClick={() => handleCancelResponse(true)}
-              >
-                ✅ อนุมัติยกเลิก
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                loading={saving}
-                onClick={() => handleCancelResponse(false)}
-              >
-                ❌ ปฏิเสธ
-              </Button>
+
+            <div className="bg-red-50 p-4 flex flex-col gap-3">
+              {/* Reason */}
+              <div className="rounded-xl bg-white border border-red-200 px-4 py-3">
+                <p className="text-xs text-red-400 font-medium mb-1">สาเหตุที่ลูกค้าแจ้ง</p>
+                <p className="text-sm font-semibold text-red-800">{order.cancelRequest.reason}</p>
+              </div>
+
+              {/* Decision buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleCancelResponse(true)}
+                  disabled={saving}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-red-500 py-3 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50 transition-colors shadow-sm"
+                >
+                  <CheckCheck size={16} />
+                  อนุมัติยกเลิก
+                </button>
+                <button
+                  onClick={() => handleCancelResponse(false)}
+                  disabled={saving}
+                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white py-3 text-sm font-bold text-gray-700 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <XCircle size={16} />
+                  ปฏิเสธคำขอ
+                </button>
+              </div>
+              <p className="text-xs text-red-400 text-center">
+                อนุมัติ = ออเดอร์ถูกยกเลิกทันที · ปฏิเสธ = ออเดอร์ดำเนินต่อไป
+              </p>
             </div>
           </div>
         )}

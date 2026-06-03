@@ -9,14 +9,14 @@ interface Props {
 
 export function CategoryFilter({ categories, activeId, onChange }: Props) {
   return (
-    <div className="sticky top-[57px] z-20 -mx-4 px-4 py-2 bg-white/80 backdrop-blur-md border-b border-stone-100/80 flex gap-2 overflow-x-auto scrollbar-hide">
+    <div className="category-filter-bar sticky top-[57px] z-20 -mx-4 px-4 py-2 bg-[#fff8f0]/90 backdrop-blur-md border-b border-orange-100 flex gap-2 overflow-x-auto scrollbar-hide">
       <button
         onClick={() => onChange(null)}
         className={[
           'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150 whitespace-nowrap',
           activeId === null
-            ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-            : 'bg-white/80 text-stone-600 border-stone-200 hover:border-orange-300 hover:text-orange-600',
+            ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
+            : 'chip-inactive bg-white/70 text-stone-600 border-orange-200 hover:border-orange-400 hover:text-orange-700',
         ].join(' ')}
       >
         ทั้งหมด
@@ -28,8 +28,8 @@ export function CategoryFilter({ categories, activeId, onChange }: Props) {
           className={[
             'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150 whitespace-nowrap',
             activeId === cat.id
-              ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-              : 'bg-white/80 text-stone-600 border-stone-200 hover:border-orange-300 hover:text-orange-600',
+              ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
+              : 'chip-inactive bg-white/70 text-stone-600 border-orange-200 hover:border-orange-400 hover:text-orange-700',
           ].join(' ')}
         >
           {cat.name}

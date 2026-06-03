@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Search, CheckCircle2, Trash2 } from 'lucide-react'
+import { Search, CheckCircle2, Trash2, AlertTriangle, CheckCheck, XCircle, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { OrderStatusBadge, statusConfig } from '@/components/admin/OrderStatusBadge'
@@ -8,12 +8,99 @@ import { OrderDetailModal } from '@/components/admin/OrderDetailModal'
 import { OrderRowSkeleton } from '@/components/ui/Skeleton'
 import { Badge } from '@/components/ui/Badge'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
-import { updateOrderStatus, updatePaymentStatus, deleteOrder } from '@/lib/services/orderService'
+import { updateOrderStatus, updatePaymentStatus, deleteOrder, respondToCancelRequest } from '@/lib/services/orderService'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
 import type { Order, OrderStatus } from '@/types'
 
-const ALL_STATUSES: (OrderStatus | 'all')[] = ['all', 'pending', 'cooking', 'delivering', 'completed', 'cancelled']
+const ALL_STATUSES: (OrderStatus | 'all' | 'cancel_request')[] = ['all', 'pending', 'cooking', 'delivering', 'completed', 'cancelled', 'cancel_request']
 const ORDER_STATUSES: OrderStatus[] = ['pending', 'cooking', 'delivering', 'completed', 'cancelled']
+
+// ── Cancel Alert Panel ───────────────────────────────────────────────────────
+function CancelAlertPanel({ orders, onRespond }: { orders: Order[]; onRespond: (id: string, approve: boolean) => void }) {
+  const [processing, setProcessing] = useState<string | null>(null)
+  const pendingCancels = orders.filter(o => o.cancelRequest && o.status !== 'cancelled')
+  if (pendingCancels.length === 0) return null
+
+  async function handleRespond(orderId: string, approve: boolean) {
+    setProcessing(orderId)
+    try {
+      await respondToCancelRequest(orderId, approve)
+      toast.success(approve ? '✅ ยืนยันยกเลิกออเดอร์แล้ว' : '❌ ปฏิเสธคำขอยกเลิกแล้ว')
+      onRespond(orderId, approve)
+    } catch {
+      toast.error('ดำเนินการไม่สำเร็จ')
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-red-300 bg-red-50 overflow-hidden shadow-sm">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 py-3 bg-red-500 text-white">
+        <AlertTriangle size={18} className="shrink-0" />
+        <span className="font-bold text-sm">คำขอยกเลิกออเดอร์</span>
+        <span className="ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-white text-red-600 text-xs font-extrabold">
+          {pendingCancels.length}
+        </span>
+      </div>
+
+      <div className="flex flex-col divide-y divide-red-100">
+        {pendingCancels.map((order) => {
+          const elapsed = Math.floor((Date.now() - new Date(order.cancelRequest!.requestedAt).getTime()) / 60000)
+          const isProcessing = processing === order.id
+          return (
+            <div key={order.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="font-mono text-sm font-bold text-gray-800">{order.orderNumber}</span>
+                  <OrderStatusBadge status={order.status} />
+                  <span className="flex items-center gap-1 text-xs text-gray-400">
+                    <Clock size={11} />
+                    {elapsed < 1 ? 'เพิ่งส่ง' : `${elapsed} นาทีที่แล้ว`}
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-gray-700 truncate">
+                  {order.customer.name} · {order.customer.phone}
+                </p>
+                {/* Reason highlight */}
+                <div className="mt-1.5 flex items-start gap-1.5 rounded-xl bg-white border border-red-200 px-3 py-2">
+                  <span className="text-red-400 shrink-0 mt-0.5">💬</span>
+                  <p className="text-sm text-red-800 font-medium">{order.cancelRequest!.reason}</p>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">
+                  ยอด {formatCurrency(order.total)} · {order.items.length} รายการ ·{' '}
+                  {order.orderType === 'pickup' ? '🛍️ รับเอง' : order.orderType === 'dine-in' ? '🍽️ ทานที่ร้าน' : '🚚 จัดส่ง'}
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => handleRespond(order.id, true)}
+                  disabled={!!isProcessing}
+                  className="flex items-center gap-1.5 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors shadow-sm"
+                >
+                  <CheckCheck size={15} />
+                  {isProcessing ? '...' : 'อนุมัติยกเลิก'}
+                </button>
+                <button
+                  onClick={() => handleRespond(order.id, false)}
+                  disabled={!!isProcessing}
+                  className="flex items-center gap-1.5 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <XCircle size={15} />
+                  ปฏิเสธ
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // ── Quick status dropdown ────────────────────────────────────────────────────
 function QuickStatusSelect({ order }: { order: Order }) {
@@ -145,10 +232,13 @@ function DeleteOrderButton({ order }: { order: Order }) {
 export default function OrdersPage() {
   const { orders, loading } = useOrders()
   const [selected, setSelected] = useState<Order | null>(null)
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all' | 'cancel_request'>('all')
   const [search, setSearch] = useState('')
 
+  const cancelRequestCount = orders.filter(o => o.cancelRequest && o.status !== 'cancelled').length
+
   const filtered = orders.filter((o) => {
+    if (statusFilter === 'cancel_request') return !!o.cancelRequest && o.status !== 'cancelled'
     const matchStatus = statusFilter === 'all' || o.status === statusFilter
     const matchSearch = !search || o.orderNumber.includes(search) || o.customer.name.includes(search) || o.customer.phone.includes(search)
     return matchStatus && matchSearch
@@ -165,8 +255,28 @@ export default function OrdersPage() {
         </span>
       </div>
 
+      {/* ── Cancel Alert Panel ── */}
+      <CancelAlertPanel orders={orders} onRespond={() => {}} />
+
       <div className="flex gap-2 flex-wrap">
-        {ALL_STATUSES.map((s) => (
+        {/* Cancel request filter — แสดงเฉพาะเมื่อมีคำขอ */}
+        {cancelRequestCount > 0 && (
+          <button
+            onClick={() => setStatusFilter('cancel_request')}
+            className={[
+              'rounded-full px-3 py-1 text-xs font-bold transition-colors border flex items-center gap-1',
+              statusFilter === 'cancel_request'
+                ? 'bg-red-500 text-white border-red-500'
+                : 'bg-red-50 text-red-600 border-red-300 hover:bg-red-100 animate-pulse',
+            ].join(' ')}
+          >
+            🚨 ขอยกเลิก
+            <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-extrabold">
+              {cancelRequestCount}
+            </span>
+          </button>
+        )}
+        {ALL_STATUSES.filter(s => s !== 'cancel_request').map((s) => (
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
@@ -177,7 +287,7 @@ export default function OrdersPage() {
                 : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300',
             ].join(' ')}
           >
-            {s === 'all' ? 'ทั้งหมด' : statusConfig[s].label}
+            {s === 'all' ? 'ทั้งหมด' : statusConfig[s as OrderStatus].label}
             <span className="ml-1 opacity-70">
               {s === 'all' ? orders.length : orders.filter((o) => o.status === s).length}
             </span>
@@ -222,7 +332,7 @@ export default function OrdersPage() {
                   <td className="px-4 py-3 font-mono text-xs font-medium">
                     <div className="flex flex-col gap-1">
                       {order.orderNumber}
-                      {order.cancelRequest && (
+                      {order.cancelRequest && order.status !== 'cancelled' && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-100 rounded-full px-1.5 py-0.5 w-fit">
                           🚨 ขอยกเลิก
                         </span>
@@ -233,7 +343,7 @@ export default function OrdersPage() {
                     <p className="font-medium">{order.customer.name}</p>
                     <p className="text-xs text-gray-400">{order.customer.phone}</p>
                   </td>
-                  <td className="px-4 py-3">{order.orderType === 'pickup' ? '🛍️ รับหน้าร้าน' : '🚚 จัดส่ง'}</td>
+                  <td className="px-4 py-3">{order.orderType === 'pickup' ? '🛍️ รับเอง' : order.orderType === 'dine-in' ? '🍽️ ที่ร้าน' : '🚚 จัดส่ง'}</td>
                   <td className="px-4 py-3 font-semibold text-orange-600">{formatCurrency(order.total)}</td>
                   <td className="px-4 py-3">
                     <QuickPayButton order={order} />
