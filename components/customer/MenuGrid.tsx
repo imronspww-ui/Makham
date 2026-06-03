@@ -87,7 +87,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {filtered.map((item) => (
                 <MenuCard key={item.id} item={item} showPopularBadge />
               ))}
@@ -103,7 +103,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
                 <Flame size={18} className="text-orange-500" />
                 <h2 className="text-base font-bold text-stone-800">เมนูยอดนิยม</h2>
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
                 {popularItems.map((item) => (
                   <MenuCard key={`pop-${item.id}`} item={item} showPopularBadge={false} />
                 ))}
@@ -125,7 +125,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-stone-400">ยังไม่มีเมนูในหมวดนี้</div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {filtered.map((item) => (
                 <MenuCard key={item.id} item={item} />
               ))}
