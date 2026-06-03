@@ -88,7 +88,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
         ].join(' ')}
       >
         {/* Image — mobile: สี่เหลี่ยมซ้าย, sm+: เต็มความกว้าง */}
-        <div className="relative w-36 shrink-0 sm:w-full h-auto sm:h-52 bg-stone-100 aspect-square sm:aspect-auto">
+        <div className="relative w-40 shrink-0 sm:w-full h-auto sm:h-72 bg-stone-100 aspect-square sm:aspect-auto">
           {showImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
