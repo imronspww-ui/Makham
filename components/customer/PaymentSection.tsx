@@ -42,6 +42,7 @@ export function PaymentSection() {
         {options.map((opt) => (
           <button
             key={opt.value}
+            type="button"
             onClick={() => setPaymentMethod(opt.value)}
             className={[
               'flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all',
