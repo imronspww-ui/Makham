@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ShoppingCart, Store, ClipboardList, UtensilsCrossed, Home, Sun, Moon } from 'lucide-react'
+import { ShoppingCart, Store, ClipboardList, UtensilsCrossed, Home, Sun, Moon, Clock } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { CartDrawer } from '@/components/customer/CartDrawer'
@@ -250,6 +250,14 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 </span>
               )}
               <span className="text-[10px] font-medium">ออเดอร์</span>
+            </Link>
+
+            <Link
+              href="/my-orders"
+              className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-stone-400 dark:text-stone-500 hover:text-stone-600 transition-colors"
+            >
+              <Clock size={22} />
+              <span className="text-[10px] font-medium">ประวัติ</span>
             </Link>
 
           </div>
