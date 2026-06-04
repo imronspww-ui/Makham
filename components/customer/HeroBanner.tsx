@@ -67,7 +67,9 @@ export function HeroBanner({ items, onSelect }: Props) {
           onClick={() => onSelect(slide)}
           className="flex-shrink-0 flex items-center gap-1.5 rounded-full bg-orange-600 px-4 py-2 text-sm font-bold text-white shadow-lg active:scale-95 transition-all"
         >
-          {formatCurrency(slide.price)}
+          {slide.price > 0 ? formatCurrency(slide.price) : (
+            <span className="text-xs opacity-90">ตั้งแต่ ฿{Math.min(...(slide.optionGroups ?? []).flatMap((g) => g.choices.map((c) => c.extraPrice)).filter((p) => p > 0))}</span>
+          )}
           <span className="text-xs opacity-80">สั่งเลย</span>
         </button>
       </div>

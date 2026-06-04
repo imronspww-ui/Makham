@@ -89,7 +89,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
           'menu-card group relative flex flex-col rounded-2xl bg-white border border-orange-200 shadow-sm',
           'overflow-hidden transition-all duration-200',
           unavailable
-            ? 'cursor-not-allowed'
+            ? 'cursor-not-allowed opacity-60 grayscale'
             : 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:scale-[0.98]',
         ].join(' ')}
       >
@@ -100,7 +100,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
             <img
               src={item.imageUrl}
               alt={item.name}
-              className={['h-full w-full object-cover transition-all duration-300', unavailable ? 'grayscale opacity-50' : ''].join(' ')}
+              className="h-full w-full object-cover transition-all duration-300"
               onError={() => setImgError(true)}
             />
           ) : (

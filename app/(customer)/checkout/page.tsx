@@ -122,7 +122,7 @@ export default function CheckoutPage() {
 
   // Items to suggest as upsell: cheap popular items not already in cart
   const upsellSuggestions = menuItems
-    .filter((m) => m.isAvailable && !m.isSoldOut && m.price > 0 && m.price <= 20)
+    .filter((m) => m.isAvailable && !m.isSoldOut && m.isPopular && m.price > 0)
     .filter((m) => !items.find((ci) => ci.menuItemId === m.id))
     .slice(0, 3)
 

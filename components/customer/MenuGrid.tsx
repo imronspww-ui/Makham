@@ -22,6 +22,15 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
   const [bannerItem, setBannerItem] = useState<MenuItem | null>(null)
   const { addItem } = useCartStore()
 
+  function handleBannerSelect(item: MenuItem) {
+    if ((item.optionGroups ?? []).length === 0) {
+      // ไม่มี options → add to cart ตรงๆ ไม่ต้องเปิด modal
+      addItem({ menuItemId: item.id, name: item.name, price: item.price, imageUrl: item.imageUrl, selectedOptions: [], itemNote: '', optionGroups: [] })
+    } else {
+      setBannerItem(item)
+    }
+  }
+
   function handleBannerAdd(selectedOptions: SelectedOption[], itemNote: string, qty: number) {
     if (!bannerItem) return
     for (let i = 0; i < qty; i++) {
@@ -67,7 +76,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
     <div className="flex flex-col gap-4">
       {/* ── #10 Hero Banner ── */}
       {!loading && items.length > 0 && (
-        <HeroBanner items={items} onSelect={setBannerItem} />
+        <HeroBanner items={items} onSelect={handleBannerSelect} />
       )}
 
       {/* Banner item modal */}

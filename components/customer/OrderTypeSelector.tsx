@@ -18,6 +18,13 @@ export function OrderTypeSelector() {
 
   const deliveryEnabled = settings?.delivery?.enabled ?? true
 
+  // ถ้า delivery ถูกปิดและ orderType ปัจจุบันคือ delivery → reset เป็น pickup
+  useEffect(() => {
+    if (!deliveryEnabled && orderType === 'delivery') {
+      setOrderType('pickup')
+    }
+  }, [deliveryEnabled, orderType, setOrderType])
+
   const options: { value: OrderType; label: string; icon: React.ReactNode; desc: string; disabled?: boolean }[] = [
     {
       value: 'dine-in',

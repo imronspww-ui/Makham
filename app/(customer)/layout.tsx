@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ShoppingCart, Store, ClipboardList, UtensilsCrossed, Home, Clock, Sun, Moon } from 'lucide-react'
+import { ShoppingCart, Store, ClipboardList, UtensilsCrossed, Home, Sun, Moon } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { CartDrawer } from '@/components/customer/CartDrawer'
@@ -74,6 +74,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Bottom nav ซ่อนใน checkout เพื่อไม่รกหน้าจอตอนกำลังสั่ง
   const hideBottomNav = pathname === '/checkout'
+  const settingsLoaded = settings !== null
 
   return (
     <div
@@ -93,8 +94,8 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         <TableNumberTracker />
       </Suspense>
 
-      {/* ── Open/Closed banner ── */}
-      {isOpen ? (
+      {/* ── Open/Closed banner — รอ settings โหลดก่อนแสดง เพื่อป้องกัน layout shift ── */}
+      {settingsLoaded && (isOpen ? (
         closeTime && (
           <div className="bg-emerald-600 text-white text-center py-1.5 px-4 text-xs font-medium z-40 relative flex items-center justify-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-200 animate-pulse" />
@@ -106,7 +107,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
           🚫 ร้านปิดให้บริการชั่วคราว
           {nextOpenTime && <span className="opacity-80">· เปิดอีกครั้ง {nextOpenTime}</span>}
         </div>
-      )}
+      ))}
 
       {/* ── Dark classy header ── */}
       <header className="sticky top-0 z-30 border-b border-[#2d1e0a] relative" style={{ background: '#1c1209' }}>
@@ -180,8 +181,8 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       {/* ── Active order banner ── */}
       <ActiveOrderBanner />
 
-      {/* เพิ่ม padding ด้านล่างให้เนื้อหาไม่ถูก bottom nav บัง */}
-      <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? 'pb-32' : ''].join(' ')}>
+      {/* padding-bottom: nav (~60px) + cart bar (~60px) when visible, nav only otherwise */}
+      <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
         {children}
       </main>
 
@@ -245,13 +246,6 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
               <span className="text-[10px] font-medium">ออเดอร์</span>
             </Link>
 
-            <Link
-              href="/my-orders"
-              className="flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-stone-400 dark:text-stone-500 hover:text-stone-600 transition-colors"
-            >
-              <Clock size={22} />
-              <span className="text-[10px] font-medium">ประวัติ</span>
-            </Link>
           </div>
         </nav>
       )}
