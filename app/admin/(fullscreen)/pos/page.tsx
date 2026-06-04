@@ -530,7 +530,7 @@ export default function PosPage() {
 
   return (
     <>
-      <div className="flex flex-col h-[100dvh] bg-[#0d0a07]">
+      <div className="flex flex-col flex-1 min-h-0 bg-[#0d0a07]">
 
         {/* ══════════ TOP HEADER ══════════ */}
         <header className="flex items-center justify-between px-5 py-2.5 shrink-0 border-b border-[#2a1e0f]" style={{ background: '#1c1209' }}>
@@ -687,7 +687,7 @@ export default function PosPage() {
         </div>
 
         {/* ══════════ RIGHT: Cart + Payment ══════════ */}
-        <div className="w-[340px] xl:w-[380px] flex flex-col gap-0 shrink-0 overflow-hidden bg-[#0d0a07] border-l border-[#2a1e0f]">
+        <div className="w-[340px] xl:w-[380px] h-full flex flex-col gap-0 shrink-0 overflow-hidden bg-[#0d0a07] border-l border-[#2a1e0f]">
 
           {/* ── CART SECTION ── */}
           <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
