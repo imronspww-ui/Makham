@@ -465,10 +465,15 @@ export default function PosPage() {
       }
 
       const orderChange = change
+      const memberAfter = member && settings?.loyalty?.enabled
+        ? await getCustomer(member.phone).catch(() => null)
+        : null
       const receipt: ReceiptData = {
         orderNumber,
-        paidAt:         new Date(),
-        items:          cart.map((i) => ({
+        paidAt:            new Date(),
+        orderType:         'pickup',
+        paymentMethod:     posPayMethod,
+        items:             cart.map((i) => ({
           name:    i.name,
           price:   i.price,
           qty:     i.qty,
@@ -479,12 +484,20 @@ export default function PosPage() {
         })),
         subtotal,
         discountAmount,
-        discountLabel:  discountAmount > 0
+        discountLabel:     discountAmount > 0
           ? (discountType === 'percent' ? `${discountInput}%` : formatCurrency(discountAmount))
           : '',
         total,
         cashPaid,
-        change:         orderChange,
+        change:            orderChange,
+        ...(member && {
+          memberName:          member.name,
+          pointsEarned:        pointsEarned > 0 ? pointsEarned : undefined,
+          memberTotalPoints:   memberAfter?.points,
+          memberPointsExpiry:  memberAfter?.pointsExpireAt
+            ? new Date(memberAfter.pointsExpireAt)
+            : undefined,
+        }),
       }
       setLastOrder({ number: orderNumber, total, change: orderChange, receipt })
       setShowPayModal(false)
