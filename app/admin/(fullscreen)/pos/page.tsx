@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -490,38 +490,69 @@ export default function PosPage() {
     }
   }
 
+  // ── Real-time clock ─────────────────────────────────────────────────────────
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const dateStr = now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
+
   if (loading) return <Spinner text="กำลังโหลดเมนู..." />
 
   return (
     <>
-      <div className="flex gap-4 h-[100dvh] p-4">
+      <div className="flex flex-col h-[100dvh] bg-[#0d0a07]">
+
+        {/* ══════════ TOP HEADER ══════════ */}
+        <header className="flex items-center justify-between px-5 py-2.5 shrink-0 border-b border-[#2a1e0f]" style={{ background: '#1c1209' }}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-600">
+              <ChefHat size={16} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-100 leading-tight">{storeName}</p>
+              <p className="text-[10px] text-amber-700 leading-tight">POS หน้าร้าน</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-6 text-amber-600">
+            <div className="text-right">
+              <p className="text-xl font-bold text-amber-300 font-mono tracking-widest leading-none">{timeStr}</p>
+              <p className="text-[11px] text-amber-700 mt-0.5">{dateStr}</p>
+            </div>
+          </div>
+        </header>
+
+        {/* ══════════ MAIN AREA ══════════ */}
+        <div className="flex flex-1 overflow-hidden gap-0">
 
         {/* ══════════ LEFT: Menu browser ══════════ */}
-        <div className="flex flex-col flex-1 min-w-0 gap-3 overflow-hidden">
-          <h1 className="text-xl font-bold text-gray-800 shrink-0">POS หน้าร้าน</h1>
+        <div className="flex flex-col flex-1 min-w-0 gap-0 overflow-hidden bg-[#130e08]">
 
           {/* Category tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-hide">
-            {[{ id: 'all', name: '🍽️ ทั้งหมด' }, ...categories.map(c => ({ ...c, name: categoryEmoji(c.name) + ' ' + c.name }))].map((cat) => (
+          <div className="flex gap-2 overflow-x-auto px-4 py-3 shrink-0 scrollbar-hide border-b border-[#2a1e0f]">
+            {[{ id: 'all', name: 'ทั้งหมด' }, ...categories].map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCat(cat.id)}
                 className={[
-                  'rounded-2xl px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-2 transition-all active:scale-95',
+                  'rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all active:scale-95 shrink-0',
                   selectedCat === cat.id
-                    ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-orange-400 hover:text-orange-600',
+                    ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/50'
+                    : 'bg-[#2a1e0f] text-amber-600 hover:bg-[#3d2a10] hover:text-amber-400',
                 ].join(' ')}
               >
-                {cat.name}
+                {cat.id === 'all' ? '🍽️ ทั้งหมด' : categoryEmoji(cat.name) + ' ' + cat.name}
               </button>
             ))}
           </div>
 
           {/* Menu grid */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-4">
             {filteredItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 h-40 text-gray-300">
+              <div className="flex flex-col items-center justify-center gap-2 h-40 text-amber-800">
                 <UtensilsCrossed size={36} strokeWidth={1.5} />
                 <p className="text-sm">ไม่มีเมนูในหมวดนี้</p>
               </div>
@@ -538,23 +569,23 @@ export default function PosPage() {
                     <div
                       key={item.id}
                       className={[
-                        'relative flex flex-col rounded-2xl bg-white border-2 overflow-hidden text-left transition-all group',
+                        'relative flex flex-col rounded-2xl overflow-hidden text-left transition-all group border',
                         soldOut
-                          ? 'border-gray-200 opacity-70 cursor-default'
+                          ? 'border-[#2a1e0f] opacity-60 cursor-default bg-[#1a1209]'
                           : totalQtyInCart > 0
-                            ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer active:scale-95'
-                            : 'border-gray-100 hover:border-orange-300 hover:shadow-lg cursor-pointer active:scale-95',
+                            ? 'border-orange-500 shadow-lg shadow-orange-900/40 cursor-pointer active:scale-95 bg-[#251a0e]'
+                            : 'border-[#3d2a10] hover:border-orange-600 hover:shadow-lg cursor-pointer active:scale-95 bg-[#1e1409]',
                       ].join(' ')}
                       onClick={() => !soldOut && handleMenuItemClick(item)}
                     >
                       {/* Image — h-40 (ใหญ่ขึ้น) */}
-                      <div className="relative h-40 w-full bg-gray-100 shrink-0">
+                      <div className="relative h-40 w-full bg-[#2a1e0f] shrink-0">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.imageUrl} alt={item.name}
                             className={['h-full w-full object-cover transition-all duration-300', soldOut ? 'grayscale opacity-50' : ''].join(' ')} />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-gray-200 bg-stone-50">
+                          <div className="flex h-full items-center justify-center text-amber-900">
                             <UtensilsCrossed size={40} />
                           </div>
                         )}
@@ -616,8 +647,8 @@ export default function PosPage() {
 
                       {/* Info */}
                       <div className="px-3 py-2.5">
-                        <p className="text-sm font-semibold text-gray-800 line-clamp-1 leading-tight">{item.name}</p>
-                        <p className={['text-base font-extrabold mt-0.5', soldOut ? 'text-gray-400' : 'text-orange-600'].join(' ')}>
+                        <p className="text-sm font-semibold text-amber-100 line-clamp-1 leading-tight">{item.name}</p>
+                        <p className={['text-base font-extrabold mt-0.5', soldOut ? 'text-amber-800' : 'text-orange-500'].join(' ')}>
                           {formatCurrency(item.price)}
                         </p>
                       </div>
@@ -630,11 +661,30 @@ export default function PosPage() {
         </div>
 
         {/* ══════════ RIGHT: Cart + Payment ══════════ */}
-        <div className="w-80 xl:w-96 flex flex-col gap-3 shrink-0 overflow-y-auto pb-2 bg-[#1c1209] rounded-2xl p-3 -m-0.5">
+        <div className="w-[340px] xl:w-[380px] flex flex-col gap-0 shrink-0 overflow-hidden bg-[#0d0a07] border-l border-[#2a1e0f]">
+
+          {/* ── CART SECTION ── */}
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* Cart header */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a1e0f] shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">🛒 รายการสั่ง</span>
+                {cart.length > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-600 text-[10px] font-extrabold text-white">
+                    {cart.reduce((s, i) => s + i.qty, 0)}
+                  </span>
+                )}
+              </div>
+              {cart.length > 0 && (
+                <button onClick={clearAll} className="flex items-center gap-1 text-[10px] text-amber-800 hover:text-red-400 transition-colors">
+                  <RotateCcw size={10} /> ล้าง
+                </button>
+              )}
+            </div>
 
           {/* ── Held orders tabs ── */}
           {heldOrders.length > 0 && (
-            <div className="flex flex-col gap-1.5 shrink-0">
+            <div className="flex flex-col gap-1.5 px-3 pt-2 shrink-0">
               <div className="flex items-center gap-1.5">
                 <ClipboardList size={13} className="text-amber-500" />
                 <span className="text-xs font-semibold text-amber-400">คิวรอ ({heldOrders.length})</span>
@@ -699,8 +749,8 @@ export default function PosPage() {
             </div>
           )}
 
-          {/* ── Cart ── */}
-          <div className="flex flex-col gap-2 shrink-0">
+          {/* ── Cart items (scrollable) ── */}
+          <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2 min-h-0 scrollbar-hide">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border border-dashed border-amber-900/50">
                 <ShoppingBagIcon />
@@ -748,8 +798,18 @@ export default function PosPage() {
             )}
           </div>
 
+          </div> {/* end cart scroll area */}
+          </div> {/* end cart section */}
+
+          {/* ══ PAYMENT SECTION ══ */}
+          <div className="flex flex-col gap-0 border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0">
+            <div className="px-4 py-2 border-b border-[#2a1e0f]">
+              <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">💳 ชำระเงิน</span>
+            </div>
+            <div className="flex flex-col gap-2.5 px-3 py-3 overflow-y-auto max-h-[calc(100dvh-280px)] scrollbar-hide">
+
           {/* ── Discount ── */}
-          <div className="rounded-2xl bg-[#2a1e0f] border border-amber-900/40 p-3 flex flex-col gap-2 shrink-0">
+          <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 p-3 flex flex-col gap-2 shrink-0">
             <div className="flex items-center gap-2">
               <Tag size={14} className="text-amber-500" />
               <span className="text-xs font-semibold text-amber-400">ส่วนลด</span>
@@ -1006,16 +1066,19 @@ export default function PosPage() {
                 className={[
                   'flex-1 rounded-2xl py-4 text-base font-extrabold transition-all',
                   canPay && cart.length > 0
-                    ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-lg shadow-orange-200 active:scale-[0.98]'
-                    : 'bg-gray-100 text-gray-300 cursor-not-allowed',
+                    ? 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-900/40 active:scale-[0.98]'
+                    : 'bg-[#2a1e0f] text-amber-900 cursor-not-allowed',
                 ].join(' ')}
               >
                 {saving ? '⏳ กำลังบันทึก...' : `✅ ชำระเงิน${total > 0 ? ` ${formatCurrency(total)}` : ''}`}
               </button>
             </div>
-          </div>
-        </div>
-      </div>
+          </div>{/* end payment inner scroll */}
+          </div>{/* end payment section */}
+
+        </div>{/* end right panel */}
+        </div>{/* end MAIN AREA */}
+      </div>{/* end outer */}
 
       {/* ── Option modal ── */}
       {pendingItem && (
