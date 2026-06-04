@@ -89,12 +89,12 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
   const totalPrice = unitPrice * qty
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-16 sm:pb-0">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Sheet — บนมือถือ bottom nav สูง ~60px จึง max-h [calc(90vh-4rem)] เพื่อไม่ให้ footer ถูกบัง */}
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl max-h-[calc(90vh-4rem)] sm:max-h-[90vh] flex flex-col shadow-2xl">
+      {/* Sheet */}
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between p-4 border-b border-gray-100">
           <div>
