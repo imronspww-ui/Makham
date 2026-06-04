@@ -160,6 +160,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* Cart button — ซ่อนบนมือถือเพราะมี live cart bar แล้ว */}
             <button
+              data-cart-target-desktop
               onClick={() => setCartOpen(true)}
               className="relative hidden sm:flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 active:scale-95 transition-all duration-150"
             >
@@ -221,6 +222,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
             </Link>
 
             <button
+              data-cart-target
               onClick={() => setCartOpen(true)}
               className={['relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-colors', totalItems > 0 ? 'text-orange-500 dark:text-amber-400' : 'text-stone-400 dark:text-stone-500 hover:text-stone-600'].join(' ')}
             >

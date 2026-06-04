@@ -1,9 +1,10 @@
 'use client'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { Plus, UtensilsCrossed, Flame } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { formatCurrency } from '@/lib/utils/format'
+import { flyToCart } from '@/lib/utils/flyToCart'
 import type { MenuItem, SelectedOption } from '@/types'
 
 interface Props {
@@ -17,6 +18,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
   const [showOptions, setShowOptions] = useState(false)
 
   const [popping, setPopping] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
   const cartItem   = items.find((i) => i.menuItemId === item.id)
   const cartQty    = cartItem?.qty ?? 0
   const unavailable = !item.isAvailable || item.isSoldOut
@@ -44,7 +46,6 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
     return minFromRequired
   }, [item.price, item.optionGroups, hasOptions])
 
-  // ── เปิด modal เสมอสำหรับ item ที่มี options (ทั้ง click การ์ดและปุ่ม +) ───
   function handleClick() {
     if (unavailable) return
     if (hasOptions) {
@@ -52,6 +53,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
       return
     }
     triggerPop()
+    if (btnRef.current) flyToCart(btnRef.current, item.imageUrl)
     addItem({
       menuItemId:      item.id,
       name:            item.name,
@@ -65,6 +67,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
 
   function handleModalAdd(selectedOptions: SelectedOption[], itemNote: string, qty: number) {
     triggerPop()
+    if (btnRef.current) flyToCart(btnRef.current, item.imageUrl)
     for (let i = 0; i < qty; i++) {
       addItem({
         menuItemId:   item.id,
@@ -164,6 +167,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
               )}
             </div>
             <button
+              ref={btnRef}
               onClick={(e) => { e.stopPropagation(); handleClick() }}
               disabled={unavailable}
               aria-label={`เพิ่ม ${item.name}`}
