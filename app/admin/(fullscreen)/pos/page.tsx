@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, Clock } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, Clock, QrCode } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -9,6 +9,7 @@ import { getCustomer, upsertCustomerAfterOrder, createCustomer } from '@/lib/ser
 import { updateMenuItem } from '@/lib/services/menuService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
+import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { ChoiceSoldOutModal } from '@/components/admin/ChoiceSoldOutModal'
@@ -120,9 +121,12 @@ export default function PosPage() {
   const [discountInput, setDiscountInput] = useState('')
 
   // ── Payment state ─────────────────────────────────────────────────────────
-  const [cashInput, setCashInput] = useState('')
-  const [saving,    setSaving]    = useState(false)
-  const [lastOrder, setLastOrder] = useState<{ number: string; total: number; change: number; receipt: ReceiptData } | null>(null)
+  const [cashInput,      setCashInput]      = useState('')
+  const [saving,         setSaving]         = useState(false)
+  const [lastOrder,      setLastOrder]      = useState<{ number: string; total: number; change: number; receipt: ReceiptData } | null>(null)
+  const [posPayMethod,   setPosPayMethod]   = useState<'cash' | 'promptpay'>('cash')
+  const [qrDataUrl,      setQrDataUrl]      = useState<string | null>(null)
+  const [qrLoading,      setQrLoading]      = useState(false)
 
   // ── Member state ──────────────────────────────────────────────────────────
   const [memberPhone,     setMemberPhone]     = useState('')
@@ -166,7 +170,9 @@ export default function PosPage() {
   const total    = Math.max(0, subtotal - discountAmount)
   const cashPaid = parseInt(cashInput, 10) || 0
   const change   = Math.max(0, cashPaid - total)
-  const canPay   = cashPaid >= total && total > 0
+  const canPay   = posPayMethod === 'promptpay'
+    ? total > 0 && cart.length > 0
+    : cashPaid >= total && total > 0
 
   // แต้มที่จะได้รับ
   const pointsEarned = useMemo(() => {
@@ -322,6 +328,8 @@ export default function PosPage() {
     setNewName('')
     setShowHoldForm(false)
     setHoldLabel('')
+    setPosPayMethod('cash')
+    setQrDataUrl(null)
   }
 
   // ── พักคิว: บันทึก cart ปัจจุบัน → เปิดออเดอร์ใหม่ ─────────────────────
@@ -403,7 +411,8 @@ export default function PosPage() {
 
   // ── Save order ────────────────────────────────────────────────────────────
   async function handleSave() {
-    if (!canPay || cart.length === 0) return
+    if (posPayMethod === 'cash' && !canPay) return
+    if (cart.length === 0) return
     setSaving(true)
     try {
       const orderNumber = generateOrderNumber()
@@ -429,7 +438,7 @@ export default function PosPage() {
           phone: member?.phone ?? '-',
         },
         items:       orderItems,
-        payment:     { method: 'cash', status: 'paid' },
+        payment:     { method: posPayMethod, status: 'paid' },
         subtotal,
         deliveryFee: 0,
         total,
@@ -489,6 +498,20 @@ export default function PosPage() {
       setSaving(false)
     }
   }
+
+  // ── Generate PromptPay QR ────────────────────────────────────────────────────
+  useEffect(() => {
+    const phone = settings?.promptpay?.phone
+    if (posPayMethod === 'promptpay' && phone && total > 0) {
+      setQrLoading(true)
+      generatePromptPayQR(phone, total)
+        .then(setQrDataUrl)
+        .catch(() => setQrDataUrl(null))
+        .finally(() => setQrLoading(false))
+    } else {
+      setQrDataUrl(null)
+    }
+  }, [posPayMethod, total, settings?.promptpay?.phone])
 
   // ── Real-time clock ─────────────────────────────────────────────────────────
   const [now, setNow] = useState(new Date())
@@ -938,6 +961,34 @@ export default function PosPage() {
             </div>
           )}
 
+          {/* ── Payment Method Toggle ── */}
+          <div className="grid grid-cols-2 gap-2 shrink-0">
+            <button
+              onClick={() => setPosPayMethod('cash')}
+              className={[
+                'flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold border-2 transition-all',
+                posPayMethod === 'cash'
+                  ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/40'
+                  : 'bg-[#1c1209] text-amber-600 border-amber-900/40 hover:border-amber-700',
+              ].join(' ')}
+            >
+              <Banknote size={16} /> เงินสด
+            </button>
+            <button
+              onClick={() => setPosPayMethod('promptpay')}
+              disabled={!settings?.promptpay?.phone}
+              className={[
+                'flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold border-2 transition-all',
+                posPayMethod === 'promptpay'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/40'
+                  : 'bg-[#1c1209] text-amber-600 border-amber-900/40 hover:border-amber-700',
+                !settings?.promptpay?.phone ? 'opacity-40 cursor-not-allowed' : '',
+              ].join(' ')}
+            >
+              <QrCode size={16} /> สแกน QR
+            </button>
+          </div>
+
           {/* ── Summary + Payment ── */}
           <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 p-2.5 flex flex-col gap-2 shrink-0">
             {/* Summary row */}
@@ -952,60 +1003,102 @@ export default function PosPage() {
               </div>
             </div>
 
-            {/* Cash display */}
-            <div className={[
-              'rounded-xl px-3 py-2 flex items-center justify-between',
-              cashPaid > 0
-                ? canPay
-                  ? 'bg-green-900/40 border border-green-700/50'
-                  : 'bg-red-900/40 border border-red-700/50'
-                : 'bg-[#1c1209] border border-amber-900/40',
-            ].join(' ')}>
-              <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-400' : 'text-red-400') : 'text-amber-800'}`}>
-                รับเงินมา
-              </span>
-              <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
-                {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
-              </span>
-            </div>
+            {posPayMethod === 'cash' ? (
+              <>
+                {/* Cash display */}
+                <div className={[
+                  'rounded-xl px-3 py-2 flex items-center justify-between',
+                  cashPaid > 0
+                    ? canPay ? 'bg-green-900/40 border border-green-700/50' : 'bg-red-900/40 border border-red-700/50'
+                    : 'bg-[#1c1209] border border-amber-900/40',
+                ].join(' ')}>
+                  <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-400' : 'text-red-400') : 'text-amber-800'}`}>รับเงินมา</span>
+                  <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
+                    {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
+                  </span>
+                </div>
 
-            {/* Change / shortage */}
-            {cashPaid > 0 && total > 0 && (
-              <div className={[
-                'flex justify-between items-center rounded-xl px-3 py-2 font-bold',
-                canPay
-                  ? 'bg-green-900/50 border border-green-700/50'
-                  : 'bg-red-900/50 border border-red-700/50',
-              ].join(' ')}>
-                <span className={`text-sm ${canPay ? 'text-green-400' : 'text-red-400'}`}>{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
-                <span className={`text-2xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
+                {/* Change / shortage */}
+                {cashPaid > 0 && total > 0 && (
+                  <div className={[
+                    'flex justify-between items-center rounded-xl px-3 py-2 font-bold',
+                    canPay ? 'bg-green-900/50 border border-green-700/50' : 'bg-red-900/50 border border-red-700/50',
+                  ].join(' ')}>
+                    <span className={`text-sm ${canPay ? 'text-green-400' : 'text-red-400'}`}>{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
+                    <span className={`text-2xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
+                  </div>
+                )}
+
+                {/* Quick amount buttons */}
+                {quickAmounts.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {quickAmounts.map((amt) => (
+                      <button key={amt} onClick={() => setCashInput(String(amt))}
+                        className={[
+                          'rounded-xl py-2 text-sm font-bold border transition-all active:scale-95',
+                          amt === cashPaid
+                            ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-900/50 text-amber-200'
+                            : amt === total
+                              ? 'bg-green-700 text-white border-green-600 shadow-md'
+                              : 'bg-[#3d2a10] text-amber-400 border-amber-900/50 hover:border-amber-600 hover:text-amber-200',
+                        ].join(' ')}>
+                        {amt === total ? '💵 พอดี' : formatCurrency(amt)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* NumPad */}
+                <NumPad value={cashInput} onChange={setCashInput} />
+              </>
+            ) : (
+              /* ── PromptPay QR Panel ── */
+              <div className="flex flex-col items-center gap-3">
+                {total <= 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-6 text-amber-800">
+                    <QrCode size={48} strokeWidth={1} />
+                    <p className="text-sm">เพิ่มรายการก่อนสแกน QR</p>
+                  </div>
+                ) : qrLoading ? (
+                  <div className="flex flex-col items-center gap-2 py-6 text-amber-700">
+                    <div className="h-8 w-8 rounded-full border-2 border-amber-700 border-t-amber-400 animate-spin" />
+                    <p className="text-xs">กำลังสร้าง QR...</p>
+                  </div>
+                ) : qrDataUrl ? (
+                  <>
+                    {/* QR Code */}
+                    <div className="rounded-2xl bg-white p-3 shadow-2xl shadow-black/50">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={qrDataUrl} alt="PromptPay QR" className="w-52 h-52 rounded-xl" />
+                    </div>
+
+                    {/* Account info */}
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="h-5 w-5 rounded-full bg-[#1a3cad] flex items-center justify-center">
+                          <span className="text-white text-[8px] font-black">PP</span>
+                        </div>
+                        <span className="text-xs font-semibold text-blue-400">พร้อมเพย์</span>
+                      </div>
+                      {settings?.promptpay?.accountName && (
+                        <p className="text-sm font-bold text-amber-200">{settings.promptpay.accountName}</p>
+                      )}
+                      <p className="text-xs text-amber-600 mt-0.5">{settings?.promptpay?.phone}</p>
+                      <div className="mt-2 rounded-xl bg-amber-900/30 border border-amber-700/40 px-4 py-2">
+                        <p className="text-xs text-amber-600">ยอดที่ต้องชำระ</p>
+                        <p className="text-3xl font-extrabold text-amber-300 tracking-tight">{formatCurrency(total)}</p>
+                      </div>
+                      <p className="text-xs text-amber-800 mt-2">สแกนแล้วกด "ยืนยันรับเงินแล้ว"</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-4 text-red-400">
+                    <p className="text-xs">ยังไม่ได้ตั้งค่าเบอร์พร้อมเพย์</p>
+                    <p className="text-[10px] text-amber-800">ไปที่ ตั้งค่า → PromptPay</p>
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Quick amount buttons — เต็มแถว ใหญ่ */}
-            {quickAmounts.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
-                {quickAmounts.map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => setCashInput(String(amt))}
-                    className={[
-                      'rounded-xl py-2 text-sm font-bold border transition-all active:scale-95',
-                      amt === cashPaid
-                        ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-900/50 text-amber-200'
-                        : amt === total
-                          ? 'bg-green-700 text-white border-green-600 shadow-md'
-                          : 'bg-[#3d2a10] text-amber-400 border-amber-900/50 hover:border-amber-600 hover:text-amber-200',
-                    ].join(' ')}
-                  >
-                    {amt === total ? '💵 พอดี' : formatCurrency(amt)}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* NumPad */}
-            <NumPad value={cashInput} onChange={setCashInput} />
 
             {/* ── Hold form — ถามชื่อคิวก่อนพัก ── */}
             {showHoldForm && (
@@ -1064,7 +1157,11 @@ export default function PosPage() {
                     : 'bg-[#2a1e0f] text-amber-900 cursor-not-allowed',
                 ].join(' ')}
               >
-                {saving ? '⏳ กำลังบันทึก...' : `✅ ชำระเงิน${total > 0 ? ` ${formatCurrency(total)}` : ''}`}
+                {saving
+                  ? '⏳ กำลังบันทึก...'
+                  : posPayMethod === 'promptpay'
+                    ? `✅ ยืนยันรับเงินแล้ว${total > 0 ? ` ${formatCurrency(total)}` : ''}`
+                    : `✅ ชำระเงิน${total > 0 ? ` ${formatCurrency(total)}` : ''}`}
               </button>
             </div>
           </div>{/* end payment inner scroll */}
