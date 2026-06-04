@@ -127,6 +127,7 @@ export default function PosPage() {
   const [posPayMethod,   setPosPayMethod]   = useState<'cash' | 'promptpay'>('cash')
   const [qrDataUrl,      setQrDataUrl]      = useState<string | null>(null)
   const [qrLoading,      setQrLoading]      = useState(false)
+  const [showPayModal,   setShowPayModal]   = useState(false)
 
   // ── Member state ──────────────────────────────────────────────────────────
   const [memberPhone,     setMemberPhone]     = useState('')
@@ -330,6 +331,7 @@ export default function PosPage() {
     setHoldLabel('')
     setPosPayMethod('cash')
     setQrDataUrl(null)
+    setShowPayModal(false)
   }
 
   // ── พักคิว: บันทึก cart ปัจจุบัน → เปิดออเดอร์ใหม่ ─────────────────────
@@ -485,6 +487,7 @@ export default function PosPage() {
         change:         orderChange,
       }
       setLastOrder({ number: orderNumber, total, change: orderChange, receipt })
+      setShowPayModal(false)
       setCart([])
       setDiscountInput('')
       setCashInput('')
@@ -821,286 +824,12 @@ export default function PosPage() {
             )}
           </div>
 
-          </div> {/* end cart scroll area */}
           </div> {/* end cart section */}
 
-          {/* ══ PAYMENT SECTION ══ */}
-          <div className="flex flex-col gap-0 border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0">
-            <div className="px-4 py-2 border-b border-[#2a1e0f]">
-              <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">💳 ชำระเงิน</span>
-            </div>
-            <div className="flex flex-col gap-2 px-3 py-2">
+          {/* ══ BOTTOM BAR ══ */}
+          <div className="border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0 px-3 py-3 flex flex-col gap-2">
 
-          {/* ── Discount ── */}
-          <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-3 py-2 flex flex-col gap-1.5 shrink-0">
-            <div className="flex items-center gap-2">
-              <Tag size={12} className="text-amber-600" />
-              <span className="text-xs font-semibold text-amber-600">ส่วนลด</span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setDiscountType('amount'); setDiscountInput('') }}
-                className={[
-                  'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors',
-                  discountType === 'amount'
-                    ? 'bg-orange-600 text-white border-orange-600'
-                    : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
-                ].join(' ')}
-              >
-                <Banknote size={11} /> บาท
-              </button>
-              <button
-                onClick={() => { setDiscountType('percent'); setDiscountInput('') }}
-                className={[
-                  'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors',
-                  discountType === 'percent'
-                    ? 'bg-orange-600 text-white border-orange-600'
-                    : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
-                ].join(' ')}
-              >
-                <Percent size={11} /> %
-              </button>
-              <input
-                type="number"
-                min="0"
-                max={discountType === 'percent' ? 100 : undefined}
-                value={discountInput}
-                onChange={(e) => setDiscountInput(e.target.value)}
-                placeholder={discountType === 'percent' ? 'เช่น 10' : 'เช่น 20'}
-                className="flex-1 rounded-lg border border-amber-800 bg-[#1c1209] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
-              />
-            </div>
-            {discountAmount > 0 && (
-              <p className="text-xs text-orange-400 font-medium">
-                ลด {discountType === 'percent' ? `${discountInput}%` : ''} = -{formatCurrency(discountAmount)}
-              </p>
-            )}
-          </div>
-
-          {/* ── Member lookup ── */}
-          {settings?.loyalty?.enabled && (
-            <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-3 py-2 flex flex-col gap-1.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <Star size={12} className="text-amber-600" />
-                <span className="text-xs font-semibold text-amber-600">สมาชิก (ไม่บังคับ)</span>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700" />
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    value={memberPhone}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, '').slice(0, 10)
-                      setMemberPhone(v)
-                    }}
-                    placeholder="เบอร์โทร 10 หลัก"
-                    className="w-full rounded-lg border border-amber-800 bg-[#1c1209] text-amber-100 pl-7 pr-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
-                  />
-                </div>
-                <button
-                  onClick={() => searchMember(memberPhone)}
-                  disabled={memberSearching || memberPhone.length < 9}
-                  className="rounded-lg bg-orange-600 text-white px-3 text-xs font-semibold hover:bg-orange-500 disabled:opacity-40 transition-colors"
-                >
-                  {memberSearching ? '...' : 'ค้นหา'}
-                </button>
-                {memberProfile && (
-                  <button
-                    onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
-                    className="rounded-lg border border-amber-800 text-amber-600 px-2 text-xs hover:bg-amber-900/30"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              {memberProfile && memberProfile !== 'not-found' && (
-                <div className="rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5 flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-bold text-amber-200">👤 {memberProfile.name}</p>
-                    <p className="text-xs text-amber-500 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
-                  </div>
-                  {pointsEarned > 0 && (
-                    <div className="text-right shrink-0">
-                      <p className="text-xs text-amber-600">จะได้รับ</p>
-                      <p className="text-base font-extrabold text-amber-400">+{pointsEarned}</p>
-                      <p className="text-[10px] text-amber-600">แต้ม</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              {memberProfile === 'not-found' && !addingNew && (
-                <div className="flex items-center justify-between rounded-xl bg-amber-900/20 border border-amber-900/40 px-3 py-2">
-                  <p className="text-xs text-amber-700">ไม่พบข้อมูลสมาชิก</p>
-                  <button onClick={() => setAddingNew(true)}
-                    className="flex items-center gap-1 rounded-lg bg-orange-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-500 transition-colors">
-                    <Plus size={11} /> เพิ่มสมาชิก
-                  </button>
-                </div>
-              )}
-              {memberProfile === 'not-found' && addingNew && (
-                <div className="flex flex-col gap-2 rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5">
-                  <p className="text-xs font-semibold text-amber-400">เพิ่มสมาชิกใหม่ — {memberPhone}</p>
-                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleCreateMember()}
-                    placeholder="ชื่อสมาชิก *" autoFocus
-                    className="rounded-lg border border-amber-700 bg-[#1c1209] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-800"
-                  />
-                  <div className="flex gap-2">
-                    <button onClick={() => { setAddingNew(false); setNewName('') }}
-                      className="flex-1 rounded-lg border border-amber-800 py-1.5 text-xs text-amber-600 hover:bg-amber-900/30">ยกเลิก</button>
-                    <button onClick={handleCreateMember} disabled={creatingMember || !newName.trim()}
-                      className="flex-1 rounded-lg bg-orange-600 text-white py-1.5 text-xs font-bold hover:bg-orange-500 disabled:opacity-50 transition-colors">
-                      {creatingMember ? '...' : '✅ บันทึก'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Payment Method Toggle ── */}
-          <div className="grid grid-cols-2 gap-2 shrink-0">
-            <button
-              onClick={() => setPosPayMethod('cash')}
-              className={[
-                'flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold border-2 transition-all',
-                posPayMethod === 'cash'
-                  ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/40'
-                  : 'bg-[#1c1209] text-amber-600 border-amber-900/40 hover:border-amber-700',
-              ].join(' ')}
-            >
-              <Banknote size={16} /> เงินสด
-            </button>
-            <button
-              onClick={() => setPosPayMethod('promptpay')}
-              disabled={!settings?.promptpay?.phone}
-              className={[
-                'flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold border-2 transition-all',
-                posPayMethod === 'promptpay'
-                  ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/40'
-                  : 'bg-[#1c1209] text-amber-600 border-amber-900/40 hover:border-amber-700',
-                !settings?.promptpay?.phone ? 'opacity-40 cursor-not-allowed' : '',
-              ].join(' ')}
-            >
-              <QrCode size={16} /> สแกน QR
-            </button>
-          </div>
-
-          {/* ── Summary + Payment ── */}
-          <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 p-2.5 flex flex-col gap-2 shrink-0">
-            {/* Summary row */}
-            <div className="flex flex-col gap-0.5">
-              <div className="flex justify-between text-xs text-amber-800">
-                <span>ยอดรวม {discountAmount > 0 && <span className="text-orange-600 ml-1">- {formatCurrency(discountAmount)}</span>}</span>
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between items-center border-t border-amber-900/40 pt-1.5">
-                <span className="text-sm font-bold text-amber-500">ยอดสุทธิ</span>
-                <span className="text-4xl font-extrabold text-amber-300 tracking-tight leading-none">{formatCurrency(total)}</span>
-              </div>
-            </div>
-
-            {posPayMethod === 'cash' ? (
-              <>
-                {/* Cash display */}
-                <div className={[
-                  'rounded-xl px-3 py-2 flex items-center justify-between',
-                  cashPaid > 0
-                    ? canPay ? 'bg-green-900/40 border border-green-700/50' : 'bg-red-900/40 border border-red-700/50'
-                    : 'bg-[#1c1209] border border-amber-900/40',
-                ].join(' ')}>
-                  <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-400' : 'text-red-400') : 'text-amber-800'}`}>รับเงินมา</span>
-                  <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
-                    {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
-                  </span>
-                </div>
-
-                {/* Change / shortage */}
-                {cashPaid > 0 && total > 0 && (
-                  <div className={[
-                    'flex justify-between items-center rounded-xl px-3 py-2 font-bold',
-                    canPay ? 'bg-green-900/50 border border-green-700/50' : 'bg-red-900/50 border border-red-700/50',
-                  ].join(' ')}>
-                    <span className={`text-sm ${canPay ? 'text-green-400' : 'text-red-400'}`}>{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
-                    <span className={`text-2xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
-                  </div>
-                )}
-
-                {/* Quick amount buttons */}
-                {quickAmounts.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {quickAmounts.map((amt) => (
-                      <button key={amt} onClick={() => setCashInput(String(amt))}
-                        className={[
-                          'rounded-xl py-2 text-sm font-bold border transition-all active:scale-95',
-                          amt === cashPaid
-                            ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-900/50 text-amber-200'
-                            : amt === total
-                              ? 'bg-green-700 text-white border-green-600 shadow-md'
-                              : 'bg-[#3d2a10] text-amber-400 border-amber-900/50 hover:border-amber-600 hover:text-amber-200',
-                        ].join(' ')}>
-                        {amt === total ? '💵 พอดี' : formatCurrency(amt)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* NumPad */}
-                <NumPad value={cashInput} onChange={setCashInput} />
-              </>
-            ) : (
-              /* ── PromptPay QR Panel ── */
-              <div className="flex flex-col items-center gap-3">
-                {total <= 0 ? (
-                  <div className="flex flex-col items-center gap-2 py-6 text-amber-800">
-                    <QrCode size={48} strokeWidth={1} />
-                    <p className="text-sm">เพิ่มรายการก่อนสแกน QR</p>
-                  </div>
-                ) : qrLoading ? (
-                  <div className="flex flex-col items-center gap-2 py-6 text-amber-700">
-                    <div className="h-8 w-8 rounded-full border-2 border-amber-700 border-t-amber-400 animate-spin" />
-                    <p className="text-xs">กำลังสร้าง QR...</p>
-                  </div>
-                ) : qrDataUrl ? (
-                  <>
-                    {/* QR Code */}
-                    <div className="rounded-2xl bg-white p-3 shadow-2xl shadow-black/50">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={qrDataUrl} alt="PromptPay QR" className="w-52 h-52 rounded-xl" />
-                    </div>
-
-                    {/* Account info */}
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <div className="h-5 w-5 rounded-full bg-[#1a3cad] flex items-center justify-center">
-                          <span className="text-white text-[8px] font-black">PP</span>
-                        </div>
-                        <span className="text-xs font-semibold text-blue-400">พร้อมเพย์</span>
-                      </div>
-                      {settings?.promptpay?.accountName && (
-                        <p className="text-sm font-bold text-amber-200">{settings.promptpay.accountName}</p>
-                      )}
-                      <p className="text-xs text-amber-600 mt-0.5">{settings?.promptpay?.phone}</p>
-                      <div className="mt-2 rounded-xl bg-amber-900/30 border border-amber-700/40 px-4 py-2">
-                        <p className="text-xs text-amber-600">ยอดที่ต้องชำระ</p>
-                        <p className="text-3xl font-extrabold text-amber-300 tracking-tight">{formatCurrency(total)}</p>
-                      </div>
-                      <p className="text-xs text-amber-800 mt-2">สแกนแล้วกด "ยืนยันรับเงินแล้ว"</p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 py-4 text-red-400">
-                    <p className="text-xs">ยังไม่ได้ตั้งค่าเบอร์พร้อมเพย์</p>
-                    <p className="text-[10px] text-amber-800">ไปที่ ตั้งค่า → PromptPay</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Hold form — ถามชื่อคิวก่อนพัก ── */}
+            {/* Hold form */}
             {showHoldForm && (
               <div className="flex flex-col gap-2 rounded-xl bg-blue-900/30 border border-blue-700/40 px-3 py-2.5">
                 <p className="text-xs font-semibold text-blue-400">ตั้งชื่อคิว (ไม่บังคับ)</p>
@@ -1124,11 +853,27 @@ export default function PosPage() {
               </div>
             )}
 
+            {/* Subtotal summary */}
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <p className="text-[11px] text-amber-700 uppercase tracking-wider">ยอดสุทธิ</p>
+                <p className="text-3xl font-extrabold text-amber-300 tracking-tight leading-none">
+                  {formatCurrency(total)}
+                </p>
+              </div>
+              {discountAmount > 0 && (
+                <div className="text-right">
+                  <p className="text-[10px] text-amber-700">ส่วนลด</p>
+                  <p className="text-sm font-bold text-orange-400">-{formatCurrency(discountAmount)}</p>
+                </div>
+              )}
+            </div>
+
             {/* Action buttons */}
-            <div className="flex gap-2 pt-0.5">
+            <div className="flex gap-2">
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1.5 rounded-xl border border-amber-900/50 bg-amber-900/20 px-3 py-2 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-amber-900/50 bg-amber-900/20 px-3 py-2.5 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors"
               >
                 <RotateCcw size={13} />
                 ล้าง
@@ -1137,7 +882,7 @@ export default function PosPage() {
                 onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowHoldForm((v) => !v); setHoldLabel('') }}
                 disabled={cart.length === 0}
                 className={[
-                  'flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
+                  'flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all',
                   showHoldForm
                     ? 'border-blue-500/50 bg-blue-900/30 text-blue-400'
                     : 'border-amber-900/50 bg-amber-900/20 text-amber-600 hover:border-blue-700 hover:text-blue-400 hover:bg-blue-900/20',
@@ -1148,24 +893,19 @@ export default function PosPage() {
                 พักคิว
               </button>
               <button
-                onClick={handleSave}
-                disabled={!canPay || cart.length === 0 || saving}
+                onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowPayModal(true) }}
+                disabled={cart.length === 0}
                 className={[
-                  'flex-1 rounded-xl py-3 text-sm font-extrabold transition-all',
-                  canPay && cart.length > 0
-                    ? 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-900/40 active:scale-[0.98]'
+                  'flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all active:scale-[0.98]',
+                  cart.length > 0
+                    ? 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-900/40'
                     : 'bg-[#2a1e0f] text-amber-900 cursor-not-allowed',
                 ].join(' ')}
               >
-                {saving
-                  ? '⏳ กำลังบันทึก...'
-                  : posPayMethod === 'promptpay'
-                    ? `✅ ยืนยันรับเงินแล้ว${total > 0 ? ` ${formatCurrency(total)}` : ''}`
-                    : `✅ ชำระเงิน${total > 0 ? ` ${formatCurrency(total)}` : ''}`}
+                💳 ชำระเงิน{total > 0 ? ` ${formatCurrency(total)}` : ''}
               </button>
             </div>
-          </div>{/* end payment inner scroll */}
-          </div>{/* end payment section */}
+          </div>{/* end bottom bar */}
 
         </div>{/* end right panel */}
         </div>{/* end MAIN AREA */}
@@ -1187,6 +927,319 @@ export default function PosPage() {
           onClose={() => setManagingChoices(null)}
           onDone={reloadMenu}
         />
+      )}
+
+      {/* ══════════ PAYMENT MODAL ══════════ */}
+      {showPayModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPayModal(false) }}
+        >
+          <div className="relative w-[480px] max-h-[92dvh] overflow-y-auto rounded-2xl bg-[#1a1007] border border-amber-900/50 shadow-2xl flex flex-col scrollbar-hide">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a1e0f] shrink-0">
+              <div>
+                <p className="text-base font-bold text-amber-100">💳 ชำระเงิน</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  {cart.reduce((s, i) => s + i.qty, 0)} รายการ
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPayModal(false)}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-amber-900/30 text-amber-600 hover:bg-amber-900/60 hover:text-amber-300 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 p-4">
+
+              {/* Order summary */}
+              <div className="rounded-xl bg-[#0d0a07] border border-amber-900/30 px-4 py-3 flex flex-col gap-1">
+                {cart.map((item) => (
+                  <div key={item.cartKey} className="flex justify-between text-sm">
+                    <span className="text-amber-400 truncate flex-1 mr-2">{item.name} × {item.qty}</span>
+                    <span className="text-amber-300 font-semibold shrink-0">{formatCurrency(item.price * item.qty)}</span>
+                  </div>
+                ))}
+                <div className="border-t border-amber-900/40 mt-2 pt-2 flex justify-between items-center">
+                  <span className="text-xs text-amber-700">ยอดรวม</span>
+                  <span className="text-sm font-bold text-amber-400">{formatCurrency(subtotal)}</span>
+                </div>
+              </div>
+
+              {/* Discount */}
+              <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-4 py-3 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Tag size={12} className="text-amber-600" />
+                  <span className="text-xs font-semibold text-amber-600">ส่วนลด</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setDiscountType('amount'); setDiscountInput('') }}
+                    className={[
+                      'flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors',
+                      discountType === 'amount'
+                        ? 'bg-orange-600 text-white border-orange-600'
+                        : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
+                    ].join(' ')}
+                  >
+                    <Banknote size={11} /> บาท
+                  </button>
+                  <button
+                    onClick={() => { setDiscountType('percent'); setDiscountInput('') }}
+                    className={[
+                      'flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors',
+                      discountType === 'percent'
+                        ? 'bg-orange-600 text-white border-orange-600'
+                        : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
+                    ].join(' ')}
+                  >
+                    <Percent size={11} /> %
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    max={discountType === 'percent' ? 100 : undefined}
+                    value={discountInput}
+                    onChange={(e) => setDiscountInput(e.target.value)}
+                    placeholder={discountType === 'percent' ? 'เช่น 10' : 'เช่น 20'}
+                    className="flex-1 rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 px-3 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <p className="text-xs text-orange-400 font-medium">
+                    ลด{discountType === 'percent' ? ` ${discountInput}%` : ''} = -{formatCurrency(discountAmount)}
+                  </p>
+                )}
+              </div>
+
+              {/* Member lookup */}
+              {settings?.loyalty?.enabled && (
+                <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-4 py-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Star size={12} className="text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-600">สมาชิก (ไม่บังคับ)</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700" />
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={memberPhone}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          setMemberPhone(v)
+                        }}
+                        placeholder="เบอร์โทร 10 หลัก"
+                        className="w-full rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 pl-7 pr-2.5 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
+                      />
+                    </div>
+                    <button
+                      onClick={() => searchMember(memberPhone)}
+                      disabled={memberSearching || memberPhone.length < 9}
+                      className="rounded-lg bg-orange-600 text-white px-3 text-xs font-semibold hover:bg-orange-500 disabled:opacity-40 transition-colors"
+                    >
+                      {memberSearching ? '...' : 'ค้นหา'}
+                    </button>
+                    {memberProfile && (
+                      <button
+                        onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
+                        className="rounded-lg border border-amber-800 text-amber-600 px-2 text-xs hover:bg-amber-900/30"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {memberProfile && memberProfile !== 'not-found' && (
+                    <div className="rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-amber-200">👤 {memberProfile.name}</p>
+                        <p className="text-xs text-amber-500 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
+                      </div>
+                      {pointsEarned > 0 && (
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-amber-600">จะได้รับ</p>
+                          <p className="text-base font-extrabold text-amber-400">+{pointsEarned}</p>
+                          <p className="text-[10px] text-amber-600">แต้ม</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {memberProfile === 'not-found' && !addingNew && (
+                    <div className="flex items-center justify-between rounded-xl bg-amber-900/20 border border-amber-900/40 px-3 py-2">
+                      <p className="text-xs text-amber-700">ไม่พบข้อมูลสมาชิก</p>
+                      <button onClick={() => setAddingNew(true)}
+                        className="flex items-center gap-1 rounded-lg bg-orange-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-500 transition-colors">
+                        <Plus size={11} /> เพิ่มสมาชิก
+                      </button>
+                    </div>
+                  )}
+                  {memberProfile === 'not-found' && addingNew && (
+                    <div className="flex flex-col gap-2 rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5">
+                      <p className="text-xs font-semibold text-amber-400">เพิ่มสมาชิกใหม่ — {memberPhone}</p>
+                      <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateMember()}
+                        placeholder="ชื่อสมาชิก *" autoFocus
+                        className="rounded-lg border border-amber-700 bg-[#0d0a07] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-800"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => { setAddingNew(false); setNewName('') }}
+                          className="flex-1 rounded-lg border border-amber-800 py-1.5 text-xs text-amber-600 hover:bg-amber-900/30">ยกเลิก</button>
+                        <button onClick={handleCreateMember} disabled={creatingMember || !newName.trim()}
+                          className="flex-1 rounded-lg bg-orange-600 text-white py-1.5 text-xs font-bold hover:bg-orange-500 disabled:opacity-50 transition-colors">
+                          {creatingMember ? '...' : '✅ บันทึก'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Payment method toggle */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setPosPayMethod('cash')}
+                  className={[
+                    'flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border-2 transition-all',
+                    posPayMethod === 'cash'
+                      ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/40'
+                      : 'bg-[#1c1209] text-amber-600 border-amber-900/40 hover:border-amber-700',
+                  ].join(' ')}
+                >
+                  <Banknote size={17} /> เงินสด
+                </button>
+                <button
+                  onClick={() => setPosPayMethod('promptpay')}
+                  disabled={!settings?.promptpay?.phone}
+                  className={[
+                    'flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border-2 transition-all',
+                    posPayMethod === 'promptpay'
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/40'
+                      : 'bg-[#1c1209] text-amber-600 border-amber-900/40 hover:border-amber-700',
+                    !settings?.promptpay?.phone ? 'opacity-40 cursor-not-allowed' : '',
+                  ].join(' ')}
+                >
+                  <QrCode size={17} /> สแกน QR
+                </button>
+              </div>
+
+              {/* Total */}
+              <div className="rounded-xl bg-[#0d0a07] border border-amber-900/30 px-4 py-3 flex justify-between items-center">
+                <span className="text-sm font-bold text-amber-500">ยอดสุทธิ</span>
+                <span className="text-4xl font-extrabold text-amber-300 tracking-tight leading-none">{formatCurrency(total)}</span>
+              </div>
+
+              {posPayMethod === 'cash' ? (
+                <>
+                  {/* Cash received */}
+                  <div className={[
+                    'rounded-xl px-4 py-3 flex items-center justify-between',
+                    cashPaid > 0
+                      ? canPay ? 'bg-green-900/40 border border-green-700/50' : 'bg-red-900/40 border border-red-700/50'
+                      : 'bg-[#1c1209] border border-amber-900/40',
+                  ].join(' ')}>
+                    <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-400' : 'text-red-400') : 'text-amber-800'}`}>รับเงินมา</span>
+                    <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
+                      {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
+                    </span>
+                  </div>
+
+                  {/* Change / shortage */}
+                  {cashPaid > 0 && total > 0 && (
+                    <div className={[
+                      'flex justify-between items-center rounded-xl px-4 py-3 font-bold',
+                      canPay ? 'bg-green-900/50 border border-green-700/50' : 'bg-red-900/50 border border-red-700/50',
+                    ].join(' ')}>
+                      <span className={`text-sm ${canPay ? 'text-green-400' : 'text-red-400'}`}>{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
+                      <span className={`text-2xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
+                    </div>
+                  )}
+
+                  {/* Quick amounts */}
+                  {quickAmounts.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {quickAmounts.map((amt) => (
+                        <button key={amt} onClick={() => setCashInput(String(amt))}
+                          className={[
+                            'rounded-xl py-2 text-sm font-bold border transition-all active:scale-95',
+                            amt === cashPaid
+                              ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-900/50 text-amber-200'
+                              : amt === total
+                                ? 'bg-green-700 text-white border-green-600 shadow-md'
+                                : 'bg-[#3d2a10] text-amber-400 border-amber-900/50 hover:border-amber-600 hover:text-amber-200',
+                          ].join(' ')}>
+                          {amt === total ? '💵 พอดี' : formatCurrency(amt)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* NumPad */}
+                  <NumPad value={cashInput} onChange={setCashInput} />
+                </>
+              ) : (
+                /* PromptPay QR */
+                <div className="flex flex-col items-center gap-3 py-2">
+                  {qrLoading ? (
+                    <div className="flex flex-col items-center gap-2 py-8 text-amber-700">
+                      <div className="h-10 w-10 rounded-full border-2 border-amber-700 border-t-amber-400 animate-spin" />
+                      <p className="text-xs">กำลังสร้าง QR...</p>
+                    </div>
+                  ) : qrDataUrl ? (
+                    <>
+                      <div className="rounded-2xl bg-white p-4 shadow-2xl shadow-black/50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={qrDataUrl} alt="PromptPay QR" className="w-56 h-56 rounded-xl" />
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                          <div className="h-5 w-5 rounded-full bg-[#1a3cad] flex items-center justify-center">
+                            <span className="text-white text-[8px] font-black">PP</span>
+                          </div>
+                          <span className="text-xs font-semibold text-blue-400">พร้อมเพย์</span>
+                        </div>
+                        {settings?.promptpay?.accountName && (
+                          <p className="text-sm font-bold text-amber-200">{settings.promptpay.accountName}</p>
+                        )}
+                        <p className="text-xs text-amber-600 mt-0.5">{settings?.promptpay?.phone}</p>
+                        <p className="text-xs text-amber-800 mt-3">สแกนแล้วกด "ยืนยันรับเงินแล้ว"</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 py-6 text-red-400">
+                      <p className="text-xs">ยังไม่ได้ตั้งค่าเบอร์พร้อมเพย์</p>
+                      <p className="text-[10px] text-amber-800">ไปที่ ตั้งค่า → PromptPay</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Confirm button */}
+              <button
+                onClick={handleSave}
+                disabled={!canPay || saving}
+                className={[
+                  'w-full rounded-xl py-4 text-base font-extrabold transition-all active:scale-[0.98]',
+                  canPay
+                    ? posPayMethod === 'promptpay'
+                      ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/40'
+                      : 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-900/40'
+                    : 'bg-[#2a1e0f] text-amber-900 cursor-not-allowed',
+                ].join(' ')}
+              >
+                {saving
+                  ? '⏳ กำลังบันทึก...'
+                  : posPayMethod === 'promptpay'
+                    ? `✅ ยืนยันรับเงินแล้ว ${formatCurrency(total)}`
+                    : `✅ ชำระเงิน ${formatCurrency(total)}`}
+              </button>
+
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

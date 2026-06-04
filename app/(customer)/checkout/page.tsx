@@ -127,12 +127,6 @@ export default function CheckoutPage() {
     .slice(0, 3)
 
   async function onSubmit(formData: CheckoutFormData) {
-    // Show upsell once — ถ้ายังไม่เคยเห็นและมีของแนะนำ
-    if (!showUpsell && !pendingFormData && upsellSuggestions.length > 0) {
-      setPendingFormData(formData)
-      setShowUpsell(true)
-      return
-    }
     await doSubmit(formData)
   }
 
