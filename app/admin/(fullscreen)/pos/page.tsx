@@ -905,7 +905,7 @@ export default function PosPage() {
                 พักคิว
               </button>
               <button
-                onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowPayModal(true) }}
+                onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setPosPayMethod('cash'); setCashInput(''); setShowPayModal(true) }}
                 disabled={cart.length === 0}
                 className={[
                   'rounded-xl px-3 py-2 text-sm font-extrabold transition-all active:scale-[0.98] shrink-0',
@@ -1113,7 +1113,8 @@ export default function PosPage() {
               {/* Payment method toggle */}
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setPosPayMethod('cash')}
+                  type="button"
+                  onClick={() => { setPosPayMethod('cash'); setCashInput('') }}
                   className={[
                     'flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border-2 transition-all',
                     posPayMethod === 'cash'
@@ -1124,6 +1125,7 @@ export default function PosPage() {
                   <Banknote size={17} /> เงินสด
                 </button>
                 <button
+                  type="button"
                   onClick={() => setPosPayMethod('promptpay')}
                   disabled={!settings?.promptpay?.phone}
                   className={[
