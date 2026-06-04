@@ -827,11 +827,11 @@ export default function PosPage() {
           </div> {/* end cart section */}
 
           {/* ══ BOTTOM BAR ══ */}
-          <div className="border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0 px-3 py-3 flex flex-col gap-2">
+          <div className="border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0 px-3 py-2 flex flex-col gap-1.5">
 
             {/* Hold form */}
             {showHoldForm && (
-              <div className="flex flex-col gap-2 rounded-xl bg-blue-900/30 border border-blue-700/40 px-3 py-2.5">
+              <div className="flex flex-col gap-1.5 rounded-xl bg-blue-900/30 border border-blue-700/40 px-3 py-2">
                 <p className="text-xs font-semibold text-blue-400">ตั้งชื่อคิว (ไม่บังคับ)</p>
                 <input
                   type="text"
@@ -840,7 +840,7 @@ export default function PosPage() {
                   onChange={(e) => setHoldLabel(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') confirmHold(); if (e.key === 'Escape') setShowHoldForm(false) }}
                   placeholder={(memberProfile && memberProfile !== 'not-found') ? memberProfile.name : `คิว ${heldOrders.length + 1}`}
-                  className="rounded-lg border border-blue-800/50 bg-[#1c1209] text-blue-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 placeholder-blue-900"
+                  className="rounded-lg border border-blue-800/50 bg-[#1c1209] text-blue-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-500 placeholder-blue-900"
                 />
                 <div className="flex gap-2">
                   <button onClick={() => { setShowHoldForm(false); setHoldLabel('') }}
@@ -853,56 +853,55 @@ export default function PosPage() {
               </div>
             )}
 
-            {/* Subtotal summary */}
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <p className="text-[11px] text-amber-700 uppercase tracking-wider">ยอดสุทธิ</p>
-                <p className="text-3xl font-extrabold text-amber-300 tracking-tight leading-none">
+            {/* Total + buttons in one row */}
+            <div className="flex items-center gap-2">
+              {/* Total */}
+              <div className="flex flex-col leading-none min-w-0">
+                <p className="text-[10px] text-amber-700 uppercase tracking-wider">ยอดสุทธิ</p>
+                <p className="text-2xl font-extrabold text-amber-300 tracking-tight leading-none">
                   {formatCurrency(total)}
                 </p>
+                {discountAmount > 0 && (
+                  <p className="text-[10px] text-orange-400">ลด {formatCurrency(discountAmount)}</p>
+                )}
               </div>
-              {discountAmount > 0 && (
-                <div className="text-right">
-                  <p className="text-[10px] text-amber-700">ส่วนลด</p>
-                  <p className="text-sm font-bold text-orange-400">-{formatCurrency(discountAmount)}</p>
-                </div>
-              )}
-            </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2">
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Buttons */}
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1.5 rounded-xl border border-amber-900/50 bg-amber-900/20 px-3 py-2.5 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors"
+                className="flex items-center gap-1 rounded-xl border border-amber-900/50 bg-amber-900/20 px-2.5 py-2 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors shrink-0"
               >
-                <RotateCcw size={13} />
+                <RotateCcw size={12} />
                 ล้าง
               </button>
               <button
                 onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowHoldForm((v) => !v); setHoldLabel('') }}
                 disabled={cart.length === 0}
                 className={[
-                  'flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all',
+                  'flex items-center gap-1 rounded-xl border px-2.5 py-2 text-xs font-semibold transition-all shrink-0',
                   showHoldForm
                     ? 'border-blue-500/50 bg-blue-900/30 text-blue-400'
                     : 'border-amber-900/50 bg-amber-900/20 text-amber-600 hover:border-blue-700 hover:text-blue-400 hover:bg-blue-900/20',
                   cart.length === 0 ? 'opacity-30 cursor-not-allowed' : '',
                 ].join(' ')}
               >
-                <BookmarkPlus size={13} />
+                <BookmarkPlus size={12} />
                 พักคิว
               </button>
               <button
                 onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowPayModal(true) }}
                 disabled={cart.length === 0}
                 className={[
-                  'flex-1 rounded-xl py-2.5 text-sm font-extrabold transition-all active:scale-[0.98]',
+                  'rounded-xl px-3 py-2 text-sm font-extrabold transition-all active:scale-[0.98] shrink-0',
                   cart.length > 0
                     ? 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-900/40'
                     : 'bg-[#2a1e0f] text-amber-900 cursor-not-allowed',
                 ].join(' ')}
               >
-                💳 ชำระเงิน{total > 0 ? ` ${formatCurrency(total)}` : ''}
+                💳 ชำระเงิน
               </button>
             </div>
           </div>{/* end bottom bar */}
