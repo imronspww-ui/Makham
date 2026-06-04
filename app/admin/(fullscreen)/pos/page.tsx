@@ -84,7 +84,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
           type="button"
           onClick={() => press(k)}
           className={[
-            'rounded-2xl py-5 text-2xl font-bold select-none transition-all active:scale-95 active:brightness-75',
+            'rounded-xl py-3 text-xl font-bold select-none transition-all active:scale-95 active:brightness-75',
             k === '⌫'
               ? 'bg-red-900/60 text-red-400 border border-red-800/50 hover:bg-red-900/80'
               : k === '00'
@@ -806,13 +806,13 @@ export default function PosPage() {
             <div className="px-4 py-2 border-b border-[#2a1e0f]">
               <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">💳 ชำระเงิน</span>
             </div>
-            <div className="flex flex-col gap-2.5 px-3 py-3 overflow-y-auto max-h-[calc(100dvh-280px)] scrollbar-hide">
+            <div className="flex flex-col gap-2 px-3 py-2">
 
           {/* ── Discount ── */}
-          <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 p-3 flex flex-col gap-2 shrink-0">
+          <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-3 py-2 flex flex-col gap-1.5 shrink-0">
             <div className="flex items-center gap-2">
-              <Tag size={14} className="text-amber-500" />
-              <span className="text-xs font-semibold text-amber-400">ส่วนลด</span>
+              <Tag size={12} className="text-amber-600" />
+              <span className="text-xs font-semibold text-amber-600">ส่วนลด</span>
             </div>
             <div className="flex gap-2">
               <button
@@ -856,10 +856,10 @@ export default function PosPage() {
 
           {/* ── Member lookup ── */}
           {settings?.loyalty?.enabled && (
-            <div className="rounded-2xl bg-[#2a1e0f] border border-amber-900/40 p-3 flex flex-col gap-2 shrink-0">
+            <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-3 py-2 flex flex-col gap-1.5 shrink-0">
               <div className="flex items-center gap-2">
-                <Star size={14} className="text-amber-500" />
-                <span className="text-xs font-semibold text-amber-400">สมาชิก (ไม่บังคับ)</span>
+                <Star size={12} className="text-amber-600" />
+                <span className="text-xs font-semibold text-amber-600">สมาชิก (ไม่บังคับ)</span>
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -939,28 +939,22 @@ export default function PosPage() {
           )}
 
           {/* ── Summary + Payment ── */}
-          <div className="rounded-2xl bg-[#2a1e0f] border border-amber-900/40 p-3 flex flex-col gap-2.5 shrink-0">
+          <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 p-2.5 flex flex-col gap-2 shrink-0">
             {/* Summary row */}
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between text-sm text-amber-700">
-                <span>ยอดรวม</span>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex justify-between text-xs text-amber-800">
+                <span>ยอดรวม {discountAmount > 0 && <span className="text-orange-600 ml-1">- {formatCurrency(discountAmount)}</span>}</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-orange-400">
-                  <span>ส่วนลด</span>
-                  <span>-{formatCurrency(discountAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center border-t border-amber-900/50 pt-2 mt-1">
-                <span className="text-base font-bold text-amber-400">ยอดสุทธิ</span>
-                <span className="text-5xl font-extrabold text-amber-300 tracking-tight leading-none">{formatCurrency(total)}</span>
+              <div className="flex justify-between items-center border-t border-amber-900/40 pt-1.5">
+                <span className="text-sm font-bold text-amber-500">ยอดสุทธิ</span>
+                <span className="text-4xl font-extrabold text-amber-300 tracking-tight leading-none">{formatCurrency(total)}</span>
               </div>
             </div>
 
             {/* Cash display */}
             <div className={[
-              'rounded-xl px-3 py-3 flex items-center justify-between',
+              'rounded-xl px-3 py-2 flex items-center justify-between',
               cashPaid > 0
                 ? canPay
                   ? 'bg-green-900/40 border border-green-700/50'
@@ -970,7 +964,7 @@ export default function PosPage() {
               <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-400' : 'text-red-400') : 'text-amber-800'}`}>
                 รับเงินมา
               </span>
-              <span className={`text-3xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
+              <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
                 {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
               </span>
             </div>
@@ -978,13 +972,13 @@ export default function PosPage() {
             {/* Change / shortage */}
             {cashPaid > 0 && total > 0 && (
               <div className={[
-                'flex justify-between items-center rounded-xl px-3 py-3 font-bold',
+                'flex justify-between items-center rounded-xl px-3 py-2 font-bold',
                 canPay
                   ? 'bg-green-900/50 border border-green-700/50'
                   : 'bg-red-900/50 border border-red-700/50',
               ].join(' ')}>
                 <span className={`text-sm ${canPay ? 'text-green-400' : 'text-red-400'}`}>{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
-                <span className={`text-3xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
+                <span className={`text-2xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
               </div>
             )}
 
@@ -996,7 +990,7 @@ export default function PosPage() {
                     key={amt}
                     onClick={() => setCashInput(String(amt))}
                     className={[
-                      'rounded-2xl py-3.5 text-sm font-bold border transition-all active:scale-95',
+                      'rounded-xl py-2 text-sm font-bold border transition-all active:scale-95',
                       amt === cashPaid
                         ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-900/50 text-amber-200'
                         : amt === total
@@ -1041,7 +1035,7 @@ export default function PosPage() {
             <div className="flex gap-2 pt-0.5">
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1.5 rounded-xl border border-amber-900/50 bg-amber-900/20 px-3 py-2.5 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-amber-900/50 bg-amber-900/20 px-3 py-2 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors"
               >
                 <RotateCcw size={13} />
                 ล้าง
@@ -1050,7 +1044,7 @@ export default function PosPage() {
                 onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowHoldForm((v) => !v); setHoldLabel('') }}
                 disabled={cart.length === 0}
                 className={[
-                  'flex items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all',
+                  'flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
                   showHoldForm
                     ? 'border-blue-500/50 bg-blue-900/30 text-blue-400'
                     : 'border-amber-900/50 bg-amber-900/20 text-amber-600 hover:border-blue-700 hover:text-blue-400 hover:bg-blue-900/20',
@@ -1064,7 +1058,7 @@ export default function PosPage() {
                 onClick={handleSave}
                 disabled={!canPay || cart.length === 0 || saving}
                 className={[
-                  'flex-1 rounded-2xl py-4 text-base font-extrabold transition-all',
+                  'flex-1 rounded-xl py-3 text-sm font-extrabold transition-all',
                   canPay && cart.length > 0
                     ? 'bg-orange-600 text-white hover:bg-orange-500 shadow-lg shadow-orange-900/40 active:scale-[0.98]'
                     : 'bg-[#2a1e0f] text-amber-900 cursor-not-allowed',
