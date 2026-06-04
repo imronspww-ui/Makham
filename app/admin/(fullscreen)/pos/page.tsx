@@ -43,6 +43,20 @@ interface HeldOrder {
 }
 
 const HELD_KEY = 'pos-held-orders'
+
+function categoryEmoji(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('ยำ') || n.includes('ยำ')) return '🥗'
+  if (n.includes('น้ำ') || n.includes('เครื่องดื่ม')) return '🥤'
+  if (n.includes('ลูกชิ้น') || n.includes('ลูกชื้น')) return '🍢'
+  if (n.includes('ข้าว') || n.includes('อาหาร')) return '🍚'
+  if (n.includes('ทอด') || n.includes('ไก่')) return '🍗'
+  if (n.includes('หมู') || n.includes('เนื้อ')) return '🥩'
+  if (n.includes('ขนม') || n.includes('ของหวาน')) return '🍮'
+  if (n.includes('ไส้กรอก')) return '🌭'
+  if (n.includes('ซอส') || n.includes('เครื่องเคียง')) return '🫙'
+  return '🍴'
+}
 let heldCounter = 0
 
 let cartKeyCounter = 0
@@ -56,27 +70,29 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
   function press(key: string) {
     if (key === '⌫') { onChange(value.slice(0, -1)); return }
     if (key === 'C')  { onChange(''); return }
-    // ห้าม leading zero
     if (value === '' || value === '0') { onChange(key === '00' ? '0' : key); return }
-    if (value.length >= 7) return     // max ฿9,999,999
+    if (value.length >= 7) return
     onChange(value + key)
   }
-  const keys = ['1','2','3','4','5','6','7','8','9','00','0','⌫']
+  // layout: 7 8 9 / 4 5 6 / 1 2 3 / 00 0 ⌫
+  const keys = ['7','8','9','4','5','6','1','2','3','00','0','⌫']
   return (
-    <div className="grid grid-cols-3 gap-1.5">
+    <div className="grid grid-cols-3 gap-2">
       {keys.map((k) => (
         <button
           key={k}
           type="button"
           onClick={() => press(k)}
           className={[
-            'rounded-xl py-3 text-base font-bold select-none transition-all active:scale-95',
+            'rounded-2xl py-5 text-2xl font-bold select-none transition-all active:scale-95 active:brightness-90',
             k === '⌫'
-              ? 'bg-red-50 text-red-400 border border-red-200 hover:bg-red-100'
-              : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-orange-50 hover:border-orange-300',
+              ? 'bg-red-100 text-red-500 hover:bg-red-200'
+              : k === '00'
+                ? 'bg-stone-100 text-stone-600 hover:bg-orange-50 hover:text-orange-700'
+                : 'bg-stone-100 text-stone-800 hover:bg-orange-50 hover:text-orange-700',
           ].join(' ')}
         >
-          {k === '⌫' ? <Delete size={15} className="mx-auto" /> : k}
+          {k === '⌫' ? <Delete size={20} className="mx-auto" /> : k}
         </button>
       ))}
     </div>
@@ -485,27 +501,16 @@ export default function PosPage() {
           <h1 className="text-xl font-bold text-gray-800 shrink-0">POS หน้าร้าน</h1>
 
           {/* Category tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 shrink-0">
-            <button
-              onClick={() => setSelectedCat('all')}
-              className={[
-                'rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap border transition-colors',
-                selectedCat === 'all'
-                  ? 'bg-orange-500 text-white border-orange-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300',
-              ].join(' ')}
-            >
-              ทั้งหมด
-            </button>
-            {categories.map((cat) => (
+          <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-hide">
+            {[{ id: 'all', name: '🍽️ ทั้งหมด' }, ...categories.map(c => ({ ...c, name: categoryEmoji(c.name) + ' ' + c.name }))].map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCat(cat.id)}
                 className={[
-                  'rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap border transition-colors',
+                  'rounded-2xl px-5 py-2.5 text-sm font-semibold whitespace-nowrap border-2 transition-all active:scale-95',
                   selectedCat === cat.id
-                    ? 'bg-orange-500 text-white border-orange-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300',
+                    ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-orange-400 hover:text-orange-600',
                 ].join(' ')}
               >
                 {cat.name}
@@ -533,93 +538,89 @@ export default function PosPage() {
                     <div
                       key={item.id}
                       className={[
-                        'relative flex flex-col rounded-2xl bg-white border shadow-sm overflow-hidden text-left transition-all group',
+                        'relative flex flex-col rounded-2xl bg-white border-2 overflow-hidden text-left transition-all group',
                         soldOut
-                          ? 'border-gray-200 opacity-60'
-                          : 'border-gray-100 hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-95',
+                          ? 'border-gray-200 opacity-70 cursor-default'
+                          : totalQtyInCart > 0
+                            ? 'border-orange-400 shadow-lg shadow-orange-100 cursor-pointer active:scale-95'
+                            : 'border-gray-100 hover:border-orange-300 hover:shadow-lg cursor-pointer active:scale-95',
                       ].join(' ')}
                       onClick={() => !soldOut && handleMenuItemClick(item)}
                     >
-                      {/* Image */}
-                      <div className="relative h-28 w-full bg-gray-100">
+                      {/* Image — h-40 (ใหญ่ขึ้น) */}
+                      <div className="relative h-40 w-full bg-gray-100 shrink-0">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.imageUrl} alt={item.name}
-                            className={['h-full w-full object-cover', soldOut ? 'grayscale' : ''].join(' ')} />
+                            className={['h-full w-full object-cover transition-all duration-300', soldOut ? 'grayscale opacity-50' : ''].join(' ')} />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-gray-200">
-                            <UtensilsCrossed size={32} />
+                          <div className="flex h-full items-center justify-center text-gray-200 bg-stone-50">
+                            <UtensilsCrossed size={40} />
                           </div>
                         )}
 
                         {/* Sold-out overlay */}
                         {soldOut && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                            <span className="rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 shadow">
-                              หมด
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="rounded-full bg-red-500 text-white text-xs font-bold px-3 py-1 shadow-lg">
+                              สินค้าหมด
                             </span>
                           </div>
                         )}
 
-                        {/* In-cart badge */}
+                        {/* In-cart badge — ใหญ่ขึ้น */}
                         {!soldOut && totalQtyInCart > 0 && (
-                          <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shadow-md">
+                          <div className="absolute top-2 right-2 h-9 w-9 rounded-full bg-orange-500 text-white text-base font-extrabold flex items-center justify-center shadow-lg ring-2 ring-white">
                             {totalQtyInCart}
                           </div>
                         )}
 
-                        {/* Options indicator */}
+                        {/* Options pill */}
                         {!soldOut && hasOptions && (
-                          <div className="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 text-white text-[10px] px-1.5 py-0.5">
-                            เลือกตัวเลือก
+                          <div className="absolute bottom-2 left-2 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5">
+                            มีตัวเลือก
                           </div>
                         )}
+
+                        {/* ── Action strip — ซ่อนไว้ แสดงเมื่อ hover ── */}
+                        <div className={[
+                          'absolute bottom-0 left-0 right-0 flex transition-all duration-200',
+                          'opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0',
+                        ].join(' ')}>
+                          <button
+                            type="button"
+                            onClick={(e) => toggleSoldOut(e, item)}
+                            disabled={isToggling}
+                            className={[
+                              'flex-1 py-2 text-[11px] font-bold backdrop-blur-sm transition-colors',
+                              isToggling ? 'opacity-50 cursor-wait' : '',
+                              soldOut
+                                ? 'bg-green-500/90 text-white hover:bg-green-600/90'
+                                : 'bg-red-500/90 text-white hover:bg-red-600/90',
+                              hasOptions ? 'border-r border-white/30' : '',
+                            ].join(' ')}
+                          >
+                            {isToggling ? '...' : soldOut ? '✅ เปิดขาย' : '🔴 หมด'}
+                          </button>
+                          {hasOptions && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setManagingChoices(item) }}
+                              className="px-3 py-2 text-[11px] font-bold bg-stone-700/90 text-white hover:bg-stone-800/90 transition-colors backdrop-blur-sm"
+                            >
+                              ⚙️
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Info */}
-                      <div className="p-2.5 flex-1">
-                        <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight">{item.name}</p>
-                        <p className={['text-sm font-bold mt-1', soldOut ? 'text-gray-400' : 'text-orange-500'].join(' ')}>
+                      <div className="px-3 py-2.5">
+                        <p className="text-sm font-semibold text-gray-800 line-clamp-1 leading-tight">{item.name}</p>
+                        <p className={['text-base font-extrabold mt-0.5', soldOut ? 'text-gray-400' : 'text-orange-600'].join(' ')}>
                           {formatCurrency(item.price)}
                         </p>
                       </div>
-
-                      {/* ── Bottom action strip ── */}
-                      <div className={['flex border-t', soldOut ? 'border-green-100' : 'border-gray-100'].join(' ')}>
-                        {/* Toggle whole-item sold-out */}
-                        <button
-                          type="button"
-                          onClick={(e) => toggleSoldOut(e, item)}
-                          disabled={isToggling}
-                          className={[
-                            'flex-1 py-1.5 text-[10px] font-semibold transition-colors',
-                            isToggling ? 'opacity-50 cursor-wait' : '',
-                            soldOut
-                              ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                              : 'bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500',
-                            hasOptions ? 'border-r border-gray-100' : '',
-                          ].join(' ')}
-                        >
-                          {isToggling ? '...' : soldOut ? '✅ เปิดขาย' : '🔴 หมดทั้งหมด'}
-                        </button>
-
-                        {/* Toggle choice-level (เฉพาะเมนูที่มี options) */}
-                        {hasOptions && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setManagingChoices(item) }}
-                            className="px-2 py-1.5 text-[10px] font-semibold bg-gray-50 text-gray-400 hover:bg-orange-50 hover:text-orange-500 transition-colors"
-                            title="เลือกตัวเลือกที่หมด"
-                          >
-                            ⚙️ ตัวเลือก
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Hover overlay */}
-                      {!soldOut && (
-                        <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/5 transition-colors pointer-events-none" />
-                      )}
                     </div>
                   )
                 })}
@@ -910,9 +911,9 @@ export default function PosPage() {
                   <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg border-t border-gray-100 pt-1.5">
-                <span className="text-gray-700">ยอดสุทธิ</span>
-                <span className="text-orange-500">{formatCurrency(total)}</span>
+              <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-1">
+                <span className="text-base font-bold text-gray-700">ยอดสุทธิ</span>
+                <span className="text-3xl font-extrabold text-orange-600 tracking-tight">{formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -946,20 +947,20 @@ export default function PosPage() {
               </div>
             )}
 
-            {/* Quick amount buttons */}
+            {/* Quick amount buttons — เต็มแถว ใหญ่ */}
             {quickAmounts.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-3 gap-2">
                 {quickAmounts.map((amt) => (
                   <button
                     key={amt}
                     onClick={() => setCashInput(String(amt))}
                     className={[
-                      'rounded-lg px-3 py-1.5 text-xs font-bold border transition-all active:scale-95',
+                      'rounded-2xl py-3.5 text-sm font-bold border-2 transition-all active:scale-95 col-span-1',
                       amt === cashPaid
-                        ? 'ring-2 ring-orange-400 border-orange-400 bg-orange-50 text-orange-700'
+                        ? 'ring-2 ring-orange-400 border-orange-400 bg-orange-100 text-orange-700'
                         : amt === total
-                          ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-orange-300',
+                          ? 'bg-green-500 text-white border-green-500 shadow-md'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-700',
                     ].join(' ')}
                   >
                     {amt === total ? '💵 พอดี' : formatCurrency(amt)}
@@ -1030,9 +1031,9 @@ export default function PosPage() {
                 onClick={handleSave}
                 disabled={!canPay || cart.length === 0 || saving}
                 className={[
-                  'flex-1 rounded-xl py-2.5 text-sm font-bold transition-all',
+                  'flex-1 rounded-2xl py-4 text-base font-extrabold transition-all',
                   canPay && cart.length > 0
-                    ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm shadow-orange-200 active:scale-98'
+                    ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-lg shadow-orange-200 active:scale-[0.98]'
                     : 'bg-gray-100 text-gray-300 cursor-not-allowed',
                 ].join(' ')}
               >
