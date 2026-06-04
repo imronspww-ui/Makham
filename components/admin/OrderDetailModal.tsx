@@ -1,12 +1,14 @@
 'use client'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { AlertTriangle, CheckCheck, XCircle, Clock } from 'lucide-react'
+import { AlertTriangle, CheckCheck, XCircle, Clock, Printer } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { OrderStatusBadge, statusConfig } from './OrderStatusBadge'
 import { updateOrderStatus, updatePaymentStatus, respondToCancelRequest } from '@/lib/services/orderService'
 import { formatCurrency, formatDate, formatDistance } from '@/lib/utils/format'
+import { printReceipt } from '@/lib/utils/printReceipt'
+import { useSettings } from '@/lib/hooks/useSettings'
 import type { Order, OrderStatus } from '@/types'
 
 interface Props {
@@ -19,8 +21,38 @@ const statusFlow: OrderStatus[] = ['pending', 'cooking', 'delivering', 'complete
 
 export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
   const [saving, setSaving] = useState(false)
+  const { settings } = useSettings()
 
   if (!order) return null
+
+  function handlePrint() {
+    if (!order) return
+    const storeName = settings?.store.name ?? 'ร้านมะขาม'
+    printReceipt(
+      {
+        orderNumber:    order.orderNumber,
+        paidAt:         new Date(order.createdAt),
+        orderType:      order.orderType as 'pickup' | 'delivery' | 'dine-in',
+        paymentMethod:  order.payment.method as 'cash' | 'promptpay' | undefined,
+        items:          order.items.map((i) => ({
+          name:    i.name,
+          price:   i.price,
+          qty:     i.qty,
+          options: i.selectedOptions?.map((o) => o.choiceName).join(', ') || undefined,
+          note:    i.itemNote || undefined,
+        })),
+        subtotal:       order.subtotal,
+        discountAmount: order.discount ?? 0,
+        discountLabel:  order.discount ? formatCurrency(order.discount) : '',
+        total:          order.total,
+        cashPaid:       order.total,
+        change:         0,
+      },
+      storeName,
+      settings?.store,
+      settings?.receipt,
+    )
+  }
 
   async function handleStatusChange(status: OrderStatus) {
     if (!order) return
@@ -76,6 +108,13 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${order.payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
             {order.payment.status === 'paid' ? 'ชำระแล้ว' : 'ยังไม่ชำระ'}
           </span>
+          <button
+            onClick={handlePrint}
+            className="ml-auto flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+          >
+            <Printer size={13} />
+            พิมพ์ใบเสร็จ
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
