@@ -89,9 +89,12 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         : { background: theme === 'dark' ? '#0f0a05' : '#fff8f0' }
       }
     >
-      {/* Dark overlay เมื่อมี background image + dark mode */}
-      {bgImageUrl && theme === 'dark' && (
-        <div className="absolute inset-0 bg-black/70 z-0 pointer-events-none" />
+      {/* Overlay เมื่อมี background image */}
+      {bgImageUrl && (
+        <div className={[
+          'absolute inset-0 z-0 pointer-events-none',
+          theme === 'dark' ? 'bg-black/70' : 'bg-white/55',
+        ].join(' ')} />
       )}
       {/* อ่าน ?table=X จาก URL — ต้อง Suspense เพราะใช้ useSearchParams */}
       <Suspense fallback={null}>
