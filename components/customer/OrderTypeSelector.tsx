@@ -11,27 +11,26 @@ export function OrderTypeSelector() {
   const [tableNumber, setTableNumber] = useState('')
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setTableNumber(sessionStorage.getItem('tableNumber') ?? '')
-    }
+    setTableNumber(sessionStorage.getItem('tableNumber') ?? '')
   }, [])
 
   const deliveryEnabled = settings?.delivery?.enabled ?? true
+  const hasDineIn = tableNumber.trim().length > 0
 
-  // ถ้า delivery ถูกปิดและ orderType ปัจจุบันคือ delivery → reset เป็น pickup
+  // reset orderType ที่ไม่ valid อีกต่อไป
   useEffect(() => {
-    if (!deliveryEnabled && orderType === 'delivery') {
-      setOrderType('pickup')
-    }
-  }, [deliveryEnabled, orderType, setOrderType])
+    if (!deliveryEnabled && orderType === 'delivery') setOrderType('pickup')
+    if (!hasDineIn && orderType === 'dine-in') setOrderType('pickup')
+  }, [deliveryEnabled, hasDineIn, orderType, setOrderType])
 
   const options: { value: OrderType; label: string; icon: React.ReactNode; desc: string; disabled?: boolean }[] = [
-    {
-      value: 'dine-in',
+    // dine-in แสดงเฉพาะเมื่อสแกน QR โต๊ะมาแล้ว
+    ...(hasDineIn ? [{
+      value: 'dine-in' as OrderType,
       label: 'ทานที่ร้าน',
       icon: <UtensilsCrossed size={20} />,
-      desc: tableNumber ? `โต๊ะ ${tableNumber}` : 'นั่งทานที่ร้าน',
-    },
+      desc: `โต๊ะ ${tableNumber}`,
+    }] : []),
     {
       value: 'pickup',
       label: 'รับเอง',
@@ -49,7 +48,7 @@ export function OrderTypeSelector() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {options.map((opt) => (
           <button
             key={opt.value}
@@ -71,20 +70,11 @@ export function OrderTypeSelector() {
         ))}
       </div>
 
-      {/* Table number input for dine-in without pre-set table */}
-      {orderType === 'dine-in' && !tableNumber && (
+      {/* แสดง badge โต๊ะเมื่อเลือก dine-in */}
+      {hasDineIn && orderType === 'dine-in' && (
         <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5">
           <UtensilsCrossed size={14} className="text-orange-500 shrink-0" />
-          <input
-            type="text"
-            placeholder="ระบุหมายเลขโต๊ะ (ไม่บังคับ)"
-            className="flex-1 bg-transparent text-sm text-stone-700 placeholder-stone-400 outline-none"
-            onChange={(e) => {
-              if (typeof window !== 'undefined') {
-                sessionStorage.setItem('tableNumber', e.target.value)
-              }
-            }}
-          />
+          <span className="text-sm text-orange-700 font-medium">โต๊ะ {tableNumber} · สแกน QR สำเร็จ</span>
         </div>
       )}
     </div>
