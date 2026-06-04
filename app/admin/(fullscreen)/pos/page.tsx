@@ -84,12 +84,12 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
           type="button"
           onClick={() => press(k)}
           className={[
-            'rounded-2xl py-5 text-2xl font-bold select-none transition-all active:scale-95 active:brightness-90',
+            'rounded-2xl py-5 text-2xl font-bold select-none transition-all active:scale-95 active:brightness-75',
             k === '⌫'
-              ? 'bg-red-100 text-red-500 hover:bg-red-200'
+              ? 'bg-red-900/60 text-red-400 border border-red-800/50 hover:bg-red-900/80'
               : k === '00'
-                ? 'bg-stone-100 text-stone-600 hover:bg-orange-50 hover:text-orange-700'
-                : 'bg-stone-100 text-stone-800 hover:bg-orange-50 hover:text-orange-700',
+                ? 'bg-[#3d2a10] text-amber-500 border border-amber-900/50 hover:bg-[#4a3418] hover:text-amber-300'
+                : 'bg-[#3d2a10] text-amber-200 border border-amber-900/50 hover:bg-[#4a3418] hover:text-amber-100',
           ].join(' ')}
         >
           {k === '⌫' ? <Delete size={20} className="mx-auto" /> : k}
@@ -630,29 +630,29 @@ export default function PosPage() {
         </div>
 
         {/* ══════════ RIGHT: Cart + Payment ══════════ */}
-        <div className="w-80 xl:w-96 flex flex-col gap-2.5 shrink-0 overflow-y-auto pb-2">
+        <div className="w-80 xl:w-96 flex flex-col gap-3 shrink-0 overflow-y-auto pb-2 bg-[#1c1209] rounded-2xl p-3 -m-0.5">
 
           {/* ── Held orders tabs ── */}
           {heldOrders.length > 0 && (
             <div className="flex flex-col gap-1.5 shrink-0">
               <div className="flex items-center gap-1.5">
-                <ClipboardList size={13} className="text-blue-400" />
-                <span className="text-xs font-semibold text-gray-500">คิวรอ ({heldOrders.length})</span>
+                <ClipboardList size={13} className="text-amber-500" />
+                <span className="text-xs font-semibold text-amber-400">คิวรอ ({heldOrders.length})</span>
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-0.5">
+              <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
                 {heldOrders.map((h) => (
                   <div key={h.id}
-                    className="flex items-center gap-1.5 rounded-xl border-2 border-blue-200 bg-blue-50 px-3 py-1.5 shrink-0 cursor-pointer hover:border-blue-400 transition-colors group"
+                    className="flex items-center gap-1.5 rounded-xl border border-amber-700/50 bg-amber-900/30 px-3 py-1.5 shrink-0 cursor-pointer hover:border-amber-500 hover:bg-amber-900/50 transition-colors group"
                     onClick={() => restoreHeld(h.id)}
                   >
                     <div className="flex flex-col leading-none">
-                      <span className="text-xs font-bold text-blue-700">{h.label}</span>
-                      <span className="text-[10px] text-blue-400">{formatCurrency(h.total)}</span>
+                      <span className="text-xs font-bold text-amber-300">{h.label}</span>
+                      <span className="text-[10px] text-amber-500">{formatCurrency(h.total)}</span>
                     </div>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); cancelHeld(h.id) }}
-                      className="text-blue-300 hover:text-red-400 transition-colors ml-0.5"
+                      className="text-amber-700 hover:text-red-400 transition-colors ml-0.5"
                     >
                       <X size={12} />
                     </button>
@@ -664,36 +664,36 @@ export default function PosPage() {
 
           {/* ── Success state ── */}
           {lastOrder && (
-            <div className="rounded-2xl bg-green-50 border border-green-200 p-4 flex flex-col gap-3 shrink-0">
-              <div className="flex items-center gap-2 text-green-700">
+            <div className="rounded-2xl bg-[#0d2010] border border-green-700/50 p-4 flex flex-col gap-3 shrink-0">
+              <div className="flex items-center gap-2 text-green-400">
                 <CheckCircle2 size={20} />
-                <span className="font-bold text-sm">บันทึกออเดอร์แล้ว</span>
+                <span className="font-bold text-sm">บันทึกออเดอร์แล้ว ✅</span>
               </div>
-              <div className="text-sm text-green-700 flex flex-col gap-1">
+              <div className="text-sm text-green-300 flex flex-col gap-1.5">
                 <div className="flex justify-between">
-                  <span>เลขออเดอร์</span>
-                  <span className="font-mono font-bold">{lastOrder.number}</span>
+                  <span className="text-green-600">เลขออเดอร์</span>
+                  <span className="font-mono font-bold text-green-200">{lastOrder.number}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>ยอดสุทธิ</span>
-                  <span className="font-bold">{formatCurrency(lastOrder.total)}</span>
+                  <span className="text-green-600">ยอดสุทธิ</span>
+                  <span className="font-bold text-green-200">{formatCurrency(lastOrder.total)}</span>
                 </div>
                 {lastOrder.change > 0 && (
-                  <div className="flex justify-between text-base font-bold">
-                    <span>เงินทอน</span>
-                    <span className="text-green-600">{formatCurrency(lastOrder.change)}</span>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-green-500">เงินทอน</span>
+                    <span className="text-3xl font-extrabold text-green-300">{formatCurrency(lastOrder.change)}</span>
                   </div>
                 )}
               </div>
               <button
                 onClick={() => printReceipt(lastOrder.receipt, storeName, storeForReceipt, receiptSettings)}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border border-green-300 text-green-700 text-sm font-semibold py-2 hover:bg-green-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-green-900/50 border border-green-700 text-green-300 text-sm font-semibold py-2.5 hover:bg-green-900 transition-colors"
               >
                 <Printer size={15} />
                 พิมพ์ใบเสร็จ
               </button>
               <button onClick={clearAll}
-                className="w-full rounded-xl bg-green-500 text-white text-sm font-semibold py-2 hover:bg-green-600 transition-colors">
+                className="w-full rounded-xl bg-green-600 text-white text-sm font-bold py-3 hover:bg-green-700 transition-colors">
                 ➕ รายการถัดไป
               </button>
             </div>
@@ -702,45 +702,45 @@ export default function PosPage() {
           {/* ── Cart ── */}
           <div className="flex flex-col gap-2 shrink-0">
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 h-28 text-gray-300 rounded-2xl bg-white border border-dashed border-gray-200">
+              <div className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border border-dashed border-amber-900/50">
                 <ShoppingBagIcon />
-                <p className="text-xs">กดเมนูเพื่อเพิ่มรายการ</p>
+                <p className="text-xs text-amber-800">กดเมนูเพื่อเพิ่มรายการ</p>
               </div>
             ) : (
               cart.map((item) => (
                 <div key={item.cartKey}
-                  className="flex items-start gap-2 rounded-xl bg-white border border-gray-100 px-3 py-2.5 shadow-sm">
+                  className="flex items-start gap-2 rounded-xl bg-[#2a1e0f] border border-amber-900/40 px-3 py-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                    <p className="text-sm font-semibold text-amber-100 truncate">{item.name}</p>
                     {item.selectedOptions.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-0.5 leading-snug">
+                      <p className="text-xs text-amber-700 mt-0.5 leading-snug">
                         {item.selectedOptions.map((o) => o.choiceName).join(', ')}
                         {item.selectedOptions.some((o) => o.extraPrice > 0) && (
-                          <span className="text-orange-400 ml-1">
+                          <span className="text-amber-500 ml-1">
                             (+{formatCurrency(item.selectedOptions.reduce((s, o) => s + o.extraPrice, 0))})
                           </span>
                         )}
                       </p>
                     )}
                     {item.itemNote && (
-                      <p className="text-xs text-gray-400 mt-0.5">📝 {item.itemNote}</p>
+                      <p className="text-xs text-amber-700 mt-0.5">📝 {item.itemNote}</p>
                     )}
-                    <p className="text-xs text-orange-500 font-semibold mt-0.5">{formatCurrency(item.price)} / ชิ้น</p>
+                    <p className="text-xs text-amber-500 font-semibold mt-0.5">{formatCurrency(item.price)} / ชิ้น</p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
                     <button onClick={() => setQty(item.cartKey, item.qty - 1)}
-                      className="h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100 text-gray-600">
-                      <Minus size={10} />
+                      className="h-7 w-7 flex items-center justify-center rounded-full bg-amber-900/50 border border-amber-800 text-amber-400 hover:bg-amber-900 transition-colors">
+                      <Minus size={11} />
                     </button>
-                    <span className="w-5 text-center text-sm font-bold text-gray-800">{item.qty}</span>
+                    <span className="w-6 text-center text-sm font-extrabold text-amber-100">{item.qty}</span>
                     <button onClick={() => setQty(item.cartKey, item.qty + 1)}
-                      className="h-6 w-6 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600">
-                      <Plus size={10} />
+                      className="h-7 w-7 flex items-center justify-center rounded-full bg-orange-600 text-white hover:bg-orange-500 transition-colors">
+                      <Plus size={11} />
                     </button>
                   </div>
-                  <p className="text-sm font-bold text-gray-700 w-14 text-right shrink-0 mt-0.5">{formatCurrency(item.price * item.qty)}</p>
+                  <p className="text-sm font-bold text-amber-300 w-16 text-right shrink-0 mt-0.5">{formatCurrency(item.price * item.qty)}</p>
                   <button onClick={() => removeFromCart(item.cartKey)}
-                    className="text-gray-300 hover:text-red-400 transition-colors shrink-0 mt-1">
+                    className="text-amber-900 hover:text-red-400 transition-colors shrink-0 mt-1">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -749,19 +749,19 @@ export default function PosPage() {
           </div>
 
           {/* ── Discount ── */}
-          <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm flex flex-col gap-2 shrink-0">
+          <div className="rounded-2xl bg-[#2a1e0f] border border-amber-900/40 p-3 flex flex-col gap-2 shrink-0">
             <div className="flex items-center gap-2">
-              <Tag size={14} className="text-orange-400" />
-              <span className="text-xs font-semibold text-gray-700">ส่วนลด</span>
+              <Tag size={14} className="text-amber-500" />
+              <span className="text-xs font-semibold text-amber-400">ส่วนลด</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => { setDiscountType('amount'); setDiscountInput('') }}
                 className={[
-                  'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-colors',
+                  'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors',
                   discountType === 'amount'
-                    ? 'bg-orange-500 text-white border-orange-500'
-                    : 'border-gray-200 text-gray-500 hover:border-orange-300',
+                    ? 'bg-orange-600 text-white border-orange-600'
+                    : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
                 ].join(' ')}
               >
                 <Banknote size={11} /> บาท
@@ -769,10 +769,10 @@ export default function PosPage() {
               <button
                 onClick={() => { setDiscountType('percent'); setDiscountInput('') }}
                 className={[
-                  'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-colors',
+                  'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors',
                   discountType === 'percent'
-                    ? 'bg-orange-500 text-white border-orange-500'
-                    : 'border-gray-200 text-gray-500 hover:border-orange-300',
+                    ? 'bg-orange-600 text-white border-orange-600'
+                    : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
                 ].join(' ')}
               >
                 <Percent size={11} /> %
@@ -784,11 +784,11 @@ export default function PosPage() {
                 value={discountInput}
                 onChange={(e) => setDiscountInput(e.target.value)}
                 placeholder={discountType === 'percent' ? 'เช่น 10' : 'เช่น 20'}
-                className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-orange-400"
+                className="flex-1 rounded-lg border border-amber-800 bg-[#1c1209] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
               />
             </div>
             {discountAmount > 0 && (
-              <p className="text-xs text-orange-600 font-medium">
+              <p className="text-xs text-orange-400 font-medium">
                 ลด {discountType === 'percent' ? `${discountInput}%` : ''} = -{formatCurrency(discountAmount)}
               </p>
             )}
@@ -796,14 +796,14 @@ export default function PosPage() {
 
           {/* ── Member lookup ── */}
           {settings?.loyalty?.enabled && (
-            <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm flex flex-col gap-2 shrink-0">
+            <div className="rounded-2xl bg-[#2a1e0f] border border-amber-900/40 p-3 flex flex-col gap-2 shrink-0">
               <div className="flex items-center gap-2">
-                <Star size={14} className="text-orange-400" />
-                <span className="text-xs font-semibold text-gray-700">สมาชิก (ไม่บังคับ)</span>
+                <Star size={14} className="text-amber-500" />
+                <span className="text-xs font-semibold text-amber-400">สมาชิก (ไม่บังคับ)</span>
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700" />
                   <input
                     type="tel"
                     inputMode="numeric"
@@ -813,82 +813,63 @@ export default function PosPage() {
                       setMemberPhone(v)
                     }}
                     placeholder="เบอร์โทร 10 หลัก"
-                    className="w-full rounded-lg border border-gray-200 pl-7 pr-2.5 py-1.5 text-sm outline-none focus:border-orange-400"
+                    className="w-full rounded-lg border border-amber-800 bg-[#1c1209] text-amber-100 pl-7 pr-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
                   />
                 </div>
                 <button
                   onClick={() => searchMember(memberPhone)}
                   disabled={memberSearching || memberPhone.length < 9}
-                  className="rounded-lg bg-orange-500 text-white px-3 text-xs font-semibold hover:bg-orange-600 disabled:opacity-40 transition-colors"
+                  className="rounded-lg bg-orange-600 text-white px-3 text-xs font-semibold hover:bg-orange-500 disabled:opacity-40 transition-colors"
                 >
                   {memberSearching ? '...' : 'ค้นหา'}
                 </button>
                 {memberProfile && (
                   <button
                     onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
-                    className="rounded-lg border border-gray-200 text-gray-400 px-2 text-xs hover:bg-gray-50"
+                    className="rounded-lg border border-amber-800 text-amber-600 px-2 text-xs hover:bg-amber-900/30"
                   >
                     ✕
                   </button>
                 )}
               </div>
 
-              {/* Member card */}
               {memberProfile && memberProfile !== 'not-found' && (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 flex items-center justify-between gap-2">
+                <div className="rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5 flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-bold text-amber-800">👤 {memberProfile.name}</p>
-                    <p className="text-xs text-amber-600 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
+                    <p className="text-sm font-bold text-amber-200">👤 {memberProfile.name}</p>
+                    <p className="text-xs text-amber-500 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
                   </div>
                   {pointsEarned > 0 && (
                     <div className="text-right shrink-0">
                       <p className="text-xs text-amber-600">จะได้รับ</p>
-                      <p className="text-base font-extrabold text-amber-700">+{pointsEarned}</p>
-                      <p className="text-[10px] text-amber-500">แต้ม</p>
+                      <p className="text-base font-extrabold text-amber-400">+{pointsEarned}</p>
+                      <p className="text-[10px] text-amber-600">แต้ม</p>
                     </div>
                   )}
                 </div>
               )}
               {memberProfile === 'not-found' && !addingNew && (
-                <div className="flex items-center justify-between rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
-                  <p className="text-xs text-gray-400">ไม่พบข้อมูลสมาชิก</p>
-                  <button
-                    onClick={() => setAddingNew(true)}
-                    className="flex items-center gap-1 rounded-lg bg-orange-500 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-600 transition-colors"
-                  >
-                    <Plus size={11} />
-                    เพิ่มสมาชิก
+                <div className="flex items-center justify-between rounded-xl bg-amber-900/20 border border-amber-900/40 px-3 py-2">
+                  <p className="text-xs text-amber-700">ไม่พบข้อมูลสมาชิก</p>
+                  <button onClick={() => setAddingNew(true)}
+                    className="flex items-center gap-1 rounded-lg bg-orange-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-500 transition-colors">
+                    <Plus size={11} /> เพิ่มสมาชิก
                   </button>
                 </div>
               )}
-
-              {/* ── Inline new member form ── */}
               {memberProfile === 'not-found' && addingNew && (
-                <div className="flex flex-col gap-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
-                  <p className="text-xs font-semibold text-orange-700">
-                    เพิ่มสมาชิกใหม่ — {memberPhone}
-                  </p>
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                <div className="flex flex-col gap-2 rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5">
+                  <p className="text-xs font-semibold text-amber-400">เพิ่มสมาชิกใหม่ — {memberPhone}</p>
+                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleCreateMember()}
-                    placeholder="ชื่อสมาชิก *"
-                    autoFocus
-                    className="rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-orange-500"
+                    placeholder="ชื่อสมาชิก *" autoFocus
+                    className="rounded-lg border border-amber-700 bg-[#1c1209] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-800"
                   />
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => { setAddingNew(false); setNewName('') }}
-                      className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      onClick={handleCreateMember}
-                      disabled={creatingMember || !newName.trim()}
-                      className="flex-1 rounded-lg bg-orange-500 text-white py-1.5 text-xs font-bold hover:bg-orange-600 disabled:opacity-50 transition-colors"
-                    >
+                    <button onClick={() => { setAddingNew(false); setNewName('') }}
+                      className="flex-1 rounded-lg border border-amber-800 py-1.5 text-xs text-amber-600 hover:bg-amber-900/30">ยกเลิก</button>
+                    <button onClick={handleCreateMember} disabled={creatingMember || !newName.trim()}
+                      className="flex-1 rounded-lg bg-orange-600 text-white py-1.5 text-xs font-bold hover:bg-orange-500 disabled:opacity-50 transition-colors">
                       {creatingMember ? '...' : '✅ บันทึก'}
                     </button>
                   </div>
@@ -898,38 +879,38 @@ export default function PosPage() {
           )}
 
           {/* ── Summary + Payment ── */}
-          <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm flex flex-col gap-2.5 shrink-0">
+          <div className="rounded-2xl bg-[#2a1e0f] border border-amber-900/40 p-3 flex flex-col gap-2.5 shrink-0">
             {/* Summary row */}
             <div className="flex flex-col gap-1">
-              <div className="flex justify-between text-sm text-gray-500">
+              <div className="flex justify-between text-sm text-amber-700">
                 <span>ยอดรวม</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-orange-500">
+                <div className="flex justify-between text-sm text-orange-400">
                   <span>ส่วนลด</span>
                   <span>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-1">
-                <span className="text-base font-bold text-gray-700">ยอดสุทธิ</span>
-                <span className="text-3xl font-extrabold text-orange-600 tracking-tight">{formatCurrency(total)}</span>
+              <div className="flex justify-between items-center border-t border-amber-900/50 pt-2 mt-1">
+                <span className="text-base font-bold text-amber-400">ยอดสุทธิ</span>
+                <span className="text-5xl font-extrabold text-amber-300 tracking-tight leading-none">{formatCurrency(total)}</span>
               </div>
             </div>
 
             {/* Cash display */}
             <div className={[
-              'rounded-xl px-3 py-2.5 flex items-center justify-between',
+              'rounded-xl px-3 py-3 flex items-center justify-between',
               cashPaid > 0
                 ? canPay
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-red-50 border border-red-200'
-                : 'bg-gray-50 border border-gray-200',
+                  ? 'bg-green-900/40 border border-green-700/50'
+                  : 'bg-red-900/40 border border-red-700/50'
+                : 'bg-[#1c1209] border border-amber-900/40',
             ].join(' ')}>
-              <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-600' : 'text-red-500') : 'text-gray-400'}`}>
+              <span className={`text-sm font-medium ${cashPaid > 0 ? (canPay ? 'text-green-400' : 'text-red-400') : 'text-amber-800'}`}>
                 รับเงินมา
               </span>
-              <span className={`text-2xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-700' : 'text-red-600') : 'text-gray-300'}`}>
+              <span className={`text-3xl font-extrabold tracking-tight ${cashPaid > 0 ? (canPay ? 'text-green-300' : 'text-red-400') : 'text-amber-900'}`}>
                 {cashPaid > 0 ? formatCurrency(cashPaid) : '฿ —'}
               </span>
             </div>
@@ -937,13 +918,13 @@ export default function PosPage() {
             {/* Change / shortage */}
             {cashPaid > 0 && total > 0 && (
               <div className={[
-                'flex justify-between items-center rounded-xl px-3 py-2 font-bold',
+                'flex justify-between items-center rounded-xl px-3 py-3 font-bold',
                 canPay
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-600',
+                  ? 'bg-green-900/50 border border-green-700/50'
+                  : 'bg-red-900/50 border border-red-700/50',
               ].join(' ')}>
-                <span className="text-sm">{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
-                <span className="text-xl">{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
+                <span className={`text-sm ${canPay ? 'text-green-400' : 'text-red-400'}`}>{canPay ? '💰 เงินทอน' : '⚠️ รับไม่พอ'}</span>
+                <span className={`text-3xl font-extrabold ${canPay ? 'text-green-300' : 'text-red-300'}`}>{canPay ? formatCurrency(change) : formatCurrency(total - cashPaid)}</span>
               </div>
             )}
 
@@ -955,12 +936,12 @@ export default function PosPage() {
                     key={amt}
                     onClick={() => setCashInput(String(amt))}
                     className={[
-                      'rounded-2xl py-3.5 text-sm font-bold border-2 transition-all active:scale-95 col-span-1',
+                      'rounded-2xl py-3.5 text-sm font-bold border transition-all active:scale-95',
                       amt === cashPaid
-                        ? 'ring-2 ring-orange-400 border-orange-400 bg-orange-100 text-orange-700'
+                        ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-900/50 text-amber-200'
                         : amt === total
-                          ? 'bg-green-500 text-white border-green-500 shadow-md'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-700',
+                          ? 'bg-green-700 text-white border-green-600 shadow-md'
+                          : 'bg-[#3d2a10] text-amber-400 border-amber-900/50 hover:border-amber-600 hover:text-amber-200',
                     ].join(' ')}
                   >
                     {amt === total ? '💵 พอดี' : formatCurrency(amt)}
@@ -974,28 +955,22 @@ export default function PosPage() {
 
             {/* ── Hold form — ถามชื่อคิวก่อนพัก ── */}
             {showHoldForm && (
-              <div className="flex flex-col gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2.5">
-                <p className="text-xs font-semibold text-blue-700">ตั้งชื่อคิว (ไม่บังคับ)</p>
+              <div className="flex flex-col gap-2 rounded-xl bg-blue-900/30 border border-blue-700/40 px-3 py-2.5">
+                <p className="text-xs font-semibold text-blue-400">ตั้งชื่อคิว (ไม่บังคับ)</p>
                 <input
                   type="text"
                   autoFocus
                   value={holdLabel}
                   onChange={(e) => setHoldLabel(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') confirmHold(); if (e.key === 'Escape') setShowHoldForm(false) }}
-                  placeholder={
-                    (memberProfile && memberProfile !== 'not-found')
-                      ? memberProfile.name
-                      : `คิว ${heldOrders.length + 1}`
-                  }
-                  className="rounded-lg border border-blue-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500"
+                  placeholder={(memberProfile && memberProfile !== 'not-found') ? memberProfile.name : `คิว ${heldOrders.length + 1}`}
+                  className="rounded-lg border border-blue-800/50 bg-[#1c1209] text-blue-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 placeholder-blue-900"
                 />
                 <div className="flex gap-2">
                   <button onClick={() => { setShowHoldForm(false); setHoldLabel('') }}
-                    className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
-                    ยกเลิก
-                  </button>
+                    className="flex-1 rounded-lg border border-amber-900/50 py-1.5 text-xs text-amber-700 hover:bg-amber-900/20">ยกเลิก</button>
                   <button onClick={confirmHold}
-                    className="flex-1 rounded-lg bg-blue-500 text-white py-1.5 text-xs font-bold hover:bg-blue-600 transition-colors">
+                    className="flex-1 rounded-lg bg-blue-700 text-white py-1.5 text-xs font-bold hover:bg-blue-600 transition-colors">
                     📋 พักคิว
                   </button>
                 </div>
@@ -1006,22 +981,20 @@ export default function PosPage() {
             <div className="flex gap-2 pt-0.5">
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-amber-900/50 bg-amber-900/20 px-3 py-2.5 text-xs text-amber-600 hover:text-amber-400 hover:bg-amber-900/40 transition-colors"
               >
                 <RotateCcw size={13} />
                 ล้าง
               </button>
-              {/* พักคิว */}
               <button
                 onClick={() => { if (cart.length === 0) { toast.error('ไม่มีรายการในตะกร้า'); return } setShowHoldForm((v) => !v); setHoldLabel('') }}
                 disabled={cart.length === 0}
-                title="พักคิวนี้ไว้ก่อน แล้วเปิดออเดอร์ใหม่"
                 className={[
                   'flex items-center gap-1 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all',
                   showHoldForm
-                    ? 'border-blue-400 bg-blue-100 text-blue-700'
-                    : 'border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50',
-                  cart.length === 0 ? 'opacity-40 cursor-not-allowed' : '',
+                    ? 'border-blue-500/50 bg-blue-900/30 text-blue-400'
+                    : 'border-amber-900/50 bg-amber-900/20 text-amber-600 hover:border-blue-700 hover:text-blue-400 hover:bg-blue-900/20',
+                  cart.length === 0 ? 'opacity-30 cursor-not-allowed' : '',
                 ].join(' ')}
               >
                 <BookmarkPlus size={13} />
