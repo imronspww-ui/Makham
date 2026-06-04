@@ -53,8 +53,8 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme()
   const [cartOpen, setCartOpen] = useState(false)
   const [mounted,  setMounted]  = useState(false)
-  const getTotalItems  = useCartStore((s) => s.getTotalItems)
-  const getTotalPrice  = useCartStore((s) => s.getTotalPrice)
+  // ✅ select items โดยตรง → Zustand re-render ทุกครั้งที่ items เปลี่ยน
+  const cartItems      = useCartStore((s) => s.items)
   const historyOrders  = useOrderHistoryStore((s) => s.orders)
   const { settings }   = useSettings()
   const { isOpen }     = useStoreHours(settings)
@@ -69,8 +69,11 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
   const closeTime    = getTodayCloseTime(settings)
   const nextOpenTime = getNextOpenTime(settings)
-  const totalItems   = mounted ? getTotalItems() : 0
-  const totalPrice   = mounted ? getTotalPrice() : 0
+  const totalItems   = mounted ? cartItems.reduce((s, i) => s + i.qty, 0) : 0
+  const totalPrice   = mounted ? cartItems.reduce((s, i) => {
+    const extra = (i.selectedOptions ?? []).reduce((a, o) => a + o.extraPrice, 0)
+    return s + (i.price + extra) * i.qty
+  }, 0) : 0
 
   // Bottom nav ซ่อนใน checkout เพื่อไม่รกหน้าจอตอนกำลังสั่ง
   const hideBottomNav = pathname === '/checkout'
