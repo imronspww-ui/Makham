@@ -15,6 +15,7 @@ import {
 } from '@/lib/firebase/firestore'
 import { isFirebaseConfigured } from '@/lib/firebase/config'
 import type { Order, OrderStatus } from '@/types'
+import { adjustCustomerPoints } from '@/lib/services/customerService'
 
 const COL = 'orders'
 
@@ -59,8 +60,11 @@ export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'update
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<void> {
   requireFirebase()
+  // Read before write so _reversePoints sees the original pointsEarned/pointsUsed
+  const snap = status === 'cancelled' ? await getDoc(doc(db, COL, id)) : null
   const extra = status === 'completed' ? { 'payment.status': 'paid' } : {}
   await updateDoc(doc(db, COL, id), { status, ...extra, updatedAt: Timestamp.now() })
+  if (snap?.exists()) await _reversePoints(snap.data() as Order)
 }
 
 export async function updatePaymentStatus(id: string, status: 'pending' | 'paid'): Promise<void> {
@@ -111,16 +115,30 @@ export async function respondToCancelRequest(
 ): Promise<void> {
   requireFirebase()
   if (approve) {
+    const snap = await getDoc(doc(db, COL, id))
     await updateDoc(doc(db, COL, id), {
       status: 'cancelled' as OrderStatus,
       cancelRequest: null,
       updatedAt: Timestamp.now(),
     })
+    if (snap.exists()) await _reversePoints(snap.data() as Order)
   } else {
     await updateDoc(doc(db, COL, id), {
       cancelRequest: null,
       updatedAt: Timestamp.now(),
     })
+  }
+}
+
+/** หักแต้มคืนเมื่อยกเลิก — clawback pointsEarned, คืน pointsUsed */
+async function _reversePoints(order: Order): Promise<void> {
+  const phone = order.customer?.phone
+  if (!phone) return
+  const earned = order.pointsEarned ?? 0
+  const used   = order.pointsUsed   ?? 0
+  const delta  = used - earned  // ถ้า earned=5, used=0 → delta=-5 (หัก 5 แต้ม)
+  if (delta !== 0) {
+    await adjustCustomerPoints(phone, delta).catch(() => {})
   }
 }
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrders, createOrder } from '@/lib/services/orderService'
 import { requireStaffOrAdmin } from '@/lib/auth'
+import { getSettings } from '@/lib/services/settingsService'
+import { calculateDeliveryFee } from '@/lib/utils/delivery'
 
 // GET /api/orders — admin or staff
 export async function GET(request: NextRequest) {
@@ -22,7 +24,56 @@ export async function POST(request: NextRequest) {
     const validation = validateOrderBody(body)
     if (validation) return NextResponse.json({ error: validation }, { status: 400 })
 
-    const id = await createOrder(body)
+    const o = body as Record<string, unknown>
+    const settings = await getSettings()
+
+    // ── Recalculate subtotal from items (don't trust client math) ──────────
+    const items = o.items as Array<Record<string, unknown>>
+    const serverSubtotal = items.reduce((sum, it) => {
+      const itemSubtotal = (it.price as number) * (it.qty as number)
+      return sum + itemSubtotal
+    }, 0)
+
+    // ── Enforce minOrderAmount ─────────────────────────────────────────────
+    const minOrder = settings.delivery?.minOrderAmount ?? 0
+    if (o.orderType === 'delivery' && minOrder > 0 && serverSubtotal < minOrder) {
+      return NextResponse.json(
+        { error: `ยอดสั่งขั้นต่ำสำหรับจัดส่งคือ ${minOrder} บาท` },
+        { status: 400 },
+      )
+    }
+
+    // ── Recalculate deliveryFee (don't trust client) ───────────────────────
+    let serverDeliveryFee = 0
+    if (o.orderType === 'delivery' && settings.delivery) {
+      const delivery = o.delivery as Record<string, unknown>
+      const { fee, isOutOfRange } = calculateDeliveryFee(
+        delivery.distanceKm as number,
+        settings.delivery,
+      )
+      if (isOutOfRange) {
+        return NextResponse.json({ error: 'ที่อยู่จัดส่งอยู่นอกพื้นที่ให้บริการ' }, { status: 400 })
+      }
+      serverDeliveryFee = fee
+    }
+
+    // ── Recalculate pointsEarned (don't trust client) ──────────────────────
+    const serverTotal = serverSubtotal + serverDeliveryFee
+    let serverPointsEarned: number | undefined
+    if (settings.loyalty?.enabled && (o.pointsEarned as number | undefined)) {
+      serverPointsEarned = Math.floor(serverTotal / 100) * (settings.loyalty.pointsPer100Baht ?? 5)
+    }
+
+    // Override client-supplied financial fields with server-calculated values
+    const sanitized = {
+      ...o,
+      subtotal:    serverSubtotal,
+      deliveryFee: serverDeliveryFee,
+      total:       serverTotal,
+      pointsEarned: serverPointsEarned,
+    } as Parameters<typeof createOrder>[0]
+
+    const id = await createOrder(sanitized)
     return NextResponse.json({ id }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'สร้างออเดอร์ไม่สำเร็จ' }, { status: 500 })

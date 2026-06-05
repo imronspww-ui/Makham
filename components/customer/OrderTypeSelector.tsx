@@ -17,20 +17,27 @@ export function OrderTypeSelector() {
   const deliveryEnabled = settings?.delivery?.enabled ?? true
   const hasDineIn = tableNumber.trim().length > 0
 
-  // reset orderType ที่ไม่ valid อีกต่อไป
   useEffect(() => {
-    if (!deliveryEnabled && orderType === 'delivery') setOrderType('pickup')
-    if (!hasDineIn && orderType === 'dine-in') setOrderType('pickup')
+    if (hasDineIn) {
+      // สแกน QR โต๊ะมาแล้ว → บังคับ dine-in
+      setOrderType('dine-in')
+    } else {
+      if (!deliveryEnabled && orderType === 'delivery') setOrderType('pickup')
+      if (orderType === 'dine-in') setOrderType('pickup')
+    }
   }, [deliveryEnabled, hasDineIn, orderType, setOrderType])
 
+  // เมื่อมีโต๊ะ → แสดงแค่ badge ไม่ให้เลือกเปลี่ยน
+  if (hasDineIn) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5">
+        <UtensilsCrossed size={14} className="text-orange-500 shrink-0" />
+        <span className="text-sm text-orange-700 font-medium">ทานที่ร้าน · โต๊ะ {tableNumber}</span>
+      </div>
+    )
+  }
+
   const options: { value: OrderType; label: string; icon: React.ReactNode; desc: string; disabled?: boolean }[] = [
-    // dine-in แสดงเฉพาะเมื่อสแกน QR โต๊ะมาแล้ว
-    ...(hasDineIn ? [{
-      value: 'dine-in' as OrderType,
-      label: 'ทานที่ร้าน',
-      icon: <UtensilsCrossed size={20} />,
-      desc: `โต๊ะ ${tableNumber}`,
-    }] : []),
     {
       value: 'pickup',
       label: 'รับเอง',
@@ -47,36 +54,26 @@ export function OrderTypeSelector() {
   ]
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className={`grid gap-2 ${options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            disabled={opt.disabled}
-            onClick={() => !opt.disabled && setOrderType(opt.value)}
-            className={[
-              'flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-all',
-              opt.disabled
-                ? 'border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed'
-                : orderType === opt.value
-                  ? 'border-orange-600 bg-orange-50 text-orange-600 shadow-sm'
-                  : 'border-gray-200 bg-white text-gray-500 hover:border-orange-300',
-            ].join(' ')}
-          >
-            {opt.icon}
-            <span className="font-semibold text-xs">{opt.label}</span>
-            <span className="text-[10px] opacity-70 text-center leading-tight">{opt.desc}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* แสดง badge โต๊ะเมื่อเลือก dine-in */}
-      {hasDineIn && orderType === 'dine-in' && (
-        <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5">
-          <UtensilsCrossed size={14} className="text-orange-500 shrink-0" />
-          <span className="text-sm text-orange-700 font-medium">โต๊ะ {tableNumber} · สแกน QR สำเร็จ</span>
-        </div>
-      )}
+    <div className="grid grid-cols-2 gap-2">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          disabled={opt.disabled}
+          onClick={() => !opt.disabled && setOrderType(opt.value)}
+          className={[
+            'flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-all',
+            opt.disabled
+              ? 'border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed'
+              : orderType === opt.value
+                ? 'border-orange-600 bg-orange-50 text-orange-600 shadow-sm'
+                : 'border-gray-200 bg-white text-gray-500 hover:border-orange-300',
+          ].join(' ')}
+        >
+          {opt.icon}
+          <span className="font-semibold text-xs">{opt.label}</span>
+          <span className="text-[10px] opacity-70 text-center leading-tight">{opt.desc}</span>
+        </button>
+      ))}
     </div>
   )
 }

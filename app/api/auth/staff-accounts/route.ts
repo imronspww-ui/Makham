@@ -4,8 +4,9 @@ import { getActiveStaffAccountsPublic, getStaffAccounts, createStaffAccount } fr
 
 /** GET — list active accounts (no pinHash) — public, used by staff-login page */
 export async function GET(request: NextRequest) {
-  const isAdmin = !(await requireAdmin(request))
-  if (isAdmin) {
+  // requireAdmin returns null when authorized, NextResponse when not
+  const adminAuthError = await requireAdmin(request)
+  if (!adminAuthError) {
     // admin gets full list including inactive
     const accounts = await getStaffAccounts()
     return NextResponse.json(accounts.map(({ pinHash: _, ...rest }) => rest))
