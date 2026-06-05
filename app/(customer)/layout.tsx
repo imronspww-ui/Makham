@@ -87,7 +87,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       className="min-h-screen bg-cover bg-center bg-fixed transition-colors duration-300 relative"
       style={bgImageUrl
         ? { backgroundImage: `url(${bgImageUrl})` }
-        : { background: theme === 'dark' ? '#0f0a05' : '#e8d5b7' }
+        : { background: theme === 'dark' ? '#0f0a05' : '#fff8f0' }
       }
     >
       {/* Overlay เมื่อมี background image */}
@@ -103,11 +103,6 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         <TableNumberTracker />
         <ReferralTracker />
       </Suspense>
-
-      {/* ── Phone-app container: centered on desktop, full-width on mobile ── */}
-      <div className="relative z-10 mx-auto w-full sm:max-w-[500px] sm:min-h-screen sm:shadow-2xl"
-        style={{ background: bgImageUrl ? undefined : (theme === 'dark' ? '#0f0a05' : '#fff8f0') }}
-      >
 
       {/* ── Open/Closed banner — รอ settings โหลดก่อนแสดง เพื่อป้องกัน layout shift ── */}
       {settingsLoaded && (isOpen ? (
@@ -126,7 +121,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* ── Dark classy header ── */}
       <header className="sticky top-0 z-30 border-b border-[#2d1e0a] relative" style={{ background: '#1c1209' }}>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2.5 group">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -159,34 +154,6 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
                 โต๊ะ {tableNumber}
               </div>
             )}
-            {/* My orders — ซ่อนบนมือถือเพราะมี bottom nav แล้ว */}
-            {mounted && historyOrders.length > 0 && (
-              <Link
-                href="/my-orders"
-                className="relative hidden sm:flex items-center gap-1.5 rounded-xl border border-stone-700 bg-stone-800/60 px-3 py-2 text-sm font-medium text-stone-300 hover:border-amber-600 hover:text-amber-300 transition-colors"
-              >
-                <ClipboardList size={15} />
-                <span>ออเดอร์ของฉัน</span>
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
-                  {historyOrders.length}
-                </span>
-              </Link>
-            )}
-
-            {/* Cart button — ซ่อนบนมือถือเพราะมี live cart bar แล้ว */}
-            <button
-              data-cart-target-desktop
-              onClick={() => setCartOpen(true)}
-              className="relative hidden sm:flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 active:scale-95 transition-all duration-150"
-            >
-              <ShoppingCart size={16} />
-              ตะกร้า
-              {totalItems > 0 && (
-                <span key={totalItems} className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow animate-badge-bounce">
-                  {totalItems}
-                </span>
-              )}
-            </button>
           </div>
         </div>
       </header>
@@ -198,13 +165,13 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       <ActiveOrderBanner />
 
       {/* padding-bottom: nav (~60px) + cart bar (~60px) when visible, nav only otherwise */}
-      <main className={['relative z-10 px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
+      <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
         {children}
       </main>
 
-      {/* ── #2 Live Cart Bar — แสดงเฉพาะมือถือ เมื่อมีสินค้าในตะกร้า ── */}
+      {/* ── #2 Live Cart Bar — แสดงทุก breakpoint เมื่อมีสินค้าในตะกร้า ── */}
       {mounted && totalItems > 0 && !hideBottomNav && (
-        <div className="fixed bottom-16 left-0 right-0 z-40 px-4 sm:hidden">
+        <div className="fixed bottom-16 left-0 right-0 z-40 px-4 max-w-5xl mx-auto" style={{ left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '64rem' }}>
           <button
             onClick={() => setCartOpen(true)}
             className="w-full flex items-center justify-between rounded-2xl px-5 py-3.5 text-white shadow-xl active:scale-[0.98] transition-all duration-150"
@@ -224,10 +191,10 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* ── #1 Bottom Navigation Bar — มือถือเท่านั้น ── */}
+      {/* ── #1 Bottom Navigation Bar — ทุก breakpoint ── */}
       {!hideBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 sm:hidden backdrop-blur-md transition-colors duration-300" style={{ background: theme === 'dark' ? '#150e06' : '#fef3c7', borderTop: `1px solid ${theme === 'dark' ? '#3d2a10' : '#fed7aa'}` }}>
-          <div className="flex items-center justify-around px-2 py-1">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md transition-colors duration-300" style={{ background: theme === 'dark' ? '#150e06' : '#fef3c7', borderTop: `1px solid ${theme === 'dark' ? '#3d2a10' : '#fed7aa'}` }}>
+          <div className="mx-auto max-w-5xl flex items-center justify-around px-2 py-1">
             <Link
               href="/"
               className={['flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl transition-colors', pathname === '/' ? 'text-orange-500 dark:text-amber-400' : 'text-stone-400 dark:text-stone-500 hover:text-stone-600'].join(' ')}
@@ -276,8 +243,6 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
-
-      </div>{/* end phone-app container */}
     </div>
   )
 }
