@@ -97,7 +97,7 @@ export default function StaffLoginPage() {
             if (key === 'del') {
               return (
                 <button
-                  key={key}
+                  key={i}
                   onClick={() => pressKey('del')}
                   disabled={loading || pin.length === 0}
                   className="flex h-16 items-center justify-center rounded-2xl bg-zinc-700 text-zinc-200 text-xl font-medium active:scale-95 transition-all disabled:opacity-30"
@@ -108,7 +108,7 @@ export default function StaffLoginPage() {
             }
             return (
               <button
-                key={key}
+                key={i}
                 onClick={() => pressKey(key)}
                 disabled={loading}
                 className="flex h-16 items-center justify-center rounded-2xl bg-zinc-700 hover:bg-zinc-600 text-white text-2xl font-semibold active:scale-95 active:bg-zinc-500 transition-all disabled:opacity-50"
