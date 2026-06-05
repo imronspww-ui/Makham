@@ -36,9 +36,12 @@ const requireFirebase = () => {
 export async function getStaffAccounts(): Promise<StaffAccount[]> {
   if (!isFirebaseConfigured) return []
   try {
-    const q = query(collection(db, COL), orderBy('sortOrder'), orderBy('createdAt'))
+    // ใช้ single orderBy เพื่อหลีกเลี่ยง composite index requirement
+    const q = query(collection(db, COL), orderBy('createdAt'))
     const snap = await getDocs(q)
-    return snap.docs.map((d) => docToAccount(d.id, d.data() as Record<string, unknown>))
+    const accounts = snap.docs.map((d) => docToAccount(d.id, d.data() as Record<string, unknown>))
+    // sort by sortOrder ใน JS แทน
+    return accounts.sort((a, b) => a.sortOrder - b.sortOrder)
   } catch {
     return []
   }
