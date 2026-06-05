@@ -143,6 +143,14 @@ export interface StoreSettings {
   lng: number
   logoUrl?: string
   bgImageUrl?: string
+  // ช่องทางติดต่อ & โซเชียล
+  phoneContact?: string          // เบอร์โทรร้าน (กด tel:)
+  lineId?: string                // LINE ID หรือ LINE OA URL
+  facebookUrl?: string           // Facebook page URL
+  instagramUrl?: string          // Instagram URL
+  tiktokUrl?: string             // TikTok URL
+  websiteUrl?: string            // เว็บไซต์
+  additionalLinks?: { label: string; url: string }[]  // ลิงก์เพิ่มเติม
 }
 
 export interface DaySchedule {
