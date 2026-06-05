@@ -98,6 +98,17 @@ export async function updateReservePercent(reservePercent: number): Promise<void
   cacheClear('settings:')
 }
 
+export async function updateStaffPinHash(hash: string): Promise<void> {
+  requireFirebase()
+  await setDoc(doc(db, 'settings', 'main'), { staffPinHash: hash }, { merge: true })
+  cacheClear('settings:')
+}
+
+export async function getStaffPinHash(): Promise<string | null> {
+  const settings = await getSettings()
+  return settings.staffPinHash ?? null
+}
+
 /** Real-time subscription — fires immediately then on every change */
 export function subscribeToSettings(callback: (s: Settings) => void): () => void {
   if (!isFirebaseConfigured) { callback(DEFAULT_SETTINGS); return () => {} }

@@ -241,4 +241,5 @@ export interface Settings {
   receipt?: ReceiptSettings
   costs?: CostItem[]       // ค่าใช้จ่ายร้านรายเดือน
   reservePercent?: number  // % เงินสำรองร้าน (0-100), default 20
+  staffPinHash?: string    // HMAC hash ของ staff PIN — ตั้งค่าโดย admin เท่านั้น
 }

@@ -1,5 +1,5 @@
 'use client'
-import { QrCode, Store, Truck, Clock, ShieldAlert, Star, Receipt, UtensilsCrossed } from 'lucide-react'
+import { QrCode, Store, Truck, Clock, ShieldAlert, Star, Receipt, UtensilsCrossed, KeyRound } from 'lucide-react'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { PromptPaySettingsForm, DeliverySettingsForm, StoreSettingsForm } from '@/components/admin/SettingsForm'
 import { OpeningHoursForm } from '@/components/admin/OpeningHoursForm'
@@ -7,6 +7,7 @@ import { LoyaltySettingsForm } from '@/components/admin/LoyaltySettingsForm'
 import { ReceiptSettingsForm } from '@/components/admin/ReceiptSettingsForm'
 import { TableQRManager } from '@/components/admin/TableQRManager'
 import { DangerZoneForm } from '@/components/admin/DangerZoneForm'
+import { StaffPinForm } from '@/components/admin/StaffPinForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
 
@@ -87,6 +88,20 @@ export default function SettingsPage() {
           </div>
         </div>
         <TableQRManager />
+      </div>
+
+      {/* ── Staff PIN ── */}
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-500">
+            <KeyRound size={16} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-700">PIN พนักงาน (Staff)</h2>
+            <p className="text-xs text-gray-400">พนักงานใช้ PIN เข้าหน้า POS และออเดอร์ — ไม่มีสิทธิ์ admin</p>
+          </div>
+        </div>
+        <StaffPinForm />
       </div>
 
       {/* ── Stock reset ── */}
