@@ -2,7 +2,7 @@
 import { use, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift, MapPin, ExternalLink, AlertTriangle, X } from 'lucide-react'
+import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift, MapPin, ExternalLink, AlertTriangle, X, Share2, Copy } from 'lucide-react'
 import { useOrder } from '@/lib/hooks/useOrder'
 import { useOrderNotification } from '@/lib/hooks/useOrderNotification'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -95,6 +95,60 @@ function SlipUploader({ orderId }: { orderId: string }) {
         </span>
         <span className="text-xs text-gray-400">รองรับ JPG, PNG</span>
       </label>
+    </div>
+  )
+}
+
+// ─── Referral share card ──────────────────────────────────────────────────────
+function ReferralShareCard({ phone }: { phone: string }) {
+  const [copied, setCopied] = useState(false)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const link    = `${baseUrl}/?ref=${phone.replace(/\D/g, '')}`
+
+  async function handleShare() {
+    if (navigator.share) {
+      await navigator.share({ title: 'ชวนมาสั่งอาหาร!', url: link }).catch(() => {})
+    } else {
+      await navigator.clipboard.writeText(link).catch(() => {})
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(link).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Share2 size={14} className="text-orange-500" />
+        <span className="text-sm font-semibold text-orange-800">แชร์ให้เพื่อน รับ 20 แต้ม!</span>
+      </div>
+      <p className="text-xs text-orange-700 leading-relaxed">
+        เพื่อนที่ใช้ลิงก์ของคุณสั่งครั้งแรก คุณจะได้รับ <span className="font-bold">+20 แต้ม</span> ทันที
+      </p>
+      <div className="flex gap-2">
+        <div className="flex-1 rounded-xl bg-white border border-orange-200 px-3 py-2 text-xs text-orange-700 truncate font-mono">
+          {link}
+        </div>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 rounded-xl bg-white border border-orange-200 px-3 py-2 text-xs font-medium text-orange-600 hover:bg-orange-50 transition-colors shrink-0"
+        >
+          <Copy size={12} />
+          {copied ? 'คัดลอกแล้ว!' : 'คัดลอก'}
+        </button>
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-400 px-3 py-2 text-xs font-semibold text-white transition-colors shrink-0"
+        >
+          <Share2 size={12} />
+          แชร์
+        </button>
+      </div>
     </div>
   )
 }
@@ -494,6 +548,11 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
             })}
           </p>
         </div>
+      )}
+
+      {/* ── Referral share card ── */}
+      {order.customer?.phone && (
+        <ReferralShareCard phone={order.customer.phone} />
       )}
 
       {/* CTA — สั่งอาหารใหม่ */}

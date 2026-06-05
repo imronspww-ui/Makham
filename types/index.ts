@@ -131,6 +131,7 @@ export interface Order {
     requestedAt: string
   }
   soldBy?: string                    // ชื่อพนักงานที่ขาย (POS เท่านั้น)
+  referredBy?: string                // เบอร์โทรของผู้แนะนำ (Referral)
   createdAt: string
   updatedAt: string
 }

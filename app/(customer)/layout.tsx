@@ -8,6 +8,7 @@ import { useOrderHistoryStore } from '@/store/orderHistoryStore'
 import { CartDrawer } from '@/components/customer/CartDrawer'
 import { CustomerOrderTracker } from '@/components/customer/CustomerOrderTracker'
 import { TableNumberTracker } from '@/components/customer/TableNumberTracker'
+import { ReferralTracker } from '@/components/customer/ReferralTracker'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { useStoreHours } from '@/lib/hooks/useStoreHours'
 import { formatCurrency } from '@/lib/utils/format'
@@ -96,9 +97,10 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
           theme === 'dark' ? 'bg-black/70' : 'bg-white/55',
         ].join(' ')} />
       )}
-      {/* อ่าน ?table=X จาก URL — ต้อง Suspense เพราะใช้ useSearchParams */}
+      {/* อ่าน ?table=X และ ?ref=X จาก URL — ต้อง Suspense เพราะใช้ useSearchParams */}
       <Suspense fallback={null}>
         <TableNumberTracker />
+        <ReferralTracker />
       </Suspense>
 
       {/* ── Open/Closed banner — รอ settings โหลดก่อนแสดง เพื่อป้องกัน layout shift ── */}

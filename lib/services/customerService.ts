@@ -143,6 +143,26 @@ export async function createCustomer(
   })
 }
 
+/**
+ * ให้แต้มโบนัสผู้แนะนำ (referral bonus)
+ * - เรียกเมื่อผู้ถูกแนะนำสั่งออเดอร์แรกสำเร็จ
+ * - ถ้าไม่มีโปรไฟล์ผู้แนะนำอยู่ใน DB จะ silent skip
+ */
+export async function awardReferralBonus(referrerPhone: string, bonusPoints: number): Promise<void> {
+  if (!isFirebaseConfigured || !referrerPhone || bonusPoints <= 0) return
+  try {
+    const ref  = doc(db, COL, referrerPhone)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) return
+    const d = snap.data() as Record<string, unknown>
+    const current = isExpired(d.pointsExpireAt) ? 0 : ((d.points as number) ?? 0)
+    await updateDoc(ref, {
+      points:    current + bonusPoints,
+      updatedAt: Timestamp.now(),
+    })
+  } catch { /* silent */ }
+}
+
 /** ปรับแต้มด้วยมือโดย admin (+delta หรือ -delta) */
 export async function adjustCustomerPoints(phone: string, delta: number): Promise<void> {
   if (!isFirebaseConfigured) return

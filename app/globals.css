@@ -60,6 +60,113 @@
   border-color: #3d2a10 !important;
 }
 
+/* ── Dark mode: global bg-white / border / text overrides (customer pages) ── */
+[data-theme="dark"] .bg-white {
+  background: #1e1409 !important;
+}
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-stone-50 {
+  background: #150e06 !important;
+}
+[data-theme="dark"] .bg-gray-100 {
+  background: #2a1e0f !important;
+}
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200 {
+  border-color: #3d2a10 !important;
+}
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-700 {
+  color: #fef3c7 !important;
+}
+[data-theme="dark"] .text-gray-600 {
+  color: #d4a96a !important;
+}
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-400,
+[data-theme="dark"] .text-gray-300 {
+  color: #a8825a !important;
+}
+[data-theme="dark"] .text-stone-700,
+[data-theme="dark"] .text-stone-600 {
+  color: #d4a96a !important;
+}
+[data-theme="dark"] .hover\:bg-stone-100:hover {
+  background: #2a1e0f !important;
+}
+
+/* ── Dark mode: form inputs ── */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: #1e1409 !important;
+  border-color: #3d2a10 !important;
+  color: #fef3c7 !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #6b4c2a !important;
+}
+
+/* ── Dark mode: cart + checkout cards ── */
+[data-theme="dark"] .border-orange-100 {
+  border-color: #5c3a1a !important;
+}
+[data-theme="dark"] .bg-orange-50 {
+  background: #2a1507 !important;
+}
+[data-theme="dark"] .bg-amber-50 {
+  background: #221408 !important;
+}
+[data-theme="dark"] .border-amber-100,
+[data-theme="dark"] .border-amber-200 {
+  border-color: #5c3a1a !important;
+}
+[data-theme="dark"] .text-amber-700,
+[data-theme="dark"] .text-amber-800 {
+  color: #fbbf24 !important;
+}
+[data-theme="dark"] .bg-red-50 {
+  background: #1f0a0a !important;
+}
+[data-theme="dark"] .border-red-100,
+[data-theme="dark"] .border-red-200 {
+  border-color: #5c1a1a !important;
+}
+[data-theme="dark"] .bg-yellow-50 {
+  background: #1f1a06 !important;
+}
+[data-theme="dark"] .border-yellow-200 {
+  border-color: #5c4a10 !important;
+}
+[data-theme="dark"] .text-yellow-800 {
+  color: #fde68a !important;
+}
+[data-theme="dark"] .bg-green-50 {
+  background: #0a1f0a !important;
+}
+[data-theme="dark"] .bg-blue-50 {
+  background: #071520 !important;
+}
+
+/* ── Dark mode: order page status box ── */
+[data-theme="dark"] .shadow-sm {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Dark mode: my-orders page ── */
+[data-theme="dark"] .hover\:border-orange-200:hover {
+  border-color: #c2410c !important;
+}
+
+/* ── Dark mode: referral card ── */
+[data-theme="dark"] .from-orange-50 {
+  --tw-gradient-from: #2a1507 !important;
+}
+[data-theme="dark"] .to-amber-50 {
+  --tw-gradient-to: #221408 !important;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

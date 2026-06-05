@@ -17,7 +17,8 @@ import { UpsellModal } from '@/components/customer/UpsellModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createOrder } from '@/lib/services/orderService'
-import { getCustomer, upsertCustomerAfterOrder } from '@/lib/services/customerService'
+import { getCustomer, upsertCustomerAfterOrder, awardReferralBonus } from '@/lib/services/customerService'
+import { getReferralCode, clearReferralCode } from '@/components/customer/ReferralTracker'
 import { getSettings } from '@/lib/services/settingsService'
 import { uploadImage } from '@/lib/firebase/storage'
 import { checkoutSchema, type CheckoutFormData } from '@/lib/utils/validation'
@@ -199,19 +200,34 @@ export default function CheckoutPage() {
       const tableNumber = sessionStorage.getItem('tableNumber')
       if (tableNumber) orderData.tableNumber = tableNumber
 
+      // แนบ referral ถ้ามี
+      const referralCode = getReferralCode()
+      const myPhone      = formData.customerPhone.replace(/\D/g, '')
+      const isNewCustomer = !customerProfile  // ไม่มีโปรไฟล์ = ลูกค้าใหม่
+      if (referralCode && referralCode !== myPhone) {
+        orderData.referredBy = referralCode
+      }
+
       const id = await createOrder(orderData)
       addOrderToHistory({ id, orderNumber: orderData.orderNumber, createdAt: new Date().toISOString() })
 
       // อัปเดตแต้มลูกค้า (silent — ไม่ block UX)
       if (loyalty?.enabled && (pointsEarned > 0 || selectedRedeem)) {
         upsertCustomerAfterOrder({
-          phone:        formData.customerPhone.replace(/\D/g, ''),
+          phone:        myPhone,
           name:         formData.customerName,
           pointsEarned,
           pointsUsed:   selectedRedeem ? selectedRedeem.pointsCost * redeemQty : 0,
           orderTotal:   total,
           expiryMonths: loyalty.expiryMonths ?? 3,
         }).catch(() => {})
+      }
+
+      // ให้แต้มโบนัสผู้แนะนำ — เฉพาะลูกค้าใหม่เท่านั้น
+      if (referralCode && referralCode !== myPhone && isNewCustomer && loyalty?.enabled) {
+        const REFERRAL_BONUS = 20
+        awardReferralBonus(referralCode, REFERRAL_BONUS).catch(() => {})
+        clearReferralCode()
       }
 
       // Remember customer name & phone for next order
