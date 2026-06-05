@@ -79,14 +79,14 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
   // layout: 7 8 9 / 4 5 6 / 1 2 3 / 00 0 ⌫
   const keys = ['7','8','9','4','5','6','1','2','3','00','0','⌫']
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-2.5 h-full">
       {keys.map((k) => (
         <button
           key={k}
           type="button"
           onClick={() => press(k)}
           className={[
-            'rounded-xl py-3 text-xl font-bold select-none transition-all active:scale-95 active:brightness-75',
+            'rounded-2xl text-3xl font-bold select-none transition-all active:scale-95 active:brightness-75 flex items-center justify-center min-h-[64px]',
             k === '⌫'
               ? 'bg-red-900/60 text-red-400 border border-red-800/50 hover:bg-red-900/80'
               : k === '00'
@@ -94,7 +94,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
                 : 'bg-[#3d2a10] text-amber-200 border border-amber-900/50 hover:bg-[#4a3418] hover:text-amber-100',
           ].join(' ')}
         >
-          {k === '⌫' ? <Delete size={20} className="mx-auto" /> : k}
+          {k === '⌫' ? <Delete size={26} /> : k}
         </button>
       ))}
     </div>
@@ -950,7 +950,7 @@ export default function PosPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowPayModal(false) }}
         >
-          <div className="relative w-full max-w-[860px] max-h-[94dvh] rounded-2xl bg-[#1a1007] border border-amber-900/50 shadow-2xl flex flex-col">
+          <div className="relative w-full max-w-[940px] max-h-[94dvh] rounded-2xl bg-[#1a1007] border border-amber-900/50 shadow-2xl flex flex-col">
 
             {/* Modal header */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2a1e0f] shrink-0">
@@ -1205,7 +1205,7 @@ export default function PosPage() {
             {/* ── End left column ── */}
 
             {/* ── Right column: NumPad / QR + Confirm ── */}
-            <div className="flex flex-col w-[280px] shrink-0 border-l border-[#2a1e0f] p-4 gap-3">
+            <div className="flex flex-col w-[340px] shrink-0 border-l border-[#2a1e0f] p-4 gap-3">
               {posPayMethod === 'cash' ? (
                 <div className="flex flex-col gap-3 flex-1">
                   <NumPad value={cashInput} onChange={setCashInput} />
