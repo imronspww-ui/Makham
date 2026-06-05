@@ -15,6 +15,7 @@ import {
   orderBy,
   where,
   onSnapshot,
+  runTransaction,
   Timestamp,
   type DocumentData,
   type Firestore,
@@ -73,5 +74,6 @@ export {
   orderBy,
   where,
   onSnapshot,
+  runTransaction,
   Timestamp,
 }

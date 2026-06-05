@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  runTransaction,
   Timestamp,
   docToData,
 } from '@/lib/firebase/firestore'
@@ -131,6 +132,7 @@ export async function setStock(
 
 /**
  * หักสต็อกเมื่อมีออเดอร์ — เรียกหลัง createOrder
+ * ใช้ Firestore transaction เพื่อป้องกัน race condition กรณีหลายออเดอร์พร้อมกัน
  * ถ้า stockQty ถึง 0 → mark isSoldOut อัตโนมัติ
  */
 export async function decrementStock(
@@ -139,22 +141,24 @@ export async function decrementStock(
   if (!isFirebaseConfigured) return
 
   await Promise.allSettled(
-    items.map(async ({ menuItemId, qty }) => {
-      const ref  = doc(db, COL, menuItemId)
-      const snap = await getDoc(ref)
-      if (!snap.exists()) return
+    items.map(({ menuItemId, qty }) =>
+      runTransaction(db, async (txn) => {
+        const ref  = doc(db, COL, menuItemId)
+        const snap = await txn.get(ref)
+        if (!snap.exists()) return
 
-      const d        = snap.data() as Record<string, unknown>
-      const stockQty = (d.stockQty as number | undefined) ?? 0
-      if (!stockQty) return   // ไม่จำกัดสต็อก → ไม่ต้องทำอะไร
+        const d        = snap.data() as Record<string, unknown>
+        const stockQty = (d.stockQty as number | undefined) ?? 0
+        if (!stockQty) return   // ไม่จำกัดสต็อก → ไม่ต้องทำอะไร
 
-      const remaining = Math.max(0, stockQty - qty)
-      await updateDoc(ref, {
-        stockQty:  remaining,
-        ...(remaining === 0 && { isSoldOut: true }),
-        updatedAt: Timestamp.now(),
-      })
-    })
+        const remaining = Math.max(0, stockQty - qty)
+        txn.update(ref, {
+          stockQty:  remaining,
+          ...(remaining === 0 && { isSoldOut: true }),
+          updatedAt: Timestamp.now(),
+        })
+      }),
+    ),
   )
   cacheClear('menu:')
 }

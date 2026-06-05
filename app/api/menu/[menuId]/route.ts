@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMenuItem, updateMenuItem, deleteMenuItem } from '@/lib/services/menuService'
+import { requireAdmin } from '@/lib/auth'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ menuId: string }> }) {
   try {
@@ -13,6 +14,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ menuId
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ menuId: string }> }) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { menuId } = await params
     const body = await request.json()
@@ -23,7 +27,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ menuId: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ menuId: string }> }) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { menuId } = await params
     await deleteMenuItem(menuId)

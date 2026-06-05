@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { updateCategory, deleteCategory } from '@/lib/services/categoryService'
+import { requireAdmin } from '@/lib/auth'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ categoryId: string }> }) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { categoryId } = await params
     const body = await request.json()
@@ -12,7 +16,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ categoryId: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ categoryId: string }> }) {
+  const authError = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { categoryId } = await params
     await deleteCategory(categoryId)
