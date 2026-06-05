@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Store, Delete, ShieldCheck, UserCircle, ChevronLeft } from 'lucide-react'
+import { Store, Delete, UserCircle, ChevronLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { StaffAccountPublic } from '@/types'
 
@@ -26,9 +26,9 @@ export default function StaffLoginPage() {
       .finally(() => setLoadingAccounts(false))
   }, [])
 
-  // Auto-submit at PIN_MAX digits
+  // Auto-submit as soon as PIN reaches minimum length
   useEffect(() => {
-    if (pin.length === PIN_MAX && selected) handleSubmit(pin)
+    if (pin.length >= PIN_MIN && selected) handleSubmit(pin)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin])
 
@@ -177,16 +177,6 @@ export default function StaffLoginPage() {
         })}
       </div>
 
-      {pin.length >= PIN_MIN && pin.length < PIN_MAX && (
-        <button
-          onClick={() => handleSubmit(pin)}
-          disabled={submitting}
-          className="w-full max-w-xs flex items-center justify-center gap-2 h-14 rounded-2xl bg-orange-500 hover:bg-orange-400 text-white font-semibold text-base transition-all disabled:opacity-60"
-        >
-          <ShieldCheck size={18} />
-          {submitting ? 'กำลังตรวจสอบ...' : 'ยืนยัน PIN'}
-        </button>
-      )}
 
       <style jsx global>{`
         @keyframes shake {
