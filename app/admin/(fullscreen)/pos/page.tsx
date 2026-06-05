@@ -947,13 +947,13 @@ export default function PosPage() {
       {/* ══════════ PAYMENT MODAL ══════════ */}
       {showPayModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowPayModal(false) }}
         >
-          <div className="relative w-[480px] max-h-[92dvh] overflow-y-auto rounded-2xl bg-[#1a1007] border border-amber-900/50 shadow-2xl flex flex-col scrollbar-hide">
+          <div className="relative w-full max-w-[860px] max-h-[94dvh] rounded-2xl bg-[#1a1007] border border-amber-900/50 shadow-2xl flex flex-col">
 
             {/* Modal header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a1e0f] shrink-0">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2a1e0f] shrink-0">
               <div>
                 <p className="text-base font-bold text-amber-100">💳 ชำระเงิน</p>
                 <p className="text-xs text-amber-700 mt-0.5">
@@ -968,7 +968,11 @@ export default function PosPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-3 p-4">
+            {/* Two-column body */}
+            <div className="flex flex-1 min-h-0">
+
+            {/* ── Left column: order details ── */}
+            <div className="flex flex-col gap-3 p-4 flex-1 overflow-y-auto scrollbar-hide">
 
               {/* Order summary */}
               <div className="rounded-xl bg-[#0d0a07] border border-amber-900/30 px-4 py-3 flex flex-col gap-1">
@@ -1194,12 +1198,21 @@ export default function PosPage() {
                     </div>
                   )}
 
-                  {/* NumPad */}
-                  <NumPad value={cashInput} onChange={setCashInput} />
                 </>
+              ) : null}
+
+            </div>
+            {/* ── End left column ── */}
+
+            {/* ── Right column: NumPad / QR + Confirm ── */}
+            <div className="flex flex-col w-[280px] shrink-0 border-l border-[#2a1e0f] p-4 gap-3">
+              {posPayMethod === 'cash' ? (
+                <div className="flex flex-col gap-3 flex-1">
+                  <NumPad value={cashInput} onChange={setCashInput} />
+                </div>
               ) : (
                 /* PromptPay QR */
-                <div className="flex flex-col items-center gap-3 py-2">
+                <div className="flex flex-col items-center justify-center gap-3 flex-1">
                   {qrLoading ? (
                     <div className="flex flex-col items-center gap-2 py-8 text-amber-700">
                       <div className="h-10 w-10 rounded-full border-2 border-amber-700 border-t-amber-400 animate-spin" />
@@ -1207,9 +1220,9 @@ export default function PosPage() {
                     </div>
                   ) : qrDataUrl ? (
                     <>
-                      <div className="rounded-2xl bg-white p-4 shadow-2xl shadow-black/50">
+                      <div className="rounded-2xl bg-white p-3 shadow-2xl shadow-black/50">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={qrDataUrl} alt="PromptPay QR" className="w-56 h-56 rounded-xl" />
+                        <img src={qrDataUrl} alt="PromptPay QR" className="w-48 h-48 rounded-xl" />
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-2 mb-1">
@@ -1234,12 +1247,12 @@ export default function PosPage() {
                 </div>
               )}
 
-              {/* Confirm button */}
+              {/* Confirm button — bottom of right column */}
               <button
                 onClick={handleSave}
                 disabled={!canPay || saving}
                 className={[
-                  'w-full rounded-xl py-4 text-base font-extrabold transition-all active:scale-[0.98]',
+                  'w-full rounded-xl py-4 text-base font-extrabold transition-all active:scale-[0.98] shrink-0',
                   canPay
                     ? posPayMethod === 'promptpay'
                       ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/40'
@@ -1253,8 +1266,10 @@ export default function PosPage() {
                     ? `✅ ยืนยันรับเงินแล้ว ${formatCurrency(total)}`
                     : `✅ ชำระเงิน ${formatCurrency(total)}`}
               </button>
-
             </div>
+            {/* ── End right column ── */}
+
+            </div>{/* end two-column body */}
           </div>
         </div>
       )}
