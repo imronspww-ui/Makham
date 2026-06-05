@@ -26,9 +26,9 @@ export default function StaffLoginPage() {
       .finally(() => setLoadingAccounts(false))
   }, [])
 
-  // Auto-submit as soon as PIN reaches minimum length
+  // Auto-submit at PIN_MAX digits
   useEffect(() => {
-    if (pin.length >= PIN_MIN && selected) handleSubmit(pin)
+    if (pin.length === PIN_MAX && selected) handleSubmit(pin)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin])
 
