@@ -87,7 +87,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       className="min-h-screen bg-cover bg-center bg-fixed transition-colors duration-300 relative"
       style={bgImageUrl
         ? { backgroundImage: `url(${bgImageUrl})` }
-        : { background: theme === 'dark' ? '#0f0a05' : '#fff8f0' }
+        : { background: theme === 'dark' ? '#0f0a05' : '#e8d5b7' }
       }
     >
       {/* Overlay เมื่อมี background image */}
@@ -97,11 +97,17 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
           theme === 'dark' ? 'bg-black/70' : 'bg-white/55',
         ].join(' ')} />
       )}
+
       {/* อ่าน ?table=X และ ?ref=X จาก URL — ต้อง Suspense เพราะใช้ useSearchParams */}
       <Suspense fallback={null}>
         <TableNumberTracker />
         <ReferralTracker />
       </Suspense>
+
+      {/* ── Phone-app container: centered on desktop, full-width on mobile ── */}
+      <div className="relative z-10 mx-auto w-full sm:max-w-[500px] sm:min-h-screen sm:shadow-2xl"
+        style={{ background: bgImageUrl ? undefined : (theme === 'dark' ? '#0f0a05' : '#fff8f0') }}
+      >
 
       {/* ── Open/Closed banner — รอ settings โหลดก่อนแสดง เพื่อป้องกัน layout shift ── */}
       {settingsLoaded && (isOpen ? (
@@ -120,7 +126,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* ── Dark classy header ── */}
       <header className="sticky top-0 z-30 border-b border-[#2d1e0a] relative" style={{ background: '#1c1209' }}>
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2.5 group">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -192,7 +198,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       <ActiveOrderBanner />
 
       {/* padding-bottom: nav (~60px) + cart bar (~60px) when visible, nav only otherwise */}
-      <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
+      <main className={['relative z-10 px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
         {children}
       </main>
 
@@ -270,6 +276,8 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+
+      </div>{/* end phone-app container */}
     </div>
   )
 }
