@@ -31,6 +31,8 @@ export interface ReceiptData {
   pointsEarned?:     number
   memberTotalPoints?: number
   memberPointsExpiry?: Date
+  // staff
+  soldBy?:           string
 }
 
 const DEFAULT_FOOTER = 'ขอบคุณที่ใช้บริการ 🙏'
@@ -69,6 +71,7 @@ function generateReceiptHtml(
     items, subtotal, discountAmount, discountLabel,
     total, cashPaid, change,
     memberName, pointsEarned, memberTotalPoints, memberPointsExpiry,
+    soldBy,
   } = data
 
   const dateStr = paidAt.toLocaleDateString('th-TH', {
@@ -234,6 +237,11 @@ function generateReceiptHtml(
     <tr class="change-row">
       <td>เงินทอน</td>
       <td class="s-val">${formatCurrency(change)}</td>
+    </tr>` : ''}
+    ${soldBy ? `
+    <tr class="payment-row">
+      <td>ผู้ดำเนินการ</td>
+      <td class="s-val">${escHtml(soldBy)}</td>
     </tr>` : ''}
   </table>
 

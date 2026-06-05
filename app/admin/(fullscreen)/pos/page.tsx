@@ -493,6 +493,7 @@ export default function PosPage() {
         total,
         cashPaid,
         change:            orderChange,
+        ...(staffName && { soldBy: staffName }),
         ...(member && {
           memberName:          member.name,
           pointsEarned:        pointsEarned > 0 ? pointsEarned : undefined,
