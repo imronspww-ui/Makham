@@ -130,6 +130,7 @@ export interface Order {
     reason: string
     requestedAt: string
   }
+  soldBy?: string                    // ชื่อพนักงานที่ขาย (POS เท่านั้น)
   createdAt: string
   updatedAt: string
 }
@@ -241,5 +242,20 @@ export interface Settings {
   receipt?: ReceiptSettings
   costs?: CostItem[]       // ค่าใช้จ่ายร้านรายเดือน
   reservePercent?: number  // % เงินสำรองร้าน (0-100), default 20
-  staffPinHash?: string    // HMAC hash ของ staff PIN — ตั้งค่าโดย admin เท่านั้น
+  staffPinHash?: string    // legacy — replaced by StaffAccount per-person PIN
 }
+
+// ─── Staff Accounts ───────────────────────────────────────────────────────────
+
+export interface StaffAccount {
+  id: string
+  name: string
+  pinHash: string     // HMAC hash — never expose to client
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** Safe public version — no pinHash */
+export type StaffAccountPublic = Omit<StaffAccount, 'pinHash'>

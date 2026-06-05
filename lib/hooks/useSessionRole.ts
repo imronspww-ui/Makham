@@ -3,32 +3,37 @@ import { useEffect, useState } from 'react'
 
 export type SessionRole = 'admin' | 'staff' | null
 
-function readHintCookie(): SessionRole {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(/(?:^|;\s*)_role=([^;]*)/)
-  const val = match?.[1]
-  if (val === 'admin' || val === 'staff') return val
-  return null
+interface SessionState {
+  role: SessionRole
+  staffName: string | null
+  loading: boolean
 }
 
-export function useSessionRole(): { role: SessionRole; loading: boolean } {
-  // อ่าน hint cookie ทันทีเพื่อไม่ให้ sidebar กระพริบ
-  const [role, setRole] = useState<SessionRole>(readHintCookie)
-  const [loading, setLoading] = useState(true)
+function readHintCookies(): { role: SessionRole; staffName: string | null } {
+  if (typeof document === 'undefined') return { role: null, staffName: null }
+  const cookieStr = document.cookie
+  const roleMatch = cookieStr.match(/(?:^|;\s*)_role=([^;]*)/)
+  const nameMatch = cookieStr.match(/(?:^|;\s*)_staff_name=([^;]*)/)
+  const role = roleMatch?.[1] === 'admin' || roleMatch?.[1] === 'staff' ? roleMatch[1] as SessionRole : null
+  const staffName = nameMatch?.[1] ? decodeURIComponent(nameMatch[1]) : null
+  return { role, staffName }
+}
+
+export function useSessionRole(): SessionState {
+  const [state, setState] = useState<SessionState>(() => ({
+    ...readHintCookies(),
+    loading: true,
+  }))
 
   useEffect(() => {
-    // ยืนยันกับ server ใน background (hint cookie อาจ stale หรือถูกแก้)
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => {
-        const verified: SessionRole = d.role === 'admin' || d.role === 'staff' ? d.role : null
-        setRole(verified)
+        const role: SessionRole = d.role === 'admin' || d.role === 'staff' ? d.role : null
+        setState({ role, staffName: d.staffName ?? null, loading: false })
       })
-      .catch(() => {
-        // ถ้า network fail ให้เชื่อ hint cookie ต่อไป
-      })
-      .finally(() => setLoading(false))
+      .catch(() => setState((s) => ({ ...s, loading: false })))
   }, [])
 
-  return { role, loading }
+  return state
 }

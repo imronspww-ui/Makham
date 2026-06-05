@@ -28,7 +28,7 @@ export function Sidebar() {
   const pathname        = usePathname()
   const router          = useRouter()
   const { settings }    = useSettings()
-  const { role }        = useSessionRole()
+  const { role, staffName } = useSessionRole()
 
   const storeName = settings?.store.name ?? process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม'
   const logoUrl   = settings?.store.logoUrl
@@ -67,9 +67,14 @@ export function Sidebar() {
         <div className="min-w-0">
           <p className="text-sm font-bold text-white truncate leading-tight">{storeName}</p>
           {isStaff ? (
-            <div className="flex items-center gap-1 mt-0.5">
-              <UserCog size={10} className="text-amber-400" />
-              <p className="text-[11px] text-amber-400 font-medium">โหมดพนักงาน</p>
+            <div className="flex flex-col mt-0.5">
+              <div className="flex items-center gap-1">
+                <UserCog size={10} className="text-amber-400" />
+                <p className="text-[11px] text-amber-400 font-medium">โหมดพนักงาน</p>
+              </div>
+              {staffName && (
+                <p className="text-[11px] text-amber-300 truncate">{staffName}</p>
+              )}
             </div>
           ) : (
             <p className="text-[11px] text-zinc-500 mt-0.5">Admin Panel</p>

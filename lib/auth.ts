@@ -18,6 +18,12 @@ const HMAC_ALG = { name: 'HMAC', hash: 'SHA-256' }
 
 export type SessionRole = 'admin' | 'staff' | null
 
+export interface SessionInfo {
+  role: SessionRole
+  staffId?: string
+  staffName?: string
+}
+
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function getSecret(): string {
@@ -112,10 +118,12 @@ export async function requireAdmin(request: NextRequest): Promise<NextResponse |
 }
 
 // ─── Staff session ────────────────────────────────────────────────────────────
+// Token format: staff:{accountId}:{uuid}.{sig}
+// The id portion = "staff:{accountId}:{uuid}" — fully covered by HMAC
 
-export async function createStaffToken(): Promise<string> {
+export async function createStaffToken(staffId: string): Promise<string> {
   const secret = getSecret()
-  const id = `staff:${crypto.randomUUID()}`  // prefix → staff token
+  const id = `staff:${staffId}:${crypto.randomUUID()}`
   const sig = await signValue(id, secret)
   return `${id}.${sig}`
 }
@@ -124,7 +132,21 @@ export async function isValidStaffToken(token: string): Promise<boolean> {
   return verifyToken(token, 'staff:')
 }
 
-export function setStaffCookie(response: NextResponse, token: string): void {
+/** Extract staffId from a valid staff token — call only after isValidStaffToken passes */
+export function extractStaffId(token: string): string | null {
+  try {
+    const dotIdx = token.lastIndexOf('.')
+    if (dotIdx === -1) return null
+    const id = token.slice(0, dotIdx)                    // "staff:{staffId}:{uuid}"
+    const parts = id.split(':')                           // ["staff", staffId, uuid]
+    if (parts.length < 3 || parts[0] !== 'staff') return null
+    return parts[1]
+  } catch {
+    return null
+  }
+}
+
+export function setStaffCookie(response: NextResponse, token: string, staffName: string): void {
   response.cookies.set(STAFF_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -132,8 +154,15 @@ export function setStaffCookie(response: NextResponse, token: string): void {
     maxAge: 60 * 60 * 12,  // 12 hours — กะทำงานหนึ่งกะ
     path: '/',
   })
-  // hint cookie — JS-readable, ใช้แค่ UI (ไม่ใช้ทำ auth)
+  // hint cookies — JS-readable, ใช้แค่ UI (ไม่ใช้ทำ auth)
   response.cookies.set('_role', 'staff', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 12,
+    path: '/',
+  })
+  response.cookies.set('_staff_name', encodeURIComponent(staffName), {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -145,6 +174,7 @@ export function setStaffCookie(response: NextResponse, token: string): void {
 export function clearStaffCookie(response: NextResponse): void {
   response.cookies.set(STAFF_COOKIE, '', { maxAge: 0, path: '/' })
   response.cookies.set('_role', '', { maxAge: 0, path: '/' })
+  response.cookies.set('_staff_name', '', { maxAge: 0, path: '/' })
 }
 
 /** API route guard — admin OR staff */
@@ -158,15 +188,23 @@ export async function requireStaffOrAdmin(request: NextRequest): Promise<NextRes
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 }
 
-/** ดึง role ปัจจุบันจาก request cookies */
-export async function getSessionRole(request: NextRequest): Promise<SessionRole> {
+/** ดึง session info ปัจจุบัน — role + staffId (สำหรับ server) */
+export async function getSessionInfo(request: NextRequest): Promise<SessionInfo> {
   const adminToken = request.cookies.get(ADMIN_COOKIE)?.value
-  if (adminToken && (await isValidSessionToken(adminToken))) return 'admin'
+  if (adminToken && (await isValidSessionToken(adminToken))) return { role: 'admin' }
 
   const staffToken = request.cookies.get(STAFF_COOKIE)?.value
-  if (staffToken && (await isValidStaffToken(staffToken))) return 'staff'
+  if (staffToken && (await isValidStaffToken(staffToken))) {
+    const staffId = extractStaffId(staffToken) ?? undefined
+    return { role: 'staff', staffId }
+  }
 
-  return null
+  return { role: null }
+}
+
+/** @deprecated use getSessionInfo */
+export async function getSessionRole(request: NextRequest): Promise<SessionRole> {
+  return (await getSessionInfo(request)).role
 }
 
 // ─── Staff PIN hashing ────────────────────────────────────────────────────────

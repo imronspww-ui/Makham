@@ -13,6 +13,7 @@ import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { ChoiceSoldOutModal } from '@/components/admin/ChoiceSoldOutModal'
+import { useSessionRole } from '@/lib/hooks/useSessionRole'
 import type { MenuItem, OrderItem, SelectedOption, CustomerProfile } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -105,6 +106,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
 export default function PosPage() {
   const { items: menuItems, categories, loading, reload: reloadMenu } = useMenu()
   const { settings } = useSettings()
+  const { staffName } = useSessionRole()
   const storeName    = settings?.store.name ?? 'ร้านมะขาม'
   const storeForReceipt  = settings?.store
   const receiptSettings  = settings?.receipt
@@ -450,6 +452,7 @@ export default function PosPage() {
         status:      'completed',
         ...(discountAmount > 0 && { discount: discountAmount }),
         ...(pointsEarned > 0 && member && { pointsEarned }),
+        ...(staffName && { soldBy: staffName }),
       })
 
       // สะสมแต้มสมาชิก

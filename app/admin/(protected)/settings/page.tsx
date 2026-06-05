@@ -7,7 +7,7 @@ import { LoyaltySettingsForm } from '@/components/admin/LoyaltySettingsForm'
 import { ReceiptSettingsForm } from '@/components/admin/ReceiptSettingsForm'
 import { TableQRManager } from '@/components/admin/TableQRManager'
 import { DangerZoneForm } from '@/components/admin/DangerZoneForm'
-import { StaffPinForm } from '@/components/admin/StaffPinForm'
+import { StaffAccountsForm } from '@/components/admin/StaffAccountsForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
 
@@ -97,11 +97,11 @@ export default function SettingsPage() {
             <KeyRound size={16} />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-700">PIN พนักงาน (Staff)</h2>
-            <p className="text-xs text-gray-400">พนักงานใช้ PIN เข้าหน้า POS และออเดอร์ — ไม่มีสิทธิ์ admin</p>
+            <h2 className="font-semibold text-gray-700">บัญชีพนักงาน</h2>
+            <p className="text-xs text-gray-400">แต่ละคนมี PIN ส่วนตัว — บันทึก "ขายโดย" ในออเดอร์ POS อัตโนมัติ</p>
           </div>
         </div>
-        <StaffPinForm />
+        <StaffAccountsForm />
       </div>
 
       {/* ── Stock reset ── */}

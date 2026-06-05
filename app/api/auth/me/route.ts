@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSessionRole } from '@/lib/auth'
+import { getSessionInfo, extractStaffId } from '@/lib/auth'
+import { getStaffAccount } from '@/lib/services/staffService'
 
-/** คืน role ปัจจุบัน — ใช้โดย client เพื่อแสดง UI ตาม role */
 export async function GET(request: NextRequest) {
-  const role = await getSessionRole(request)
-  return NextResponse.json({ role })
+  const info = await getSessionInfo(request)
+
+  if (info.role === 'staff' && info.staffId) {
+    // ดึงชื่อจาก Firestore เพื่อยืนยันว่ายังเป็น active account
+    const account = await getStaffAccount(info.staffId).catch(() => null)
+    if (!account || !account.isActive) {
+      return NextResponse.json({ role: null })
+    }
+    return NextResponse.json({ role: 'staff', staffId: account.id, staffName: account.name })
+  }
+
+  return NextResponse.json({ role: info.role ?? null })
 }
