@@ -88,10 +88,19 @@ export function setSessionCookie(response: NextResponse, token: string): void {
     maxAge: 60 * 60 * 8,
     path: '/',
   })
+  // hint cookie — JS-readable, ใช้แค่ UI (ไม่ใช้ทำ auth)
+  response.cookies.set('_role', 'admin', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8,
+    path: '/',
+  })
 }
 
 export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(ADMIN_COOKIE, '', { maxAge: 0, path: '/' })
+  response.cookies.set('_role', '', { maxAge: 0, path: '/' })
 }
 
 /** API route guard — admin only */
@@ -123,10 +132,19 @@ export function setStaffCookie(response: NextResponse, token: string): void {
     maxAge: 60 * 60 * 12,  // 12 hours — กะทำงานหนึ่งกะ
     path: '/',
   })
+  // hint cookie — JS-readable, ใช้แค่ UI (ไม่ใช้ทำ auth)
+  response.cookies.set('_role', 'staff', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 12,
+    path: '/',
+  })
 }
 
 export function clearStaffCookie(response: NextResponse): void {
   response.cookies.set(STAFF_COOKIE, '', { maxAge: 0, path: '/' })
+  response.cookies.set('_role', '', { maxAge: 0, path: '/' })
 }
 
 /** API route guard — admin OR staff */
