@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSessionToken, setSessionCookie } from '@/lib/auth'
+import { createSessionToken, setSessionCookie, clearStaffCookie } from '@/lib/auth'
 
 // Simple in-memory rate limiter: max 10 attempts per IP per 15 min
 const attempts = new Map<string, { count: number; resetAt: number }>()
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     const token = await createSessionToken()
     const response = NextResponse.json({ success: true })
     setSessionCookie(response, token)
+    clearStaffCookie(response)   // ล้าง staff session ถ้ามีค้างอยู่
     return response
   } catch {
     return NextResponse.json({ error: 'เกิดข้อผิดพลาด' }, { status: 500 })

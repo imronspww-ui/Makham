@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyStaffPin, createStaffToken, setStaffCookie } from '@/lib/auth'
+import { verifyStaffPin, createStaffToken, setStaffCookie, clearSessionCookie } from '@/lib/auth'
 import { getStaffPinHash } from '@/lib/services/settingsService'
 
 // Rate limiting: max 10 attempts per IP per 15 min
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     const token = await createStaffToken()
     const response = NextResponse.json({ success: true })
     setStaffCookie(response, token)
+    clearSessionCookie(response)   // ล้าง admin session ถ้ามีค้างอยู่
     return response
   } catch {
     return NextResponse.json({ error: 'เกิดข้อผิดพลาด' }, { status: 500 })
