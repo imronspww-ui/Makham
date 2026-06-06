@@ -14,7 +14,7 @@
  */
 import { useState, useEffect } from 'react'
 import { Bell, BellOff, X, Share } from 'lucide-react'
-import { unlockAudio } from '@/lib/utils/sound'
+import { unlockAudio } from '@/lib/utils/audio'
 
 type BannerState = 'hidden' | 'ask' | 'ios-guide' | 'denied'
 

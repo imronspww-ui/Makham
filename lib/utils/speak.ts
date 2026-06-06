@@ -1,8 +1,10 @@
 /**
  * speak() — เล่นเสียงพูดภาษาไทยผ่าน SpeechSynthesis
  *
+ * Priority: Thai voice → Default voice → First available voice
  * - browser มี focus → เล่นทันที
  * - ไม่มี focus     → queue ไว้ เล่นเมื่อ window ได้ focus กลับมา
+ * - iOS bug: ต้อง pause/resume ก่อนพูด (เฉพาะ iOS)
  */
 
 let _pendingText: string | null = null
@@ -14,49 +16,56 @@ function isIOS(): boolean {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
-function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+async function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+  const immediate = window.speechSynthesis.getVoices()
+  if (immediate.length > 0) return immediate
+
   return new Promise((resolve) => {
-    const v = window.speechSynthesis.getVoices()
-    if (v.length > 0) { resolve(v); return }
-    const h = () => {
+    const handler = () => {
       resolve(window.speechSynthesis.getVoices())
-      window.speechSynthesis.removeEventListener('voiceschanged', h)
+      window.speechSynthesis.removeEventListener('voiceschanged', handler)
     }
-    window.speechSynthesis.addEventListener('voiceschanged', h)
+    window.speechSynthesis.addEventListener('voiceschanged', handler)
+    // fallback — บางเบราว์เซอร์ไม่ยิง voiceschanged
     setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1500)
   })
 }
 
-async function doSpeak(text: string) {
+async function doSpeak(text: string): Promise<void> {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
   try {
     window.speechSynthesis.cancel()
 
-    // iOS bug เฉพาะ: SpeechSynthesis หยุดเองหลังใช้ไปสักพัก
-    // pause/resume ก่อนพูดทุกครั้งบน iOS เท่านั้น — ไม่ทำบน Android/Desktop
+    // iOS bug: SpeechSynthesis หยุดเองหลังใช้ — pause/resume ก่อนพูด (iOS เท่านั้น)
     if (isIOS()) {
       window.speechSynthesis.pause()
       window.speechSynthesis.resume()
     }
 
-    const voices    = await loadVoices()
-    const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
-    if (!thaiVoice) return  // ไม่มี Thai voice → เงียบ (เสียง beep ดูแลแทน)
+    const voices = await loadVoices()
 
-    const utt   = new SpeechSynthesisUtterance(text)
-    utt.voice   = thaiVoice
-    utt.lang    = 'th-TH'
-    utt.rate    = 0.88
-    utt.pitch   = 1.05
-    utt.volume  = 1.0
+    // เลือก voice: Thai > Default > First available
+    const voice =
+      voices.find((v) => v.lang.startsWith('th')) ??
+      voices.find((v) => v.default) ??
+      voices[0] ??
+      null
+
+    if (!voice) return  // ไม่มี voice เลย → เงียบ
+
+    const utt    = new SpeechSynthesisUtterance(text)
+    utt.voice    = voice
+    utt.lang     = voice.lang.startsWith('th') ? 'th-TH' : voice.lang
+    utt.rate     = voice.lang.startsWith('th') ? 0.88 : 0.95
+    utt.pitch    = 1.05
+    utt.volume   = 1.0
     window.speechSynthesis.speak(utt)
   } catch { /* ignore */ }
 }
 
-/** hasFocus() ไม่น่าเชื่อถือบน iOS → ถือ visible = active */
-function isActive(): boolean {
+function isVisible(): boolean {
   if (typeof document === 'undefined') return false
-  return document.hasFocus() || document.visibilityState === 'visible'
+  return document.visibilityState === 'visible'
 }
 
 function attachListeners() {
@@ -64,7 +73,7 @@ function attachListeners() {
   _listenersAttached = true
 
   function tryFlush() {
-    if (isActive() && _pendingText) {
+    if (isVisible() && _pendingText) {
       doSpeak(_pendingText)
       _pendingText = null
     }
@@ -74,11 +83,11 @@ function attachListeners() {
   document.addEventListener('visibilitychange', tryFlush)
 }
 
-export function speak(text: string) {
+export function speak(text: string): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
   attachListeners()
 
-  if (isActive()) {
+  if (isVisible()) {
     doSpeak(text)
   } else {
     _pendingText = text
