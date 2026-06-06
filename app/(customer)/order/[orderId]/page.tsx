@@ -550,10 +550,10 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
         </div>
       )}
 
-      {/* ── Referral share card ── */}
-      {order.customer?.phone && (
+      {/* ── Referral share card — ปิดชั่วคราว ── */}
+      {/* {order.customer?.phone && (
         <ReferralShareCard phone={order.customer.phone} />
-      )}
+      )} */}
 
       {/* CTA — สั่งอาหารใหม่ */}
       <Link href="/">

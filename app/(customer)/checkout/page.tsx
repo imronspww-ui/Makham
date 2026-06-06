@@ -200,13 +200,11 @@ export default function CheckoutPage() {
       const tableNumber = sessionStorage.getItem('tableNumber')
       if (tableNumber) orderData.tableNumber = tableNumber
 
-      // แนบ referral ถ้ามี
-      const referralCode = getReferralCode()
+      // แนบ referral — ปิดชั่วคราว
+      // const referralCode = getReferralCode()
+      const referralCode = null
       const myPhone      = formData.customerPhone.replace(/\D/g, '')
-      const isNewCustomer = !customerProfile  // ไม่มีโปรไฟล์ = ลูกค้าใหม่
-      if (referralCode && referralCode !== myPhone) {
-        orderData.referredBy = referralCode
-      }
+      const isNewCustomer = !customerProfile
 
       const id = await createOrder(orderData)
       addOrderToHistory({ id, orderNumber: orderData.orderNumber, createdAt: new Date().toISOString() })
@@ -223,12 +221,13 @@ export default function CheckoutPage() {
         }).catch(() => {})
       }
 
-      // ให้แต้มโบนัสผู้แนะนำ — เฉพาะลูกค้าใหม่เท่านั้น
-      if (referralCode && referralCode !== myPhone && isNewCustomer && loyalty?.enabled) {
-        const REFERRAL_BONUS = 20
-        awardReferralBonus(referralCode, REFERRAL_BONUS).catch(() => {})
-        clearReferralCode()
-      }
+      // ให้แต้มโบนัสผู้แนะนำ — ปิดชั่วคราว
+      // if (referralCode && referralCode !== myPhone && isNewCustomer && loyalty?.enabled) {
+      //   const REFERRAL_BONUS = 20
+      //   awardReferralBonus(referralCode, REFERRAL_BONUS).catch(() => {})
+      //   clearReferralCode()
+      // }
+      void isNewCustomer  // suppress unused warning
 
       // Remember customer name & phone for next order
       saveCustomer(formData.customerName, formData.customerPhone)
