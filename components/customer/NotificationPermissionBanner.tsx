@@ -42,14 +42,26 @@ export function NotificationPermissionBanner() {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return
 
     const perm = Notification.permission
-    if (perm === 'denied' || perm === 'granted') return  // ไม่ต้องทำอะไร
+    if (perm === 'denied' || perm === 'granted') return
 
     // perm === 'default'
-    if (isIOS() && !isStandalone()) {
-      // iOS ต้อง Add to Home Screen ก่อน Web Push ถึงจะทำงาน
-      setState('ios-guide')
+    if (isIOS()) {
+      if (!isStandalone()) {
+        // iOS Safari (ไม่ใช่ PWA) → แนะนำ Add to Home Screen
+        setState('ios-guide')
+      } else {
+        // iOS PWA → ต้องใช้ gesture จาก user เพื่อขอ permission
+        setState('ask')
+      }
     } else {
-      setState('ask')
+      // Android / Desktop — ขอ permission อัตโนมัติได้เลย ไม่ต้องกดปุ่ม
+      Notification.requestPermission().then((result) => {
+        if (result !== 'granted') setState('denied')
+        // granted → ไม่แสดงอะไร
+      }).catch(() => {
+        // บาง browser ต้องการ gesture → fallback แสดง banner
+        setState('ask')
+      })
     }
   }, [])
 
