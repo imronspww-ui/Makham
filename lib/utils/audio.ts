@@ -21,10 +21,10 @@ function getCtx(): AudioContext | null {
 async function tryResume(): Promise<boolean> {
   const ctx = getCtx()
   if (!ctx) return false
-  if (ctx.state === 'running') return true
+  if ((ctx.state as string) === 'running') return true
   try {
     await ctx.resume()
-    return ctx.state === 'running'
+    return (ctx.state as string) === 'running'
   } catch { return false }
 }
 
@@ -34,7 +34,7 @@ async function tryResume(): Promise<boolean> {
  */
 export async function unlockAudio(): Promise<void> {
   if (typeof window === 'undefined') return
-  if (_ctx && _ctx.state === 'running') return   // unlock แล้ว ไม่ทำซ้ำ
+  if (_ctx && (_ctx.state as string) === 'running') return   // unlock แล้ว ไม่ทำซ้ำ
 
   try {
     const Ctx =
