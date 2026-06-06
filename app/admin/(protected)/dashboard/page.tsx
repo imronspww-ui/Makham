@@ -77,7 +77,7 @@ function BarChart({ data }: { data: { label: string; value: number; count: numbe
 export default function DashboardPage() {
   const { orders, loading } = useOrders()
   const { settings } = useSettings()
-  const { items: menuItems } = useAdminMenu()
+  const { items: menuItems, categories } = useAdminMenu()
   const [period, setPeriod] = useState<Period>('today')
   const [notifSent, setNotifSent] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('qty')
@@ -177,6 +177,36 @@ export default function DashboardPage() {
     const allItems = Object.values(itemMap).sort((a, b) => b.qty - a.qty)
     const topItems = allItems.slice(0, 5)
 
+    // ── Category-level analytics ──
+    // สร้าง map menuItemId → categoryId
+    const menuCatMap: Record<string, string> = {}
+    menuItems.forEach((m) => { menuCatMap[m.id] = m.categoryId })
+    const catNameMap: Record<string, string> = {}
+    categories.forEach((c) => { catNameMap[c.id] = c.name })
+
+    const catMap: Record<string, {
+      name: string; qty: number; revenue: number
+      totalCost: number; totalProfit: number; margin: number; hasCost: boolean
+    }> = {}
+    periodOrders.forEach((o) => {
+      o.items.forEach((item) => {
+        const catId = menuCatMap[item.menuItemId] ?? 'other'
+        const catName = catNameMap[catId] ?? 'ไม่ระบุหมวด'
+        if (!catMap[catId]) catMap[catId] = { name: catName, qty: 0, revenue: 0, totalCost: 0, totalProfit: 0, margin: 0, hasCost: false }
+        const entry = catMap[catId]
+        const cost = (cpuMap[item.menuItemId] ?? 0) * item.qty
+        entry.qty += item.qty
+        entry.revenue += item.subtotal
+        entry.totalCost += cost
+        entry.totalProfit += item.subtotal - cost
+        if (cpuMap[item.menuItemId]) entry.hasCost = true
+      })
+    })
+    Object.values(catMap).forEach((e) => {
+      e.margin = e.revenue > 0 ? (e.totalProfit / e.revenue) * 100 : 0
+    })
+    const categoryStats = Object.values(catMap).sort((a, b) => b.revenue - a.revenue)
+
     // ── Status counts (all orders, not just valid) ──
     const pending = orders.filter((o) => o.status === 'pending').length
     const cooking = orders.filter((o) => o.status === 'cooking').length
@@ -216,6 +246,7 @@ export default function DashboardPage() {
       dailyData,
       topItems,
       allItems,
+      categoryStats,
       pending,
       cooking,
       delivering,
@@ -224,7 +255,7 @@ export default function DashboardPage() {
       monthPersonal,
       hasCostData: Object.keys(cpuMap).length > 0,
     }
-  }, [orders, period, menuItems, settings?.costs])
+  }, [orders, period, menuItems, categories, settings?.costs])
 
   // ── แจ้งเตือนสรุปยอดวันนี้ ────────────────────────────────────────────────
   async function sendDailySummary() {
@@ -529,6 +560,66 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Category-level analytics ── */}
+      {stats.categoryStats.length > 0 && (
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+            <BarChart2 size={16} className="text-purple-500" />
+            <h2 className="font-semibold text-gray-700">กำไรตามหมวดหมู่{periodLabel}</h2>
+          </div>
+          <div className="flex flex-col divide-y divide-gray-50">
+            {stats.categoryStats.map((cat, i) => {
+              const maxRev = stats.categoryStats[0]?.revenue ?? 1
+              const marginColor =
+                cat.margin >= 50 ? 'text-green-600 bg-green-50' :
+                cat.margin >= 30 ? 'text-yellow-600 bg-yellow-50' :
+                cat.hasCost      ? 'text-red-500 bg-red-50'       : 'text-gray-400 bg-gray-50'
+              return (
+                <div key={cat.name} className="px-5 py-3.5 flex items-center gap-3">
+                  {/* rank */}
+                  <span className={[
+                    'flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold shrink-0',
+                    i === 0 ? 'bg-amber-400 text-white' :
+                    i === 1 ? 'bg-gray-300 text-gray-700' :
+                    i === 2 ? 'bg-orange-200 text-orange-700' : 'bg-gray-100 text-gray-400',
+                  ].join(' ')}>{i + 1}</span>
+
+                  {/* name + bar */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-semibold text-gray-800">{cat.name}</p>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="text-xs text-gray-500">{cat.qty} ชิ้น</span>
+                        <span className="text-xs font-medium text-orange-600">{formatCurrency(cat.revenue)}</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-full rounded-full bg-purple-400 transition-all duration-500"
+                        style={{ width: `${(cat.revenue / maxRev) * 100}%` }} />
+                    </div>
+                    {/* cost/profit detail */}
+                    {cat.hasCost && (
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                        <span>ต้นทุน {formatCurrency(cat.totalCost)}</span>
+                        <span className="text-gray-200">·</span>
+                        <span className={cat.totalProfit >= 0 ? 'text-green-600' : 'text-red-500'}>
+                          กำไร {formatCurrency(cat.totalProfit)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* margin badge */}
+                  <span className={`text-xs font-bold px-2 py-1 rounded-xl shrink-0 ${marginColor}`}>
+                    {cat.hasCost ? `${cat.margin.toFixed(1)}%` : '—'}
+                  </span>
                 </div>
               )
             })}
