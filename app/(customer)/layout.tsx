@@ -94,6 +94,8 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Bottom nav ซ่อนใน checkout เพื่อไม่รกหน้าจอตอนกำลังสั่ง
   const hideBottomNav = pathname === '/checkout'
+  // Cart bar ซ่อนเมื่ออยู่หน้าตะกร้าอยู่แล้ว หรืออยู่หน้า checkout
+  const hideCartBar   = pathname === '/cart' || pathname === '/checkout'
   const settingsLoaded = settings !== null
 
   return (
@@ -180,7 +182,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       <ActiveOrderBanner />
 
       {/* padding-bottom: nav (~60px) + cart bar (~60px) when visible, nav only otherwise */}
-      <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
+      <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 && !hideCartBar ? 'pb-36' : 'pb-20') : ''].join(' ')}>
         {children}
       </main>
 
@@ -193,7 +195,7 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── #2 Live Cart Bar — แสดงทุก breakpoint เมื่อมีสินค้าในตะกร้า ── */}
-      {mounted && totalItems > 0 && !hideBottomNav && (
+      {mounted && totalItems > 0 && !hideCartBar && (
         <div className="fixed bottom-16 left-0 right-0 z-40 px-4 max-w-5xl mx-auto" style={{ left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '64rem' }}>
           <button
             onClick={() => setCartOpen(true)}
