@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/utils/format'
 import { ThemeProvider, useTheme } from '@/components/customer/ThemeProvider'
 import { ActiveOrderBanner } from '@/components/customer/ActiveOrderBanner'
 import { SocialFloatingBar } from '@/components/customer/StoreInfoCard'
+import { NotificationPermissionBanner } from '@/components/customer/NotificationPermissionBanner'
 import type { Settings } from '@/types'
 
 /** หาเวลาเปิดถัดไปจาก schedule */
@@ -169,6 +170,9 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
       <main className={['relative z-10 mx-auto max-w-5xl px-4 py-6', !hideBottomNav ? (mounted && totalItems > 0 ? 'pb-36' : 'pb-20') : ''].join(' ')}>
         {children}
       </main>
+
+      {/* ── Notification Permission Banner ── */}
+      {mounted && <NotificationPermissionBanner />}
 
       {/* ── A: Social Floating Bar — เฉพาะหน้า / และเมื่อตะกร้าว่าง ── */}
       {mounted && pathname === '/' && settings?.store && totalItems === 0 && (

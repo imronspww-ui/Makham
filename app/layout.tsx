@@ -11,11 +11,16 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม',
   description: 'สั่งอาหารออนไลน์',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม',
     startupImage: '/icons/icon-512.png',
+  },
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/icons/icon-192.png',
   },
 }
 

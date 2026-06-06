@@ -18,12 +18,10 @@ export function CustomerOrderTracker() {
     if (!('serviceWorker' in navigator)) return
 
     async function setup() {
-      // ขอสิทธิ์ notification (ครั้งแรกที่เปิดเว็บ)
-      if ('Notification' in window && Notification.permission === 'default') {
-        await Notification.requestPermission()
-      }
-
       // Register SW (ถ้ายังไม่ได้ register)
+      // หมายเหตุ: ไม่ขอ Notification.requestPermission() ที่นี่แล้ว
+      // เพราะ iOS บังคับให้ขอจาก user gesture เท่านั้น
+      // → NotificationPermissionBanner จัดการแทน
       try {
         await navigator.serviceWorker.register('/sw.js', { scope: '/' })
       } catch (err) {

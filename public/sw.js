@@ -120,8 +120,8 @@ async function pollAdmin() {
       // ไม่มี admin tab → SW แจ้งเตือนแทน
       await self.registration.showNotification(`📦 ออเดอร์ใหม่! #${order.orderNumber}`, {
         body:               `${name} · ฿${total} · ${type}`,
-        icon:               '/favicon.ico',
-        badge:              '/favicon.ico',
+        icon:               '/icons/icon-192.png',
+        badge:              '/icons/icon-192.png',
         tag:                `admin-order-${order.id}`,
         requireInteraction: true,
         data:               { type: 'admin', url: '/admin/orders' },
@@ -194,10 +194,10 @@ async function pollCustomerOrders() {
             // ── ลูกค้าอยู่ tab อื่น → แสดง notification + เล่นเสียงพูด ──
             await self.registration.showNotification(msgInfo.title, {
               body:               `ออเดอร์ #${info.orderNumber} · ${msgInfo.body}`,
-              icon:               '/favicon.ico',
-              badge:              '/favicon.ico',
+              icon:               '/icons/icon-192.png',
+              badge:              '/icons/icon-192.png',
               tag:                `customer-order-${orderId}`,
-              requireInteraction: !TERMINAL_STATUSES.has(order.status),
+              requireInteraction: false,
               data:               { type: 'customer', url: `/order/${orderId}`, orderId },
             })
 
