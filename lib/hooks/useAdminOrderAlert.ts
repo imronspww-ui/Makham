@@ -189,7 +189,7 @@ export function useAdminOrderAlert() {
         try {
           new Notification(`📦 ออเดอร์ใหม่ #${first.orderNumber}`, {
             body: `${first.customer.name} · ฿${first.total.toLocaleString()}`,
-            icon: '/favicon.ico',
+            icon: '/icons/icon-192.png',
             tag:  'new-order',
           })
         } catch { /* ignore */ }

@@ -12,6 +12,7 @@ import { ReferralTracker } from '@/components/customer/ReferralTracker'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { useStoreHours } from '@/lib/hooks/useStoreHours'
 import { formatCurrency } from '@/lib/utils/format'
+import { unlockAudio } from '@/lib/utils/sound'
 import { ThemeProvider, useTheme } from '@/components/customer/ThemeProvider'
 import { ActiveOrderBanner } from '@/components/customer/ActiveOrderBanner'
 import { SocialFloatingBar } from '@/components/customer/StoreInfoCard'
@@ -68,6 +69,18 @@ function CustomerLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname       = usePathname()
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Unlock AudioContext บน user interaction ครั้งแรก (บังคับโดย browser policy ทุกแพลตฟอร์ม)
+  useEffect(() => {
+    const unlock = () => { unlockAudio(); cleanup() }
+    const cleanup = () => {
+      window.removeEventListener('touchstart', unlock)
+      window.removeEventListener('click', unlock)
+    }
+    window.addEventListener('touchstart', unlock, { once: true, passive: true })
+    window.addEventListener('click',      unlock, { once: true })
+    return cleanup
+  }, [])
 
   const storeName   = settings?.store.name ?? process.env.NEXT_PUBLIC_STORE_NAME ?? 'ร้านมะขาม'
   const logoUrl     = settings?.store.logoUrl
