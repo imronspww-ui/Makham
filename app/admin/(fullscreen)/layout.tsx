@@ -12,10 +12,12 @@ function AdminAlertProvider() {
     window.addEventListener('click',      unlock, { once: true })
     window.addEventListener('touchstart', unlock, { once: true, passive: true })
     window.addEventListener('keydown',    unlock, { once: true })
+    window.addEventListener('mousemove',  unlock, { once: true, passive: true })
     return () => {
       window.removeEventListener('click',      unlock)
       window.removeEventListener('touchstart', unlock)
       window.removeEventListener('keydown',    unlock)
+      window.removeEventListener('mousemove',  unlock)
     }
   }, [])
 

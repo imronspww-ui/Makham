@@ -15,13 +15,17 @@ function AdminAlertProvider() {
     // Chrome/Firefox: resume() สำเร็จหลัง user เคย interact แล้ว
     // iOS Safari PWA: ต้องการ gesture — touchstart จับได้เสมอ
     const unlock = () => { unlockAudio() }
+    // ครอบคลุมทุกกรณี: click/touch/key/mousemove
+    // mousemove → Desktop unlock ทันทีที่เลื่อน mouse (ไม่ต้องกดอะไร)
     window.addEventListener('click',      unlock, { once: true })
     window.addEventListener('touchstart', unlock, { once: true, passive: true })
     window.addEventListener('keydown',    unlock, { once: true })
+    window.addEventListener('mousemove',  unlock, { once: true, passive: true })
     return () => {
       window.removeEventListener('click',      unlock)
       window.removeEventListener('touchstart', unlock)
       window.removeEventListener('keydown',    unlock)
+      window.removeEventListener('mousemove',  unlock)
     }
   }, [])
 
