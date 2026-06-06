@@ -12,7 +12,7 @@ import { OrderTypeSelector } from '@/components/customer/OrderTypeSelector'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { formatCurrency } from '@/lib/utils/format'
 import { Button } from '@/components/ui/Button'
-import type { CartItem, Category, CategoryAddon, MenuItem, SelectedOption } from '@/types'
+import type { CartItem, MenuItem, SelectedOption } from '@/types'
 
 function toSelectionMap(selected: SelectedOption[]): Record<string, string[]> {
   return (selected ?? []).reduce<Record<string, string[]>>((acc, opt) => ({
@@ -42,8 +42,8 @@ export default function CartPage() {
   const { items, orderType, updateQty, removeItem, getTotalPrice, getTotalItems, getItemEffectivePrice, updateItemOptions } = useCartStore()
   const { settings } = useSettings()
   const { isOpen } = useStoreHours(settings)
-  const { categoryAddons, toggleCategoryAddon, note, setNote } = useCheckoutStore()
-  const { items: menuItems, categories } = useMenu()
+  const { note, setNote } = useCheckoutStore()
+  const { items: menuItems } = useMenu()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
 
   if (items.length === 0) {
@@ -56,38 +56,14 @@ export default function CartPage() {
     )
   }
 
-  // ── Determine which categories have items in cart AND have required option groups
-  const cartCategoryIds = new Set(
-    items.map((ci) => menuItems.find((m) => m.id === ci.menuItemId)?.categoryId).filter(Boolean) as string[],
-  )
-  const categoriesNeedingOptions: Category[] = categories.filter(
-    (cat) => cartCategoryIds.has(cat.id) && (cat.optionGroups ?? []).some((g) => g.required),
-  )
-
   // ── ยอดขั้นต่ำ delivery ──────────────────────────────────────────────────────
   const minOrderAmount = settings?.delivery?.minOrderAmount ?? 0
   const cartTotal = getTotalPrice()
   const belowMinOrder = orderType === 'delivery' && minOrderAmount > 0 && cartTotal < minOrderAmount
   const minOrderShortfall = minOrderAmount - cartTotal
 
-  // Check if all required category options are selected
-  const missingGroups: Array<{ cat: Category; groupName: string }> = []
-  for (const cat of categoriesNeedingOptions) {
-    for (const group of (cat.optionGroups ?? []).filter((g) => g.required)) {
-      if (!categoryAddons.some((a) => a.categoryId === cat.id && a.groupId === group.id)) {
-        missingGroups.push({ cat, groupName: group.name })
-      }
-    }
-  }
-  const canProceed = missingGroups.length === 0
-
   function handleProceed() {
-    if (!isOpen) return   // ปุ่มถูก disable แล้ว แต่กันไว้อีกชั้น
-    if (!canProceed) {
-      const first = missingGroups[0]
-      alert(`กรุณาเลือก${first.groupName} สำหรับ${first.cat.name}`)
-      return
-    }
+    if (!isOpen) return
     router.push('/checkout')
   }
 
@@ -159,93 +135,6 @@ export default function CartPage() {
         })}
       </section>
 
-      {/* ── Category-level option selection ── */}
-      {categoriesNeedingOptions.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-stone-600">ตัวเลือกประจำหมวดหมู่</h2>
-          {categoriesNeedingOptions.map((cat) => (
-            <div key={cat.id} className="rounded-2xl bg-white border border-orange-100 p-4 shadow-sm flex flex-col gap-3">
-              <p className="text-sm font-semibold text-stone-700">
-                🍢 {cat.name}
-                <span className="ml-1.5 text-xs text-stone-400 font-normal">(เลือก 1 ครั้งสำหรับทั้งออเดอร์)</span>
-              </p>
-              {(cat.optionGroups ?? []).map((group) => {
-                const groupSelections = categoryAddons.filter(
-                  (a) => a.categoryId === cat.id && a.groupId === group.id,
-                )
-                const isGroupMissing = group.required && groupSelections.length === 0
-                return (
-                  <div key={group.id}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-sm font-medium text-stone-700">{group.name}</p>
-                      {group.required && (
-                        <span className={`text-xs rounded-full px-2 py-0.5 border ${
-                          isGroupMissing
-                            ? 'bg-red-50 text-red-500 border-red-100'
-                            : 'bg-green-50 text-green-600 border-green-100'
-                        }`}>
-                          {isGroupMissing ? 'ยังไม่ได้เลือก' : '✓ เลือกแล้ว'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      {group.choices.map((choice) => {
-                        const isSelected = groupSelections.some((a) => a.choiceId === choice.id)
-                        const addon: CategoryAddon = {
-                          categoryId: cat.id,
-                          categoryName: cat.name,
-                          groupId: group.id,
-                          groupName: group.name,
-                          choiceId: choice.id,
-                          choiceName: choice.name,
-                          extraPrice: choice.extraPrice,
-                        }
-                        return (
-                          <button
-                            key={choice.id}
-                            type="button"
-                            onClick={() => toggleCategoryAddon(addon, group.multiSelect)}
-                            className={[
-                              'flex items-center justify-between px-3 py-2.5 rounded-xl border-2 text-sm text-left transition-all',
-                              isSelected
-                                ? 'border-orange-600 bg-orange-50 text-orange-700'
-                                : 'border-gray-200 text-stone-600 hover:border-orange-200',
-                            ].join(' ')}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className={[
-                                'w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                                isSelected ? 'border-orange-600 bg-orange-600' : 'border-gray-300',
-                              ].join(' ')}>
-                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                              </div>
-                              <span>{choice.name}</span>
-                            </div>
-                            {choice.extraPrice > 0 && (
-                              <span className="text-xs text-orange-600 font-medium">+{formatCurrency(choice.extraPrice)}</span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-
-          {/* Missing warning */}
-          {!canProceed && (
-            <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3">
-              <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-600">
-                กรุณาเลือก{missingGroups.map((m) => m.groupName).join(', ')} ก่อนดำเนินการ
-              </p>
-            </div>
-          )}
-        </section>
-      )}
-
       {/* Order note */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-stone-700">หมายเหตุออเดอร์ (ไม่บังคับ)</label>
@@ -284,7 +173,7 @@ export default function CartPage() {
 
         <Button fullWidth size="lg" onClick={handleProceed}
           disabled={!isOpen || belowMinOrder}
-          className={(!canProceed || !isOpen || belowMinOrder) ? 'opacity-60' : ''}>
+          className={(!isOpen || belowMinOrder) ? 'opacity-60' : ''}>
           {!isOpen ? '🚫 ร้านปิดอยู่' : belowMinOrder ? `ยอดไม่ถึงขั้นต่ำ (${formatCurrency(minOrderAmount)})` : 'ดำเนินการสั่งซื้อ'}
         </Button>
       </div>

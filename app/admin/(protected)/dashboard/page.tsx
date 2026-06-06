@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import {
   ClipboardList, TrendingUp, Clock, ChefHat, Truck,
   CalendarDays, BarChart2, Trophy, ShoppingBag, Bell, TrendingDown, Wallet,
+  ChevronDown, ChevronUp, ChevronsUpDown, PackageSearch,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
@@ -27,6 +28,8 @@ function dayLabel(d: Date) {
 // ─── types ───────────────────────────────────────────────────────────────────
 
 type Period = 'today' | 'week' | 'month'
+type SortKey = 'qty' | 'revenue' | 'profit' | 'margin'
+type SortDir = 'asc' | 'desc'
 
 // ─── mini bar chart ───────────────────────────────────────────────────────────
 
@@ -77,6 +80,9 @@ export default function DashboardPage() {
   const { items: menuItems } = useAdminMenu()
   const [period, setPeriod] = useState<Period>('today')
   const [notifSent, setNotifSent] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('qty')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [showAllItems, setShowAllItems] = useState(false)
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -132,24 +138,6 @@ export default function DashboardPage() {
       }
     })
 
-    // ── Top menu items (from period orders) ──
-    const itemMap: Record<string, { name: string; qty: number; revenue: number }> = {}
-    periodOrders.forEach((o) => {
-      o.items.forEach((item) => {
-        if (!itemMap[item.menuItemId]) {
-          itemMap[item.menuItemId] = { name: item.name, qty: 0, revenue: 0 }
-        }
-        itemMap[item.menuItemId].qty += item.qty
-        itemMap[item.menuItemId].revenue += item.subtotal
-      })
-    })
-    const topItems = Object.values(itemMap).sort((a, b) => b.qty - a.qty).slice(0, 5)
-
-    // ── Status counts (all orders, not just valid) ──
-    const pending = orders.filter((o) => o.status === 'pending').length
-    const cooking = orders.filter((o) => o.status === 'cooking').length
-    const delivering = orders.filter((o) => o.status === 'delivering').length
-
     // ── Gross profit (รายได้ - ต้นทุนวัตถุดิบ) ──
     // สร้าง map menuItemId → costPerUnit
     const cpuMap: Record<string, number> = {}
@@ -162,6 +150,38 @@ export default function DashboardPage() {
       return orderList.reduce((sum, o) =>
         sum + o.items.reduce((s, i) => s + (cpuMap[i.menuItemId] ?? 0) * i.qty, 0), 0)
     }
+
+    // ── All menu items analytics (from period orders) ──
+    const itemMap: Record<string, {
+      name: string; qty: number; revenue: number
+      costPerUnit: number; totalCost: number; totalProfit: number; margin: number
+    }> = {}
+    periodOrders.forEach((o) => {
+      o.items.forEach((item) => {
+        if (!itemMap[item.menuItemId]) {
+          const cpu = cpuMap[item.menuItemId] ?? 0
+          itemMap[item.menuItemId] = { name: item.name, qty: 0, revenue: 0, costPerUnit: cpu, totalCost: 0, totalProfit: 0, margin: 0 }
+        }
+        const entry = itemMap[item.menuItemId]
+        entry.qty += item.qty
+        entry.revenue += item.subtotal
+        const cost = (cpuMap[item.menuItemId] ?? 0) * item.qty
+        entry.totalCost += cost
+        entry.totalProfit += item.subtotal - cost
+      })
+    })
+    // คำนวณ margin หลังรวม
+    Object.values(itemMap).forEach((e) => {
+      e.margin = e.revenue > 0 ? (e.totalProfit / e.revenue) * 100 : 0
+    })
+    const allItems = Object.values(itemMap).sort((a, b) => b.qty - a.qty)
+    const topItems = allItems.slice(0, 5)
+
+    // ── Status counts (all orders, not just valid) ──
+    const pending = orders.filter((o) => o.status === 'pending').length
+    const cooking = orders.filter((o) => o.status === 'cooking').length
+    const delivering = orders.filter((o) => o.status === 'delivering').length
+
     const periodCogs   = calcCogs(periodOrders)
     const monthCogs    = calcCogs(monthOrders)
     const periodGross  = periodRevenue - periodCogs
@@ -195,6 +215,7 @@ export default function DashboardPage() {
       monthNet,
       dailyData,
       topItems,
+      allItems,
       pending,
       cooking,
       delivering,
@@ -514,6 +535,150 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ── Item-level analytics table ── */}
+      {stats.allItems.length > 0 && (() => {
+        // sort
+        const mul = sortDir === 'desc' ? 1 : -1
+        const sorted = [...stats.allItems].sort((a, b) => {
+          if (sortKey === 'qty')     return (b.qty          - a.qty)          * mul
+          if (sortKey === 'revenue') return (b.revenue      - a.revenue)      * mul
+          if (sortKey === 'profit')  return (b.totalProfit  - a.totalProfit)  * mul
+          if (sortKey === 'margin')  return (b.margin       - a.margin)       * mul
+          return 0
+        })
+        const displayed = showAllItems ? sorted : sorted.slice(0, 8)
+
+        function handleSort(key: SortKey) {
+          if (sortKey === key) setSortDir((d) => d === 'desc' ? 'asc' : 'desc')
+          else { setSortKey(key); setSortDir('desc') }
+        }
+        function SortIcon({ k }: { k: SortKey }) {
+          if (sortKey !== k) return <ChevronsUpDown size={12} className="text-gray-300" />
+          return sortDir === 'desc'
+            ? <ChevronDown size={12} className="text-orange-500" />
+            : <ChevronUp size={12} className="text-orange-500" />
+        }
+        const hasCost = stats.allItems.some((i) => i.costPerUnit > 0)
+
+        return (
+          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+              <PackageSearch size={16} className="text-blue-500" />
+              <h2 className="font-semibold text-gray-700">รายละเอียดทุกเมนู{periodLabel}</h2>
+              <span className="ml-auto text-xs text-gray-400">{stats.allItems.length} รายการ</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/60">
+                    <th className="text-left py-2.5 px-4 text-xs text-gray-400 font-medium w-6">#</th>
+                    <th className="text-left py-2.5 px-2 text-xs text-gray-400 font-medium">เมนู</th>
+                    <th className="py-2.5 px-2 text-xs font-medium">
+                      <button onClick={() => handleSort('qty')} className="flex items-center gap-1 text-gray-400 hover:text-gray-700 mx-auto">
+                        ขายได้ <SortIcon k="qty" />
+                      </button>
+                    </th>
+                    <th className="py-2.5 px-2 text-xs font-medium">
+                      <button onClick={() => handleSort('revenue')} className="flex items-center gap-1 text-gray-400 hover:text-gray-700 mx-auto">
+                        รายได้รวม <SortIcon k="revenue" />
+                      </button>
+                    </th>
+                    {hasCost && <>
+                      <th className="py-2.5 px-2 text-xs text-gray-400 font-medium text-center">ต้นทุน/ชิ้น</th>
+                      <th className="py-2.5 px-2 text-xs text-gray-400 font-medium text-center">ราคาขาย/ชิ้น</th>
+                      <th className="py-2.5 px-2 text-xs text-gray-400 font-medium text-center">กำไร/ชิ้น</th>
+                      <th className="py-2.5 px-2 text-xs font-medium">
+                        <button onClick={() => handleSort('profit')} className="flex items-center gap-1 text-gray-400 hover:text-gray-700 mx-auto">
+                          กำไรรวม <SortIcon k="profit" />
+                        </button>
+                      </th>
+                      <th className="py-2.5 px-2 text-xs font-medium">
+                        <button onClick={() => handleSort('margin')} className="flex items-center gap-1 text-gray-400 hover:text-gray-700 mx-auto">
+                          Margin <SortIcon k="margin" />
+                        </button>
+                      </th>
+                    </>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayed.map((item, i) => {
+                    const pricePerUnit = item.qty > 0 ? item.revenue / item.qty : 0
+                    const profitPerUnit = pricePerUnit - item.costPerUnit
+                    const isProfit = item.totalProfit >= 0
+                    return (
+                      <tr key={item.name} className="border-b border-gray-50 hover:bg-orange-50/30 transition-colors">
+                        <td className="py-2.5 px-4">
+                          <span className={[
+                            'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold',
+                            i === 0 ? 'bg-amber-400 text-white' :
+                            i === 1 ? 'bg-gray-300 text-gray-700' :
+                            i === 2 ? 'bg-orange-200 text-orange-700' : 'bg-gray-100 text-gray-400',
+                          ].join(' ')}>{i + 1}</span>
+                        </td>
+                        <td className="py-2.5 px-2 font-medium text-gray-800">{item.name}</td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className="font-semibold text-gray-800">{item.qty}</span>
+                          <span className="text-gray-400 text-xs ml-0.5">ชิ้น</span>
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-medium text-orange-600">
+                          {formatCurrency(item.revenue)}
+                        </td>
+                        {hasCost && <>
+                          <td className="py-2.5 px-2 text-center text-xs text-red-400">
+                            {item.costPerUnit > 0 ? formatCurrency(item.costPerUnit) : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-2.5 px-2 text-center text-xs text-gray-600">
+                            {item.qty > 0 ? formatCurrency(pricePerUnit) : '—'}
+                          </td>
+                          <td className="py-2.5 px-2 text-center text-xs font-semibold">
+                            {item.costPerUnit > 0 && item.qty > 0
+                              ? <span className={profitPerUnit >= 0 ? 'text-green-600' : 'text-red-500'}>{formatCurrency(profitPerUnit)}</span>
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-semibold">
+                            {item.costPerUnit > 0
+                              ? <span className={isProfit ? 'text-green-600' : 'text-red-500'}>{formatCurrency(item.totalProfit)}</span>
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-2.5 px-2 text-center">
+                            {item.costPerUnit > 0 && item.revenue > 0
+                              ? (
+                                <span className={[
+                                  'inline-block text-xs font-bold px-1.5 py-0.5 rounded-full',
+                                  item.margin >= 40 ? 'bg-green-50 text-green-600' :
+                                  item.margin >= 20 ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500',
+                                ].join(' ')}>
+                                  {item.margin.toFixed(1)}%
+                                </span>
+                              )
+                              : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                        </>}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* show all toggle */}
+            {stats.allItems.length > 8 && (
+              <div className="border-t border-gray-100 px-5 py-3 flex justify-center">
+                <button
+                  onClick={() => setShowAllItems((v) => !v)}
+                  className="flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-700 font-medium transition-colors"
+                >
+                  {showAllItems
+                    ? <><ChevronUp size={15} /> ย่อรายการ</>
+                    : <><ChevronDown size={15} /> ดูทั้งหมด {stats.allItems.length} รายการ</>}
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── Recent orders ── */}
       <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
