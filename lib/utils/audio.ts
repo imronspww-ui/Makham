@@ -1,31 +1,23 @@
 /**
- * audio.ts — Unified Audio Engine (Admin + Customer)
+ * audio.ts — Unified Audio Engine
  *
- * หลักการ:
- * - Singleton AudioContext — สร้างครั้งเดียว ใช้ร่วมกันทั้งแอป
- * - tryResume() — พยายาม resume ก่อนเล่นทุกครั้ง
- *   Chrome/Android/Desktop: resume() สำเร็จหลัง user เคย interact กับหน้าแล้ว
- *   iOS: ต้องมี unlockAudio() จาก user gesture ก่อน
- * - unlockAudio() — เรียกจาก click/touch handler เพื่อ unlock อย่างแน่นอน
- *   ควรเรียกทันทีที่ user tap ครั้งแรก (ทำใน layout)
+ * กฎสำคัญของ Chrome/Safari:
+ * - AudioContext ที่สร้างใน user gesture handler → state = "running" ทันที ✅
+ * - AudioContext ที่สร้างนอก gesture → state = "suspended" และ resume() ถูกบล็อก ❌
+ *
+ * ดังนั้น: สร้าง _ctx ใน unlockAudio() เท่านั้น (gesture)
+ * playAdminAlarm / playCustomerBeep → ถ้า _ctx ยังไม่ถูกสร้าง → เงียบ (รอให้ user interact ก่อน)
  */
 
 let _ctx: AudioContext | null = null
 
+/** ดึง context ที่ถูกสร้างแล้วเท่านั้น — ไม่สร้างใหม่เอง */
 function getCtx(): AudioContext | null {
-  if (typeof window === 'undefined') return null
-  if (_ctx && _ctx.state !== 'closed') return _ctx
-  try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!Ctx) return null
-    _ctx = new Ctx()
-  } catch { return null }
+  if (!_ctx || _ctx.state === 'closed') return null
   return _ctx
 }
 
-/** Resume AudioContext — สำเร็จเมื่อ user เคย interact กับหน้าแล้ว */
+/** Resume context ถ้าจำเป็น */
 async function tryResume(): Promise<boolean> {
   const ctx = getCtx()
   if (!ctx) return false
@@ -37,24 +29,37 @@ async function tryResume(): Promise<boolean> {
 }
 
 /**
- * Unlock AudioContext + prime SpeechSynthesis
- * เรียกจาก user gesture (click / touchstart) ครั้งแรก
+ * unlockAudio() — เรียกจาก user gesture (click/touch/keydown/mousemove)
+ * สร้าง AudioContext ภายใน gesture → ได้ state "running" ทันที บน Chrome/Firefox/Safari
  */
 export async function unlockAudio(): Promise<void> {
-  const ctx = getCtx()
-  if (!ctx) return
+  if (typeof window === 'undefined') return
+  if (_ctx && _ctx.state === 'running') return   // unlock แล้ว ไม่ทำซ้ำ
+
   try {
-    if (ctx.state === 'suspended') await ctx.resume()
-    // play silent 1-frame buffer → unlock จริงบน iOS/Safari
-    const buf = ctx.createBuffer(1, 1, 22050)
-    const src = ctx.createBufferSource()
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!Ctx) return
+
+    // สร้างใน gesture handler → running ทันที
+    if (!_ctx || _ctx.state === 'closed') {
+      _ctx = new Ctx()
+    }
+    if (_ctx.state === 'suspended') {
+      await _ctx.resume()
+    }
+
+    // เล่น silent buffer → unlock ให้สมบูรณ์บน iOS/Safari
+    const buf = _ctx.createBuffer(1, 1, 22050)
+    const src = _ctx.createBufferSource()
     src.buffer = buf
-    src.connect(ctx.destination)
+    src.connect(_ctx.destination)
     src.start(0)
   } catch { /* ignore */ }
 
-  // Prime SpeechSynthesis (iOS ต้องการ gesture เดียวกัน)
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  // Prime SpeechSynthesis ด้วย gesture เดียวกัน
+  if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices()
     try {
       const dummy = new SpeechSynthesisUtterance(' ')
@@ -68,8 +73,8 @@ export async function unlockAudio(): Promise<void> {
 
 // ─── Admin Alarm ─────────────────────────────────────────────────────────────
 /**
- * เสียงกริ่ง admin — square wave hi-lo × 3 รอบ รวม ~2 วินาที
- * ดังและชัดเจน ได้ยินง่ายแม้เปิดเสียงไม่เต็ม
+ * เสียงกริ่ง admin — square wave hi-lo × 3 รอบ (~2 วินาที)
+ * ต้องเรียก unlockAudio() ก่อน (ผ่าน gesture) มิเช่นนั้นเงียบ
  */
 export async function playAdminAlarm(): Promise<void> {
   const ok = await tryResume()
@@ -88,30 +93,27 @@ export async function playAdminAlarm(): Promise<void> {
     const beepDur = 0.13
     const gap     = 0.06
     const pause   = 0.22
-    const hi      = 1400
-    const lo      = 950
-    const vol     = 1.0
 
     const schedule: [number, number][] = []
     for (let r = 0; r < 3; r++) {
       const base = r * ((beepDur + gap) * 4 + pause)
       schedule.push(
-        [hi, base],
-        [lo, base + (beepDur + gap)],
-        [hi, base + (beepDur + gap) * 2],
-        [lo, base + (beepDur + gap) * 3],
+        [1400, base],
+        [950,  base + (beepDur + gap)],
+        [1400, base + (beepDur + gap) * 2],
+        [950,  base + (beepDur + gap) * 3],
       )
     }
 
     schedule.forEach(([freq, offset]) => {
       const osc  = ctx.createOscillator()
       const gain = ctx.createGain()
-      osc.type             = 'square'
-      osc.frequency.value  = freq
+      osc.type            = 'square'
+      osc.frequency.value = freq
       const t = ctx.currentTime + offset + 0.02
       gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(vol, t + 0.005)
-      gain.gain.setValueAtTime(vol, t + beepDur - 0.02)
+      gain.gain.linearRampToValueAtTime(1.0, t + 0.005)
+      gain.gain.setValueAtTime(1.0, t + beepDur - 0.02)
       gain.gain.linearRampToValueAtTime(0, t + beepDur)
       osc.connect(gain)
       gain.connect(comp)
