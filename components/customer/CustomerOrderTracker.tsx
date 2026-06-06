@@ -1,35 +1,31 @@
 'use client'
 /**
- * CustomerOrderTracker — register Service Worker + ขอสิทธิ์ notification
- * ฟัง SPEAK message จาก SW → เล่น TTS ภาษาไทย
- *
- * หน้า /order/[id] จะส่ง TRACK_ORDER พร้อมสถานะจริงเอง
- * ไม่ต้องส่งจาก history ที่นี่ (เพราะไม่รู้สถานะปัจจุบัน → เสี่ยงแจ้งซ้ำ)
+ * CustomerOrderTracker
+ * - Register Service Worker
+ * - รับ SPEAK จาก SW → TTS (queue ไว้ถ้า tab ไม่ focus)
+ * - รับ ORDER_STATUS_CHANGED จาก SW → hook บน order page จัดการต่อ
  */
 import { useEffect } from 'react'
-import { useSWSpeak } from '@/lib/hooks/useSWSpeak'
+import { speak } from '@/lib/utils/speak'
 
 export function CustomerOrderTracker() {
-  // รับ SPEAK message จาก SW → เล่น TTS ภาษาไทย
-  useSWSpeak()
-
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!('serviceWorker' in navigator)) return
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
 
-    async function setup() {
-      // Register SW (ถ้ายังไม่ได้ register)
-      // หมายเหตุ: ไม่ขอ Notification.requestPermission() ที่นี่แล้ว
-      // เพราะ iOS บังคับให้ขอจาก user gesture เท่านั้น
-      // → NotificationPermissionBanner จัดการแทน
-      try {
-        await navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      } catch (err) {
-        console.warn('[SW] register failed:', err)
+    // Register SW
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch((err) => console.warn('[SW] register failed:', err))
+
+    // รับ message จาก SW
+    function onMessage(event: MessageEvent) {
+      const { type } = event.data ?? {}
+      if (type === 'SPEAK' && typeof event.data.text === 'string') {
+        speak(event.data.text)
       }
     }
 
-    setup()
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
   }, [])
 
   return null

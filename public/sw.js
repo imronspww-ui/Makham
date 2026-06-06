@@ -96,28 +96,31 @@ async function pollAdmin() {
     orders.forEach((o) => knownIds.add(o.id))
     await writeCache(ADMIN_CACHE, ADMIN_STATE_KEY, { ids: [...knownIds], initialized: true })
 
-    // ตรวจว่า admin tab เปิดอยู่ไหม
-    // ถ้าเปิดอยู่ → Firestore hook ใน useAdminOrderAlert จัดการ notification + TTS เองแล้ว
-    // SW แค่เป็น fallback กรณีไม่มี admin tab
-    const allClients  = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    const hasAdminTab = allClients.some((c) => c.url.includes('/admin'))
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+
+    // Tab "focused" = admin เห็นหน้าจออยู่ → foreground hook (Firestore) จัดการได้
+    // Tab "background/hidden" = เสียง/notification จาก page script ใช้ไม่ได้ → SW ต้องทำแทน
+    const hasFocusedAdminTab = allClients.some(
+      (c) => c.url.includes('/admin') && c.focused,
+    )
 
     for (const order of freshPending) {
-      const name  = order.customer?.name || 'ลูกค้า'
-      const total = (order.total ?? 0).toLocaleString('th-TH')
-      const type  = order.orderType === 'delivery' ? '🚗 Delivery' : '🛍️ Pickup'
-      const extra = freshPending.length > 1
-        ? ` และมีออเดอร์เพิ่มอีก ${freshPending.length - 1} รายการ`
+      const name   = order.customer?.name || 'ลูกค้า'
+      const total  = (order.total ?? 0).toLocaleString('th-TH')
+      const type   = order.orderType === 'delivery' ? '🚗 Delivery' : '🛍️ Pickup'
+      const extra  = freshPending.length > 1
+        ? ` และอีก ${freshPending.length - 1} รายการ`
         : ''
-      const speech = `มีออเดอร์ใหม่เข้ามาจาก${name} ยอด${total}บาท${extra} กรุณาตรวจสอบด้วยครับ`
+      const speech = `มีออเดอร์ใหม่จาก${name} ยอด ${total} บาท${extra} กรุณาตรวจสอบด้วยครับ`
 
-      if (hasAdminTab) {
-        // admin tab เปิดอยู่ — hook จัดการแล้ว ไม่ต้องทำซ้ำ
-        // (Firestore onSnapshot ยิงทันที, SW ยิงช้า 20 วิ → จะซ้ำถ้าไม่ skip)
+      if (hasFocusedAdminTab) {
+        // Admin tab กำลัง focus อยู่ → Firestore hook ยิงทันที (< 2s) จัดการแล้ว
+        // SW ช้ากว่า (10s poll) → skip เพื่อไม่ให้เสียงดังซ้ำ
         continue
       }
 
-      // ไม่มี admin tab → SW แจ้งเตือนแทน
+      // Admin tab อยู่ background หรือไม่มีเลย
+      // → ยิง OS notification (ทำงานได้แม้ browser จะ minimize/background)
       await self.registration.showNotification(`📦 ออเดอร์ใหม่! #${order.orderNumber}`, {
         body:               `${name} · ฿${total} · ${type}`,
         icon:               '/icons/icon-192.png',
@@ -127,8 +130,16 @@ async function pollAdmin() {
         data:               { type: 'admin', url: '/admin/orders' },
       })
 
-      // TTS → ส่งไป tab ใดก็ได้ที่เปิดอยู่ (ทั้ง admin และ customer)
-      await broadcastSpeak(speech, null)
+      // ส่ง SPEAK + PLAY_ALARM ไปยัง admin tabs ที่เปิดอยู่ (background)
+      // tabs จะเล่นเสียงทันทีที่ผู้ใช้กลับมาที่หน้าต่าง (queue ไว้)
+      await broadcastSpeak(speech, (c) => c.url.includes('/admin'))
+
+      // ส่ง PLAY_ALARM → tab เล่นเสียงกริ่งเมื่อได้ focus กลับมา
+      try {
+        const adminTabs = allClients.filter((c) => c.url.includes('/admin'))
+        const target    = adminTabs[0]
+        if (target) target.postMessage({ type: 'PLAY_ALARM' })
+      } catch { /* ignore */ }
     }
   } catch { /* network error — retry next cycle */ }
 }

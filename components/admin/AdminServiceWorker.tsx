@@ -1,25 +1,25 @@
 'use client'
+/**
+ * AdminServiceWorker
+ * - Register SW สำหรับ background order notifications
+ * - รับ SPEAK → TTS เมื่อ tab กลับมา focus
+ * - รับ PLAY_ALARM → เล่นเสียงกริ่งเมื่อ tab กลับมา focus
+ * - แสดง banner เมื่อ notification ถูก block
+ */
 import { useEffect, useState } from 'react'
 import { BellOff, X } from 'lucide-react'
-import { useSWSpeak } from '@/lib/hooks/useSWSpeak'
+import { speak } from '@/lib/utils/speak'
+import { playAdminAlarm } from '@/lib/utils/audio'
 
-/**
- * Register Service Worker สำหรับ background order notifications
- * แสดง banner เมื่อ permission ถูก block
- */
 export function AdminServiceWorker() {
-  const [blocked, setBlocked] = useState(false)
+  const [blocked,   setBlocked]   = useState(false)
   const [dismissed, setDismissed] = useState(false)
 
-  // รับ SPEAK message จาก SW → เล่น TTS ภาษาไทย
-  useSWSpeak()
-
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!('serviceWorker' in navigator)) return
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
 
     async function setup() {
-      // ──── 1. ขอสิทธิ์ Notification ────
+      // ขอสิทธิ์ Notification
       if ('Notification' in window) {
         if (Notification.permission === 'default') {
           const perm = await Notification.requestPermission()
@@ -30,15 +30,9 @@ export function AdminServiceWorker() {
         }
       }
 
-      // ──── 2. Register Service Worker ────
+      // Register SW
       try {
-        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        console.log('[SW] registered, scope:', reg.scope)
-
-        // บอก SW ให้เริ่ม polling ทันที (กรณี SW เพิ่ง activate ช้า)
-        navigator.serviceWorker.ready.then((r) => {
-          r.active?.postMessage({ type: 'START' })
-        })
+        await navigator.serviceWorker.register('/sw.js', { scope: '/' })
       } catch (err) {
         console.warn('[SW] registration failed:', err)
       }
@@ -46,26 +40,39 @@ export function AdminServiceWorker() {
 
     setup()
 
-    // เมื่อ logout → reset state ใน SW
+    // รับ message จาก SW
+    function onMessage(event: MessageEvent) {
+      const { type } = event.data ?? {}
+
+      if (type === 'SPEAK' && typeof event.data.text === 'string') {
+        // TTS — speak() queue ไว้อัตโนมัติถ้าหน้าต่างยังไม่ focus
+        speak(event.data.text)
+      }
+
+      if (type === 'PLAY_ALARM') {
+        // เสียงกริ่ง — เล่นทันที (AudioContext resume ได้ถ้า user เคย interact แล้ว)
+        playAdminAlarm()
+      }
+    }
+
+    navigator.serviceWorker.addEventListener('message', onMessage)
+
     return () => {
+      navigator.serviceWorker.removeEventListener('message', onMessage)
       navigator.serviceWorker.controller?.postMessage({ type: 'RESET_ADMIN_STATE' })
     }
   }, [])
 
-  // Banner แจ้งว่า notification ถูก block
   if (blocked && !dismissed) {
     return (
       <div className="flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-sm text-amber-800">
         <BellOff size={16} className="shrink-0 text-amber-500" />
         <span className="flex-1">
-          การแจ้งเตือนถูกบล็อก — เปิดการแจ้งเตือนใน{' '}
-          <strong>การตั้งค่า Browser → ไซต์ → การแจ้งเตือน</strong>{' '}
+          การแจ้งเตือนถูกบล็อก — เปิดที่{' '}
+          <strong>ตั้งค่า Browser → ไซต์ → การแจ้งเตือน</strong>{' '}
           เพื่อรับแจ้งเตือนออเดอร์ใหม่
         </span>
-        <button
-          onClick={() => setDismissed(true)}
-          className="shrink-0 text-amber-500 hover:text-amber-700"
-        >
+        <button onClick={() => setDismissed(true)} className="shrink-0 text-amber-500 hover:text-amber-700">
           <X size={15} />
         </button>
       </div>
