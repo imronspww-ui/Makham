@@ -3,13 +3,16 @@
  *
  * - browser มี focus → เล่นทันที
  * - ไม่มี focus     → queue ไว้ เล่นเมื่อ window ได้ focus กลับมา
- *
- * iOS: ทำงานได้ใน PWA standalone mode (Add to Home Screen)
- *      ถ้าไม่มี Thai voice → เงียบ (เสียง beep จาก sound.ts ดูแลแทน)
  */
 
 let _pendingText: string | null = null
 let _listenersAttached = false
+
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
 
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
@@ -20,8 +23,7 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
       window.speechSynthesis.removeEventListener('voiceschanged', h)
     }
     window.speechSynthesis.addEventListener('voiceschanged', h)
-    // fallback timeout — บางเบราว์เซอร์ไม่ยิง voiceschanged
-    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 2000)
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1500)
   })
 }
 
@@ -30,13 +32,16 @@ async function doSpeak(text: string) {
   try {
     window.speechSynthesis.cancel()
 
-    // iOS bug: SpeechSynthesis หยุดเองหลังใช้ไปสักพัก → pause/resume ก่อนเสมอ
-    window.speechSynthesis.pause()
-    window.speechSynthesis.resume()
+    // iOS bug เฉพาะ: SpeechSynthesis หยุดเองหลังใช้ไปสักพัก
+    // pause/resume ก่อนพูดทุกครั้งบน iOS เท่านั้น — ไม่ทำบน Android/Desktop
+    if (isIOS()) {
+      window.speechSynthesis.pause()
+      window.speechSynthesis.resume()
+    }
 
     const voices    = await loadVoices()
     const thaiVoice = voices.find((v) => v.lang.startsWith('th'))
-    if (!thaiVoice) return  // ไม่มี Thai voice → เงียบ
+    if (!thaiVoice) return  // ไม่มี Thai voice → เงียบ (เสียง beep ดูแลแทน)
 
     const utt   = new SpeechSynthesisUtterance(text)
     utt.voice   = thaiVoice
@@ -48,7 +53,7 @@ async function doSpeak(text: string) {
   } catch { /* ignore */ }
 }
 
-/** document.hasFocus() ไม่น่าเชื่อถือบน iOS → ถือว่า active เสมอ */
+/** hasFocus() ไม่น่าเชื่อถือบน iOS → ถือ visible = active */
 function isActive(): boolean {
   if (typeof document === 'undefined') return false
   return document.hasFocus() || document.visibilityState === 'visible'

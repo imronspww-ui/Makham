@@ -9,7 +9,7 @@
  */
 'use strict'
 
-const POLL_MS            = 20_000
+const POLL_MS            = 10_000
 const ADMIN_CACHE        = 'sw-admin-v1'
 const ADMIN_STATE_KEY    = '/sw-admin-state'
 const CUSTOMER_CACHE     = 'sw-customer-v1'

@@ -86,7 +86,7 @@ export function useOrderNotification(order: Order | null, storeName = 'ร้า
     // ③ เสียง beep (AudioContext — unlock แล้วจาก user gesture ก่อนหน้า)
     playNotificationBeep(info.beep).catch(() => {})
 
-    // ④ TTS — ดีเลย์นิดนึงให้ beep ออกก่อน
-    setTimeout(() => speak(info.speech), 800)
+    // ④ TTS — ดีเลย์เล็กน้อยให้ beep ออกก่อน
+    setTimeout(() => speak(info.speech), 400)
   }, [order]) // eslint-disable-line react-hooks/exhaustive-deps
 }
