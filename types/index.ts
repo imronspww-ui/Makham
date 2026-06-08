@@ -30,8 +30,7 @@ export interface MenuItem {
   isSoldOut: boolean
   isPopular?: boolean
   optionGroups: OptionGroup[]
-  stockQty?: number      // จำนวนสินค้าคงเหลือ (ชิ้น), undefined/0 = ไม่จำกัด
-  packSize?: number      // จำนวนชิ้นต่อ 1 แพ็ค (สำหรับช่วยคำนวณ)
+  packSize?: number      // จำนวนชิ้นต่อ 1 แพ็ค (สำหรับคำนวณต้นทุน)
   costPerPack?: number   // ราคาซื้อต่อแพ็ค (บาท) สำหรับคำนวณต้นทุน
   avgRating?: number     // ค่าเฉลี่ยดาว 1-5 (คำนวณจาก reviews)
   ratingCount?: number   // จำนวนรีวิว

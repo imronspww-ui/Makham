@@ -49,12 +49,6 @@ export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'update
   requireFirebase()
   const now = Timestamp.now()
   const ref = await addDoc(collection(db, COL), { ...data, createdAt: now, updatedAt: now })
-
-  // หักสต็อกหลังบันทึกออเดอร์ (fire-and-forget — ไม่ให้กระทบ UX)
-  import('@/lib/services/menuService').then(({ decrementStock }) => {
-    decrementStock(data.items.map((i) => ({ menuItemId: i.menuItemId, qty: i.qty })))
-  }).catch(() => {})
-
   return ref.id
 }
 

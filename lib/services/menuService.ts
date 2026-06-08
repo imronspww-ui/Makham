@@ -9,7 +9,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  runTransaction,
   Timestamp,
   docToData,
 } from '@/lib/firebase/firestore'
@@ -108,71 +107,3 @@ export async function toggleChoiceSoldOut(
   cacheClear('menu:')
 }
 
-// ─── Stock management ─────────────────────────────────────────────────────────
-
-/**
- * ตั้งสต็อกสินค้า — เรียกจากหน้า admin menu
- * stockQty = 0 → ไม่จำกัด
- * packSize = จำนวนชิ้นต่อแพ็ค (เก็บไว้อ้างอิง)
- */
-export async function setStock(
-  id: string,
-  stockQty: number,
-  packSize?: number,
-): Promise<void> {
-  requireFirebase()
-  await updateDoc(doc(db, COL, id), {
-    stockQty:  stockQty > 0 ? stockQty : null,
-    packSize:  packSize && packSize > 0 ? packSize : null,
-    isSoldOut: false,
-    updatedAt: Timestamp.now(),
-  })
-  cacheClear('menu:')
-}
-
-/**
- * หักสต็อกเมื่อมีออเดอร์ — เรียกหลัง createOrder
- * ใช้ Firestore transaction เพื่อป้องกัน race condition กรณีหลายออเดอร์พร้อมกัน
- * ถ้า stockQty ถึง 0 → mark isSoldOut อัตโนมัติ
- */
-export async function decrementStock(
-  items: Array<{ menuItemId: string; qty: number }>,
-): Promise<void> {
-  if (!isFirebaseConfigured) return
-
-  await Promise.allSettled(
-    items.map(({ menuItemId, qty }) =>
-      runTransaction(db, async (txn) => {
-        const ref  = doc(db, COL, menuItemId)
-        const snap = await txn.get(ref)
-        if (!snap.exists()) return
-
-        const d        = snap.data() as Record<string, unknown>
-        const stockQty = (d.stockQty as number | undefined) ?? 0
-        if (!stockQty) return   // ไม่จำกัดสต็อก → ไม่ต้องทำอะไร
-
-        const remaining = Math.max(0, stockQty - qty)
-        txn.update(ref, {
-          stockQty:  remaining,
-          ...(remaining === 0 && { isSoldOut: true }),
-          updatedAt: Timestamp.now(),
-        })
-      }),
-    ),
-  )
-  cacheClear('menu:')
-}
-
-/** เติมสต็อกสินค้า (เพิ่มจำนวน) — เรียกเมื่อรับสินค้าเข้าใหม่ */
-export async function restockItem(id: string, addQty: number): Promise<void> {
-  requireFirebase()
-  const snap = await getDoc(doc(db, COL, id))
-  if (!snap.exists()) return
-  const current = (snap.data().stockQty as number | undefined) ?? 0
-  await updateDoc(doc(db, COL, id), {
-    stockQty:  current + addQty,
-    isSoldOut: false,
-    updatedAt: Timestamp.now(),
-  })
-  cacheClear('menu:')
-}

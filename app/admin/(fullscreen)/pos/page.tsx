@@ -139,7 +139,6 @@ export default function PosPage() {
   const [newName,         setNewName]         = useState('')
   const [creatingMember,  setCreatingMember]  = useState(false)
 
-  // ── Sold-out toggle state ─────────────────────────────────────────────────
   const [togglingId,      setTogglingId]      = useState<string | null>(null)
   const [managingChoices, setManagingChoices] = useState<MenuItem | null>(null)
 
@@ -235,20 +234,6 @@ export default function PosPage() {
     }
   }
 
-  // ── Toggle sold-out ───────────────────────────────────────────────────────
-  async function toggleSoldOut(e: React.MouseEvent, item: MenuItem) {
-    e.stopPropagation()
-    if (togglingId === item.id) return
-    setTogglingId(item.id)
-    try {
-      await updateMenuItem(item.id, { isSoldOut: !item.isSoldOut })
-      toast.success(item.isSoldOut ? `✅ ${item.name} พร้อมขายแล้ว` : `🔴 ${item.name} ทำเครื่องหมายว่าหมดแล้ว`)
-    } catch {
-      toast.error('บันทึกไม่สำเร็จ')
-    } finally {
-      setTogglingId(null)
-    }
-  }
 
   // Sync managingChoices ให้แสดงข้อมูลล่าสุดเมื่อ menuItems อัปเดต (Firestore listener)
   useEffect(() => {
@@ -265,6 +250,21 @@ export default function PosPage() {
       setMemberProfile(null)
     }
   }, [memberPhone, searchMember])
+
+  // ── Toggle sold-out ───────────────────────────────────────────────────────
+  async function toggleSoldOut(e: React.MouseEvent, item: MenuItem) {
+    e.stopPropagation()
+    if (togglingId === item.id) return
+    setTogglingId(item.id)
+    try {
+      await updateMenuItem(item.id, { isSoldOut: !item.isSoldOut })
+      toast.success(item.isSoldOut ? `✅ ${item.name} พร้อมขายแล้ว` : `🔴 ${item.name} ทำเครื่องหมายว่าหมดแล้ว`)
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
   function handleMenuItemClick(item: MenuItem) {
