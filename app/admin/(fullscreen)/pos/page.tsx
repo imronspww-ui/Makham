@@ -1,11 +1,11 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, Clock, QrCode } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, QrCode } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { createOrder } from '@/lib/services/orderService'
-import { getCustomer, upsertCustomerAfterOrder, createCustomer } from '@/lib/services/customerService'
+import { getCustomer, upsertCustomerAfterOrder, createCustomer, getCustomers } from '@/lib/services/customerService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { generatePromptPayQR } from '@/lib/utils/promptpay'
@@ -136,6 +136,9 @@ export default function PosPage() {
   const [addingNew,       setAddingNew]       = useState(false)
   const [newName,         setNewName]         = useState('')
   const [creatingMember,  setCreatingMember]  = useState(false)
+  const [allCustomers,    setAllCustomers]    = useState<CustomerProfile[]>([])
+  const [showDropdown,    setShowDropdown]    = useState(false)
+  const [showCartDropdown, setShowCartDropdown] = useState(false)
 
   // ── Held orders (พักคิว) ─────────────────────────────────────────────────
   const [heldOrders,   setHeldOrders]   = useState<HeldOrder[]>([])
@@ -210,6 +213,29 @@ export default function PosPage() {
     }
   }, [])
 
+  // ── เลือกลูกค้าจาก dropdown (payment modal) ──────────────────────────────
+  function selectCustomerSuggestion(c: CustomerProfile) {
+    setMemberPhone(c.phone)
+    setMemberProfile(c)
+    setShowDropdown(false)
+  }
+
+  // ── เลือกลูกค้าจาก dropdown (cart sidebar) ───────────────────────────────
+  function selectCartSuggestion(c: CustomerProfile) {
+    setMemberPhone(c.phone)
+    setMemberProfile(c)
+    setShowCartDropdown(false)
+  }
+
+  // filter สำหรับ cart sidebar dropdown
+  const cartSuggestions = useMemo(() => {
+    const q = memberPhone.trim()
+    if (!q || memberProfile) return []
+    return allCustomers
+      .filter((c) => c.phone.includes(q) || c.name.toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 6)
+  }, [memberPhone, allCustomers, memberProfile])
+
   // ── Create new member ─────────────────────────────────────────────────────
   async function handleCreateMember() {
     if (!newName.trim()) { toast.error('กรุณากรอกชื่อสมาชิก'); return }
@@ -230,9 +256,24 @@ export default function PosPage() {
   }
 
 
+  // โหลด customers ทั้งหมดครั้งเดียวตอน mount
+  useEffect(() => {
+    getCustomers().then(setAllCustomers).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // filter dropdown จากที่พิมพ์
+  const customerSuggestions = useMemo(() => {
+    const q = memberPhone.trim()
+    if (!q || memberProfile) return []
+    return allCustomers
+      .filter((c) => c.phone.includes(q) || c.name.toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 6)
+  }, [memberPhone, allCustomers, memberProfile])
+
   // Auto-search เมื่อพิมพ์ครบ 10 หลัก
   useEffect(() => {
     if (memberPhone.length === 10) {
+      setShowDropdown(false)
       searchMember(memberPhone)
     } else if (memberPhone.length < 9) {
       setMemberProfile(null)
@@ -302,6 +343,8 @@ export default function PosPage() {
     setMemberProfile(null)
     setAddingNew(false)
     setNewName('')
+    setShowDropdown(false)
+    setShowCartDropdown(false)
     setShowHoldForm(false)
     setHoldLabel('')
     setPosPayMethod('cash')
@@ -481,7 +524,10 @@ export default function PosPage() {
       setCart([])
       setDiscountInput('')
       setCashInput('')
-      // คง member ไว้เผื่อออเดอร์ต่อเนื่อง
+      setMemberPhone('')
+      setMemberProfile(null)
+      // auto-dismiss banner หลัง 12 วิ
+      setTimeout(() => setLastOrder(null), 12000)
       toast.success(`✅ บันทึกออเดอร์ ${orderNumber} สำเร็จ${member ? ` (+${pointsEarned} แต้ม)` : ''}`)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -695,39 +741,33 @@ export default function PosPage() {
             </div>
           )}
 
-          {/* ── Success state ── */}
+          {/* ── Success banner (compact) ── */}
           {lastOrder && (
-            <div className="rounded-2xl bg-[#0d2010] border border-green-700/50 p-4 flex flex-col gap-3 shrink-0">
-              <div className="flex items-center gap-2 text-green-400">
-                <CheckCircle2 size={20} />
-                <span className="font-bold text-sm">บันทึกออเดอร์แล้ว ✅</span>
-              </div>
-              <div className="text-sm text-green-300 flex flex-col gap-1.5">
-                <div className="flex justify-between">
-                  <span className="text-green-600">เลขออเดอร์</span>
-                  <span className="font-mono font-bold text-green-200">{lastOrder.number}</span>
+            <div className="mx-3 mt-2 shrink-0 rounded-xl bg-[#0d2010] border border-green-700/60 px-3 py-2.5 flex items-center gap-2.5">
+              <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-mono text-green-400">{lastOrder.number}</span>
+                  {lastOrder.change > 0 && (
+                    <span className="text-sm font-extrabold text-green-300">
+                      ทอน {formatCurrency(lastOrder.change)}
+                    </span>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-green-600">ยอดสุทธิ</span>
-                  <span className="font-bold text-green-200">{formatCurrency(lastOrder.total)}</span>
-                </div>
-                {lastOrder.change > 0 && (
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-green-500">เงินทอน</span>
-                    <span className="text-3xl font-extrabold text-green-300">{formatCurrency(lastOrder.change)}</span>
-                  </div>
-                )}
+                <p className="text-[10px] text-green-700 leading-tight">บันทึกแล้ว · {formatCurrency(lastOrder.total)}</p>
               </div>
               <button
                 onClick={() => printReceipt(lastOrder.receipt, storeName, storeForReceipt, receiptSettings)}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-green-900/50 border border-green-700 text-green-300 text-sm font-semibold py-2.5 hover:bg-green-900 transition-colors"
+                className="flex items-center gap-1 rounded-lg bg-green-900/60 border border-green-700/50 text-green-300 text-xs font-semibold px-2.5 py-1.5 hover:bg-green-900 transition-colors shrink-0"
               >
-                <Printer size={15} />
-                พิมพ์ใบเสร็จ
+                <Printer size={12} />
+                พิมพ์
               </button>
-              <button onClick={clearAll}
-                className="w-full rounded-xl bg-green-600 text-white text-sm font-bold py-3 hover:bg-green-700 transition-colors">
-                ➕ รายการถัดไป
+              <button
+                onClick={() => setLastOrder(null)}
+                className="text-green-800 hover:text-green-500 transition-colors shrink-0"
+              >
+                <X size={14} />
               </button>
             </div>
           )}
@@ -782,6 +822,65 @@ export default function PosPage() {
           </div>
 
           </div> {/* end cart section */}
+
+          {/* ── Customer phone quick-input ── */}
+          <div className="px-3 pb-1.5 shrink-0 border-t border-[#2a1e0f] pt-2">
+            {memberProfile && memberProfile !== 'not-found' ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-amber-900/30 border border-amber-700/40 px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="h-6 w-6 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                    <Phone size={11} className="text-orange-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-amber-200 truncate leading-tight">{memberProfile.name}</p>
+                    <p className="text-[10px] text-amber-600 font-mono leading-tight">{memberPhone} · {memberProfile.points} แต้ม</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
+                  className="text-amber-700 hover:text-red-400 transition-colors shrink-0"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Phone size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 z-10" />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={memberPhone}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 10)
+                    setMemberPhone(v)
+                    setShowCartDropdown(true)
+                  }}
+                  onFocus={() => setShowCartDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCartDropdown(false), 150)}
+                  placeholder="เบอร์ / ชื่อลูกค้า (ไม่บังคับ)"
+                  className="w-full rounded-xl border border-amber-900/40 bg-[#1c1209] text-amber-200 pl-7 pr-3 py-2 text-xs outline-none focus:border-amber-600 placeholder-amber-900"
+                />
+                {showCartDropdown && cartSuggestions.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 z-50 rounded-xl border border-amber-800/60 bg-[#1c1209] shadow-2xl overflow-hidden">
+                    {cartSuggestions.map((c) => (
+                      <button
+                        key={c.phone}
+                        type="button"
+                        onMouseDown={() => selectCartSuggestion(c)}
+                        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 hover:bg-amber-900/40 transition-colors text-left border-b border-amber-900/30 last:border-0"
+                      >
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-semibold text-amber-200 truncate">{c.name}</span>
+                          <span className="text-[11px] text-amber-600 font-mono">{c.phone}</span>
+                        </div>
+                        <span className="text-[11px] text-amber-500 shrink-0">{c.points} แต้ม</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* ══ BOTTOM BAR ══ */}
           <div className="border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0 px-3 py-2 flex flex-col gap-1.5">
@@ -975,7 +1074,7 @@ export default function PosPage() {
                   </div>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700" />
+                      <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 z-10" />
                       <input
                         type="tel"
                         inputMode="numeric"
@@ -983,13 +1082,35 @@ export default function PosPage() {
                         onChange={(e) => {
                           const v = e.target.value.replace(/\D/g, '').slice(0, 10)
                           setMemberPhone(v)
+                          setShowDropdown(true)
                         }}
-                        placeholder="เบอร์โทร 10 หลัก"
+                        onFocus={() => setShowDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                        placeholder="เบอร์โทร / ชื่อลูกค้า"
                         className="w-full rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 pl-7 pr-2.5 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
                       />
+                      {/* Dropdown suggestions */}
+                      {showDropdown && customerSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-amber-800/60 bg-[#1c1209] shadow-2xl overflow-hidden">
+                          {customerSuggestions.map((c) => (
+                            <button
+                              key={c.phone}
+                              type="button"
+                              onMouseDown={() => selectCustomerSuggestion(c)}
+                              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 hover:bg-amber-900/40 transition-colors text-left border-b border-amber-900/30 last:border-0"
+                            >
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-semibold text-amber-200 truncate">{c.name}</span>
+                                <span className="text-xs text-amber-600 font-mono">{c.phone}</span>
+                              </div>
+                              <span className="text-xs text-amber-500 shrink-0">{c.points} แต้ม</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button
-                      onClick={() => searchMember(memberPhone)}
+                      onClick={() => { setShowDropdown(false); searchMember(memberPhone) }}
                       disabled={memberSearching || memberPhone.length < 9}
                       className="rounded-lg bg-orange-600 text-white px-3 text-xs font-semibold hover:bg-orange-500 disabled:opacity-40 transition-colors"
                     >

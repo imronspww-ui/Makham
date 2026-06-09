@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ToastProvider } from '@/components/ui/ToastProvider'
+import { PwaSetup } from '@/components/PwaSetup'
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#ea580c',
 }
 
 export const metadata: Metadata = {
@@ -28,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="th">
       <body className="min-h-screen bg-gray-50">
+        <PwaSetup />
         <ToastProvider />
         {children}
       </body>
