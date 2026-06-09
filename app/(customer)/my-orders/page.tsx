@@ -1,8 +1,11 @@
 'use client'
 import Link from 'next/link'
-import { ShoppingBag, ChevronRight, Trash2, Clock, ChefHat, Truck, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ShoppingBag, ChevronRight, Trash2, Clock, ChefHat, Truck, CheckCircle, RotateCcw } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useOrderHistoryStore, type OrderHistoryItem } from '@/store/orderHistoryStore'
 import { useOrder } from '@/lib/hooks/useOrder'
+import { useCartStore } from '@/store/cartStore'
 import { Button } from '@/components/ui/Button'
 import { formatDate } from '@/lib/utils/format'
 import type { OrderStatus } from '@/types'
@@ -20,9 +23,31 @@ const STEPS = 4
 
 function OrderCard({ item }: { item: OrderHistoryItem }) {
   const { order } = useOrder(item.id)
+  const { addItem, clearCart } = useCartStore()
+  const router = useRouter()
   const status = order?.status
   const style = status ? statusStyle[status] : null
   const isActive = status ? activeStatuses.includes(status) : false
+
+  function handleReorder(e: React.MouseEvent) {
+    e.preventDefault()
+    if (!order?.items?.length) return
+    clearCart()
+    for (const item of order.items) {
+      if (item.isRedeemed) continue  // skip free reward items
+      addItem({
+        menuItemId:      item.menuItemId,
+        name:            item.name,
+        price:           item.price,
+        imageUrl:        item.imageUrl ?? '',
+        selectedOptions: item.selectedOptions ?? [],
+        itemNote:        item.itemNote ?? '',
+        optionGroups:    [],
+      })
+    }
+    toast.success(`เพิ่ม ${order.items.filter(i => !i.isRedeemed).length} รายการลงตะกร้าแล้ว`)
+    router.push('/cart')
+  }
 
   return (
     <Link
@@ -64,7 +89,17 @@ function OrderCard({ item }: { item: OrderHistoryItem }) {
           </p>
         )}
       </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Reorder button — shown when order is completed */}
+        {status === 'completed' && order?.items?.length > 0 && (
+          <button
+            onClick={handleReorder}
+            className="flex items-center gap-1 rounded-xl bg-orange-50 border border-orange-200 text-orange-600 text-xs font-semibold px-2.5 py-1.5 hover:bg-orange-100 transition-colors shrink-0"
+          >
+            <RotateCcw size={11} />
+            สั่งซ้ำ
+          </button>
+        )}
         <ChevronRight size={16} className="text-gray-300 group-hover:text-orange-400 transition-colors" />
       </div>
     </Link>

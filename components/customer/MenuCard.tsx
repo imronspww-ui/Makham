@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { Plus, UtensilsCrossed, Flame } from 'lucide-react'
+import { Plus, UtensilsCrossed, Flame, Star } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { formatCurrency } from '@/lib/utils/format'
@@ -149,11 +149,21 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
             <p className="item-desc mt-1 text-xs text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
           )}
 
-          {hasOptions && (
-            <span className="item-tag mt-1.5 self-start rounded-full bg-stone-100 text-[10px] font-medium text-stone-500 px-2 py-0.5">
-              มีตัวเลือก
-            </span>
-          )}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {hasOptions && (
+              <span className="item-tag rounded-full bg-stone-100 text-[10px] font-medium text-stone-500 px-2 py-0.5">
+                มีตัวเลือก
+              </span>
+            )}
+            {/* Star rating */}
+            {item.avgRating != null && item.ratingCount != null && item.ratingCount > 0 && (
+              <span className="flex items-center gap-0.5 text-[10px] text-amber-600 font-semibold">
+                <Star size={10} className="fill-amber-400 text-amber-400" />
+                {item.avgRating.toFixed(1)}
+                <span className="text-stone-400 font-normal">({item.ratingCount})</span>
+              </span>
+            )}
+          </div>
 
           <div className="mt-auto pt-2 flex items-center justify-between">
             <div>
