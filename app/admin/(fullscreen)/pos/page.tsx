@@ -4,7 +4,7 @@ import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, U
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
-import { createOrder } from '@/lib/services/orderService'
+import { createOrder, updateOrderStatus } from '@/lib/services/orderService'
 import { getCustomer, upsertCustomerAfterOrder, createCustomer, getCustomers } from '@/lib/services/customerService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
@@ -146,6 +146,7 @@ export default function PosPage() {
   // ── Online orders panel ───────────────────────────────────────────────────
   const [rightTab,        setRightTab]        = useState<'cart' | 'orders'>('cart')
   const [detailOrder,     setDetailOrder]     = useState<Order | null>(null)
+  const [updatingOrder,   setUpdatingOrder]   = useState<string | null>(null)
   const { orders: allOrders } = useOrders()
 
   const onlineOrders = allOrders.filter(
@@ -809,12 +810,65 @@ export default function PosPage() {
                       <span className="text-sm font-extrabold text-amber-300">{formatCurrency(order.total)}</span>
                       <button
                         onClick={() => setDetailOrder(order)}
-                        className="flex items-center gap-1 rounded-lg bg-blue-900/50 border border-blue-700/50 text-blue-300 text-xs font-semibold px-2.5 py-1.5 hover:bg-blue-900 transition-colors"
+                        className="flex items-center gap-1 rounded-lg bg-[#2a1e0f] border border-[#3a2e1f] text-zinc-500 text-xs px-2 py-1.5 hover:text-zinc-300 transition-colors shrink-0"
                       >
                         <ClipboardList size={11} />
-                        รายละเอียด
                       </button>
                     </div>
+
+                    {/* Action buttons — step by step */}
+                    {order.status === 'pending' && (
+                      <button
+                        disabled={updatingOrder === order.id}
+                        onClick={async () => {
+                          setUpdatingOrder(order.id)
+                          await updateOrderStatus(order.id, 'cooking').catch(() => {})
+                          setUpdatingOrder(null)
+                        }}
+                        className="w-full rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors"
+                      >
+                        {updatingOrder === order.id ? '⏳' : '👨‍🍳 ดำเนินการทำอาหาร'}
+                      </button>
+                    )}
+                    {order.status === 'cooking' && (
+                      <div className="flex gap-2">
+                        <button
+                          disabled={updatingOrder === order.id}
+                          onClick={async () => {
+                            setUpdatingOrder(order.id)
+                            await updateOrderStatus(order.id, 'delivering').catch(() => {})
+                            setUpdatingOrder(null)
+                          }}
+                          className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors"
+                        >
+                          {updatingOrder === order.id ? '⏳' : '🛵 กำลังจัดส่ง'}
+                        </button>
+                        <button
+                          disabled={updatingOrder === order.id}
+                          onClick={async () => {
+                            setUpdatingOrder(order.id)
+                            await updateOrderStatus(order.id, 'completed').catch(() => {})
+                            setUpdatingOrder(null)
+                          }}
+                          className="flex-1 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors"
+                        >
+                          {updatingOrder === order.id ? '⏳' : '✅ เสร็จสิ้น'}
+                        </button>
+                      </div>
+                    )}
+                    {order.status === 'delivering' && (
+                      <button
+                        disabled={updatingOrder === order.id}
+                        onClick={async () => {
+                          setUpdatingOrder(order.id)
+                          await updateOrderStatus(order.id, 'completed').catch(() => {})
+                          setUpdatingOrder(null)
+                        }}
+                        className="w-full rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors"
+                      >
+                        {updatingOrder === order.id ? '⏳' : '✅ เสร็จสิ้น'}
+                      </button>
+                    )}
                   </div>
                 ))
               )}
