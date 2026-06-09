@@ -12,6 +12,7 @@ import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
 import { OrderDetailModal } from '@/components/admin/OrderDetailModal'
+import { QrOrderModal } from '@/components/admin/QrOrderModal'
 import { OrderStatusBadge } from '@/components/admin/OrderStatusBadge'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { useSessionRole } from '@/lib/hooks/useSessionRole'
@@ -147,6 +148,7 @@ export default function PosPage() {
   const [rightTab,        setRightTab]        = useState<'cart' | 'orders'>('cart')
   const [detailOrder,     setDetailOrder]     = useState<Order | null>(null)
   const [updatingOrder,   setUpdatingOrder]   = useState<string | null>(null)
+  const [showQrModal,     setShowQrModal]     = useState(false)
   const { orders: allOrders } = useOrders()
 
   const onlineOrders = allOrders.filter(
@@ -743,6 +745,14 @@ export default function PosPage() {
                     {onlineOrders.length}
                   </span>
                 )}
+              </button>
+              {/* QR button */}
+              <button
+                onClick={() => setShowQrModal(true)}
+                title="QR สั่งอาหาร"
+                className="flex items-center justify-center w-10 shrink-0 border-l border-[#2a1e0f] text-zinc-600 hover:text-amber-400 transition-colors"
+              >
+                <QrCode size={15} />
               </button>
             </div>
 
@@ -1491,6 +1501,9 @@ export default function PosPage() {
           </div>
         </div>
       )}
+
+      {/* ── QR order modal ── */}
+      {showQrModal && <QrOrderModal onClose={() => setShowQrModal(false)} />}
 
       {/* ── Order detail modal (online orders) ── */}
       {detailOrder && (
