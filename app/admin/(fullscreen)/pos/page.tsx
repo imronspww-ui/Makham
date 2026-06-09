@@ -831,30 +831,27 @@ export default function PosPage() {
                       </button>
                     )}
                     {order.status === 'cooking' && (
-                      <div className="flex gap-2">
-                        <button
-                          disabled={updatingOrder === order.id}
-                          onClick={async () => {
-                            setUpdatingOrder(order.id)
-                            await updateOrderStatus(order.id, 'delivering').catch(() => {})
-                            setUpdatingOrder(null)
-                          }}
-                          className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors"
-                        >
-                          {updatingOrder === order.id ? '⏳' : '🛵 กำลังจัดส่ง'}
-                        </button>
-                        <button
-                          disabled={updatingOrder === order.id}
-                          onClick={async () => {
-                            setUpdatingOrder(order.id)
-                            await updateOrderStatus(order.id, 'completed').catch(() => {})
-                            setUpdatingOrder(null)
-                          }}
-                          className="flex-1 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors"
-                        >
-                          {updatingOrder === order.id ? '⏳' : '✅ เสร็จสิ้น'}
-                        </button>
-                      </div>
+                      <button
+                        disabled={updatingOrder === order.id}
+                        onClick={async () => {
+                          setUpdatingOrder(order.id)
+                          const next = order.orderType === 'delivery' ? 'delivering' : 'completed'
+                          await updateOrderStatus(order.id, next).catch(() => {})
+                          setUpdatingOrder(null)
+                        }}
+                        className={[
+                          'w-full rounded-lg disabled:opacity-50 text-white text-xs font-bold py-2 transition-colors',
+                          order.orderType === 'delivery'
+                            ? 'bg-blue-600 hover:bg-blue-500'
+                            : 'bg-green-700 hover:bg-green-600',
+                        ].join(' ')}
+                      >
+                        {updatingOrder === order.id
+                          ? '⏳'
+                          : order.orderType === 'delivery'
+                            ? '🛵 กำลังจัดส่ง'
+                            : '✅ เสร็จสิ้น'}
+                      </button>
                     )}
                     {order.status === 'delivering' && (
                       <button
