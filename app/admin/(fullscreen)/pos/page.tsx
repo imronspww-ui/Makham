@@ -6,13 +6,11 @@ import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { createOrder } from '@/lib/services/orderService'
 import { getCustomer, upsertCustomerAfterOrder, createCustomer } from '@/lib/services/customerService'
-import { updateMenuItem } from '@/lib/services/menuService'
 import { formatCurrency, generateOrderNumber } from '@/lib/utils/format'
 import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
-import { ChoiceSoldOutModal } from '@/components/admin/ChoiceSoldOutModal'
 import { useSessionRole } from '@/lib/hooks/useSessionRole'
 import type { MenuItem, OrderItem, SelectedOption, CustomerProfile } from '@/types'
 
@@ -104,7 +102,7 @@ function NumPad({ value, onChange }: { value: string; onChange: (v: string) => v
 // ─── POS Page ─────────────────────────────────────────────────────────────────
 
 export default function PosPage() {
-  const { items: menuItems, categories, loading, reload: reloadMenu } = useMenu()
+  const { items: menuItems, categories, loading } = useMenu()
   const { settings } = useSettings()
   const { staffName } = useSessionRole()
   const storeName    = settings?.store.name ?? 'ร้านมะขาม'
@@ -138,9 +136,6 @@ export default function PosPage() {
   const [addingNew,       setAddingNew]       = useState(false)
   const [newName,         setNewName]         = useState('')
   const [creatingMember,  setCreatingMember]  = useState(false)
-
-  const [togglingId,      setTogglingId]      = useState<string | null>(null)
-  const [managingChoices, setManagingChoices] = useState<MenuItem | null>(null)
 
   // ── Held orders (พักคิว) ─────────────────────────────────────────────────
   const [heldOrders,   setHeldOrders]   = useState<HeldOrder[]>([])
@@ -235,13 +230,6 @@ export default function PosPage() {
   }
 
 
-  // Sync managingChoices ให้แสดงข้อมูลล่าสุดเมื่อ menuItems อัปเดต (Firestore listener)
-  useEffect(() => {
-    if (!managingChoices) return
-    const fresh = menuItems.find((m) => m.id === managingChoices.id)
-    if (fresh) setManagingChoices(fresh)
-  }, [menuItems]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Auto-search เมื่อพิมพ์ครบ 10 หลัก
   useEffect(() => {
     if (memberPhone.length === 10) {
@@ -250,21 +238,6 @@ export default function PosPage() {
       setMemberProfile(null)
     }
   }, [memberPhone, searchMember])
-
-  // ── Toggle sold-out ───────────────────────────────────────────────────────
-  async function toggleSoldOut(e: React.MouseEvent, item: MenuItem) {
-    e.stopPropagation()
-    if (togglingId === item.id) return
-    setTogglingId(item.id)
-    try {
-      await updateMenuItem(item.id, { isSoldOut: !item.isSoldOut })
-      toast.success(item.isSoldOut ? `✅ ${item.name} พร้อมขายแล้ว` : `🔴 ${item.name} ทำเครื่องหมายว่าหมดแล้ว`)
-    } catch {
-      toast.error('บันทึกไม่สำเร็จ')
-    } finally {
-      setTogglingId(null)
-    }
-  }
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
   function handleMenuItemClick(item: MenuItem) {
@@ -605,14 +578,12 @@ export default function PosPage() {
                   const totalQtyInCart = cart
                     .filter((c) => c.menuItemId === item.id)
                     .reduce((s, c) => s + c.qty, 0)
-                  const hasOptions  = (item.optionGroups ?? []).length > 0
-                  const soldOut     = item.isSoldOut
-                  const isToggling  = togglingId === item.id
+                  const soldOut = item.isSoldOut
                   return (
                     <div
                       key={item.id}
                       className={[
-                        'relative flex flex-col rounded-2xl overflow-hidden text-left transition-all group border',
+                        'relative flex flex-col rounded-2xl overflow-hidden text-left transition-all border',
                         soldOut
                           ? 'border-[#2a1e0f] opacity-60 cursor-default bg-[#1a1209]'
                           : totalQtyInCart > 0
@@ -650,42 +621,11 @@ export default function PosPage() {
                         )}
 
                         {/* Options pill */}
-                        {!soldOut && hasOptions && (
+                        {!soldOut && (item.optionGroups ?? []).length > 0 && (
                           <div className="absolute bottom-2 left-2 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5">
                             มีตัวเลือก
                           </div>
                         )}
-
-                        {/* ── Action strip — ซ่อนไว้ แสดงเมื่อ hover ── */}
-                        <div className={[
-                          'absolute bottom-0 left-0 right-0 flex transition-all duration-200',
-                          'opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0',
-                        ].join(' ')}>
-                          <button
-                            type="button"
-                            onClick={(e) => toggleSoldOut(e, item)}
-                            disabled={isToggling}
-                            className={[
-                              'flex-1 py-2 text-[11px] font-bold backdrop-blur-sm transition-colors',
-                              isToggling ? 'opacity-50 cursor-wait' : '',
-                              soldOut
-                                ? 'bg-green-500/90 text-white hover:bg-green-600/90'
-                                : 'bg-red-500/90 text-white hover:bg-red-600/90',
-                              hasOptions ? 'border-r border-white/30' : '',
-                            ].join(' ')}
-                          >
-                            {isToggling ? '...' : soldOut ? '✅ เปิดขาย' : '🔴 หมด'}
-                          </button>
-                          {hasOptions && (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setManagingChoices(item) }}
-                              className="px-3 py-2 text-[11px] font-bold bg-stone-700/90 text-white hover:bg-stone-800/90 transition-colors backdrop-blur-sm"
-                            >
-                              ⚙️
-                            </button>
-                          )}
-                        </div>
                       </div>
 
                       {/* Info */}
@@ -933,15 +873,6 @@ export default function PosPage() {
           item={pendingItem}
           onClose={() => setPendingItem(null)}
           onAdd={handleModalAdd}
-        />
-      )}
-
-      {/* ── Choice sold-out modal ── */}
-      {managingChoices && (
-        <ChoiceSoldOutModal
-          item={managingChoices}
-          onClose={() => setManagingChoices(null)}
-          onDone={reloadMenu}
         />
       )}
 
