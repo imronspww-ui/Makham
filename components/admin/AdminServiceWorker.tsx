@@ -64,6 +64,11 @@ export function AdminServiceWorker() {
   }, [])
 
   if (blocked && !dismissed) {
+    const isPwa = typeof window !== 'undefined' &&
+      window.matchMedia('(display-mode: standalone)').matches
+
+    if (isPwa) return null
+
     return (
       <div className="flex items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-sm text-amber-800">
         <BellOff size={16} className="shrink-0 text-amber-500" />

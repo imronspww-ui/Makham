@@ -11,8 +11,11 @@ import { printReceipt, type ReceiptData } from '@/lib/utils/printReceipt'
 import { generatePromptPayQR } from '@/lib/utils/promptpay'
 import { Spinner } from '@/components/ui/Spinner'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
+import { OrderDetailModal } from '@/components/admin/OrderDetailModal'
+import { OrderStatusBadge } from '@/components/admin/OrderStatusBadge'
+import { useOrders } from '@/lib/hooks/useOrders'
 import { useSessionRole } from '@/lib/hooks/useSessionRole'
-import type { MenuItem, OrderItem, SelectedOption, CustomerProfile } from '@/types'
+import type { MenuItem, OrderItem, SelectedOption, CustomerProfile, Order } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -139,6 +142,15 @@ export default function PosPage() {
   const [allCustomers,    setAllCustomers]    = useState<CustomerProfile[]>([])
   const [showDropdown,    setShowDropdown]    = useState(false)
   const [showCartDropdown, setShowCartDropdown] = useState(false)
+
+  // ── Online orders panel ───────────────────────────────────────────────────
+  const [rightTab,        setRightTab]        = useState<'cart' | 'orders'>('cart')
+  const [detailOrder,     setDetailOrder]     = useState<Order | null>(null)
+  const { orders: allOrders } = useOrders()
+
+  const onlineOrders = allOrders.filter(
+    (o) => o.source !== 'pos' && ['pending', 'cooking', 'delivering'].includes(o.status)
+  )
 
   // ── Held orders (พักคิว) ─────────────────────────────────────────────────
   const [heldOrders,   setHeldOrders]   = useState<HeldOrder[]>([])
@@ -694,22 +706,123 @@ export default function PosPage() {
 
           {/* ── CART SECTION ── */}
           <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            {/* Cart header */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#2a1e0f] shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">🛒 รายการสั่ง</span>
+            {/* Tab switcher */}
+            <div className="flex shrink-0 border-b border-[#2a1e0f]">
+              <button
+                onClick={() => setRightTab('cart')}
+                className={[
+                  'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all border-b-2',
+                  rightTab === 'cart'
+                    ? 'border-orange-500 text-orange-400'
+                    : 'border-transparent text-zinc-600 hover:text-zinc-400',
+                ].join(' ')}
+              >
+                🛒 ตะกร้า
                 {cart.length > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-600 text-[10px] font-extrabold text-white">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-600 text-[9px] font-extrabold text-white">
                     {cart.reduce((s, i) => s + i.qty, 0)}
                   </span>
                 )}
-              </div>
-              {cart.length > 0 && (
+              </button>
+              <button
+                onClick={() => setRightTab('orders')}
+                className={[
+                  'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all border-b-2',
+                  rightTab === 'orders'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-zinc-600 hover:text-zinc-400',
+                ].join(' ')}
+              >
+                📦 ออนไลน์
+                {onlineOrders.length > 0 && (
+                  <span className={[
+                    'flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-extrabold text-white',
+                    onlineOrders.some((o) => o.status === 'pending') ? 'bg-red-500 animate-pulse' : 'bg-blue-600',
+                  ].join(' ')}>
+                    {onlineOrders.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Cart clear button — แสดงเฉพาะ tab cart */}
+            {rightTab === 'cart' && cart.length > 0 && (
+              <div className="flex justify-end px-4 pt-1.5 shrink-0">
                 <button onClick={clearAll} className="flex items-center gap-1 text-[10px] text-amber-800 hover:text-red-400 transition-colors">
                   <RotateCcw size={10} /> ล้าง
                 </button>
+              </div>
+            )}
+
+          {/* ── Online orders panel ── */}
+          {rightTab === 'orders' && (
+            <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2.5 min-h-0 scrollbar-hide">
+              {onlineOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 h-40 text-zinc-700">
+                  <ClipboardList size={32} strokeWidth={1.5} />
+                  <p className="text-sm">ไม่มีออเดอร์ออนไลน์ที่รออยู่</p>
+                </div>
+              ) : (
+                onlineOrders.map((order) => (
+                  <div key={order.id}
+                    className="rounded-xl border border-[#2a1e0f] bg-[#1a1209] px-3 py-3 flex flex-col gap-2"
+                  >
+                    {/* Header row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-mono font-bold text-amber-400 truncate">
+                          #{order.orderNumber}
+                        </span>
+                        <OrderStatusBadge status={order.status} />
+                      </div>
+                      <span className="text-[10px] text-zinc-600 shrink-0">
+                        {new Date(order.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {/* Customer + type */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-zinc-400 truncate">{order.customer?.name ?? 'ลูกค้า'}</span>
+                      <span className="text-zinc-700">·</span>
+                      <span className="text-xs text-zinc-500">
+                        {order.orderType === 'delivery' ? '🛵 จัดส่ง' : '🛍️ รับเอง'}
+                      </span>
+                    </div>
+
+                    {/* Items */}
+                    <div className="flex flex-col gap-0.5">
+                      {order.items.slice(0, 3).map((item, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-zinc-500 truncate flex-1 mr-2">
+                            {item.name} × {item.qty}
+                          </span>
+                          <span className="text-zinc-400 shrink-0">{formatCurrency(item.subtotal)}</span>
+                        </div>
+                      ))}
+                      {order.items.length > 3 && (
+                        <p className="text-[10px] text-zinc-700">+{order.items.length - 3} รายการ</p>
+                      )}
+                    </div>
+
+                    {/* Footer row */}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#2a1e0f]">
+                      <span className="text-sm font-extrabold text-amber-300">{formatCurrency(order.total)}</span>
+                      <button
+                        onClick={() => setDetailOrder(order)}
+                        className="flex items-center gap-1 rounded-lg bg-blue-900/50 border border-blue-700/50 text-blue-300 text-xs font-semibold px-2.5 py-1.5 hover:bg-blue-900 transition-colors"
+                      >
+                        <ClipboardList size={11} />
+                        รายละเอียด
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
+          )}
+
+          {/* ── Cart content (hidden when orders tab active) ── */}
+          {rightTab === 'cart' && (<>
 
           {/* ── Held orders tabs ── */}
           {heldOrders.length > 0 && (
@@ -821,10 +934,12 @@ export default function PosPage() {
             )}
           </div>
 
+          </>) /* end cart tab content */}
+
           </div> {/* end cart section */}
 
-          {/* ── Customer phone quick-input ── */}
-          <div className="px-3 pb-1.5 shrink-0 border-t border-[#2a1e0f] pt-2">
+          {/* ── Customer phone quick-input (cart tab only) ── */}
+          {rightTab === 'cart' && <div className="px-3 pb-1.5 shrink-0 border-t border-[#2a1e0f] pt-2">
             {memberProfile && memberProfile !== 'not-found' ? (
               <div className="flex items-center justify-between gap-2 rounded-xl bg-amber-900/30 border border-amber-700/40 px-3 py-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -880,9 +995,9 @@ export default function PosPage() {
                 )}
               </div>
             )}
-          </div>
+          </div>}
 
-          {/* ══ BOTTOM BAR ══ */}
+          {rightTab === 'cart' && <>{/* ══ BOTTOM BAR ══ */}
           <div className="border-t border-[#2a1e0f] bg-[#0d0a07] shrink-0 px-3 py-2 flex flex-col gap-1.5">
 
             {/* Hold form */}
@@ -961,6 +1076,7 @@ export default function PosPage() {
               </button>
             </div>
           </div>{/* end bottom bar */}
+          </> /* end cart tab */}
 
         </div>{/* end right panel */}
         </div>{/* end MAIN AREA */}
@@ -1018,157 +1134,6 @@ export default function PosPage() {
                   <span className="text-sm font-bold text-amber-400">{formatCurrency(subtotal)}</span>
                 </div>
               </div>
-
-              {/* Discount */}
-              <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-4 py-3 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <Tag size={12} className="text-amber-600" />
-                  <span className="text-xs font-semibold text-amber-600">ส่วนลด</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setDiscountType('amount'); setDiscountInput('') }}
-                    className={[
-                      'flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors',
-                      discountType === 'amount'
-                        ? 'bg-orange-600 text-white border-orange-600'
-                        : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
-                    ].join(' ')}
-                  >
-                    <Banknote size={11} /> บาท
-                  </button>
-                  <button
-                    onClick={() => { setDiscountType('percent'); setDiscountInput('') }}
-                    className={[
-                      'flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors',
-                      discountType === 'percent'
-                        ? 'bg-orange-600 text-white border-orange-600'
-                        : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
-                    ].join(' ')}
-                  >
-                    <Percent size={11} /> %
-                  </button>
-                  <input
-                    type="number"
-                    min="0"
-                    max={discountType === 'percent' ? 100 : undefined}
-                    value={discountInput}
-                    onChange={(e) => setDiscountInput(e.target.value)}
-                    placeholder={discountType === 'percent' ? 'เช่น 10' : 'เช่น 20'}
-                    className="flex-1 rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 px-3 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
-                  />
-                </div>
-                {discountAmount > 0 && (
-                  <p className="text-xs text-orange-400 font-medium">
-                    ลด{discountType === 'percent' ? ` ${discountInput}%` : ''} = -{formatCurrency(discountAmount)}
-                  </p>
-                )}
-              </div>
-
-              {/* Member lookup */}
-              {settings?.loyalty?.enabled && (
-                <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-4 py-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <Star size={12} className="text-amber-600" />
-                    <span className="text-xs font-semibold text-amber-600">สมาชิก (ไม่บังคับ)</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 z-10" />
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        value={memberPhone}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '').slice(0, 10)
-                          setMemberPhone(v)
-                          setShowDropdown(true)
-                        }}
-                        onFocus={() => setShowDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                        placeholder="เบอร์โทร / ชื่อลูกค้า"
-                        className="w-full rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 pl-7 pr-2.5 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
-                      />
-                      {/* Dropdown suggestions */}
-                      {showDropdown && customerSuggestions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-amber-800/60 bg-[#1c1209] shadow-2xl overflow-hidden">
-                          {customerSuggestions.map((c) => (
-                            <button
-                              key={c.phone}
-                              type="button"
-                              onMouseDown={() => selectCustomerSuggestion(c)}
-                              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 hover:bg-amber-900/40 transition-colors text-left border-b border-amber-900/30 last:border-0"
-                            >
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-semibold text-amber-200 truncate">{c.name}</span>
-                                <span className="text-xs text-amber-600 font-mono">{c.phone}</span>
-                              </div>
-                              <span className="text-xs text-amber-500 shrink-0">{c.points} แต้ม</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => { setShowDropdown(false); searchMember(memberPhone) }}
-                      disabled={memberSearching || memberPhone.length < 9}
-                      className="rounded-lg bg-orange-600 text-white px-3 text-xs font-semibold hover:bg-orange-500 disabled:opacity-40 transition-colors"
-                    >
-                      {memberSearching ? '...' : 'ค้นหา'}
-                    </button>
-                    {memberProfile && (
-                      <button
-                        onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
-                        className="rounded-lg border border-amber-800 text-amber-600 px-2 text-xs hover:bg-amber-900/30"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  {memberProfile && memberProfile !== 'not-found' && (
-                    <div className="rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5 flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-bold text-amber-200">👤 {memberProfile.name}</p>
-                        <p className="text-xs text-amber-500 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
-                      </div>
-                      {pointsEarned > 0 && (
-                        <div className="text-right shrink-0">
-                          <p className="text-xs text-amber-600">จะได้รับ</p>
-                          <p className="text-base font-extrabold text-amber-400">+{pointsEarned}</p>
-                          <p className="text-[10px] text-amber-600">แต้ม</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {memberProfile === 'not-found' && !addingNew && (
-                    <div className="flex items-center justify-between rounded-xl bg-amber-900/20 border border-amber-900/40 px-3 py-2">
-                      <p className="text-xs text-amber-700">ไม่พบข้อมูลสมาชิก</p>
-                      <button onClick={() => setAddingNew(true)}
-                        className="flex items-center gap-1 rounded-lg bg-orange-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-500 transition-colors">
-                        <Plus size={11} /> เพิ่มสมาชิก
-                      </button>
-                    </div>
-                  )}
-                  {memberProfile === 'not-found' && addingNew && (
-                    <div className="flex flex-col gap-2 rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5">
-                      <p className="text-xs font-semibold text-amber-400">เพิ่มสมาชิกใหม่ — {memberPhone}</p>
-                      <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreateMember()}
-                        placeholder="ชื่อสมาชิก *" autoFocus
-                        className="rounded-lg border border-amber-700 bg-[#0d0a07] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-800"
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => { setAddingNew(false); setNewName('') }}
-                          className="flex-1 rounded-lg border border-amber-800 py-1.5 text-xs text-amber-600 hover:bg-amber-900/30">ยกเลิก</button>
-                        <button onClick={handleCreateMember} disabled={creatingMember || !newName.trim()}
-                          className="flex-1 rounded-lg bg-orange-600 text-white py-1.5 text-xs font-bold hover:bg-orange-500 disabled:opacity-50 transition-colors">
-                          {creatingMember ? '...' : '✅ บันทึก'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Payment method toggle */}
               <div className="grid grid-cols-2 gap-2">
@@ -1250,9 +1215,158 @@ export default function PosPage() {
                       ))}
                     </div>
                   )}
-
                 </>
               ) : null}
+
+              {/* Discount */}
+              <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-4 py-3 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Tag size={12} className="text-amber-600" />
+                  <span className="text-xs font-semibold text-amber-600">ส่วนลด</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setDiscountType('amount'); setDiscountInput('') }}
+                    className={[
+                      'flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors',
+                      discountType === 'amount'
+                        ? 'bg-orange-600 text-white border-orange-600'
+                        : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
+                    ].join(' ')}
+                  >
+                    <Banknote size={11} /> บาท
+                  </button>
+                  <button
+                    onClick={() => { setDiscountType('percent'); setDiscountInput('') }}
+                    className={[
+                      'flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors',
+                      discountType === 'percent'
+                        ? 'bg-orange-600 text-white border-orange-600'
+                        : 'border-amber-800 text-amber-600 hover:border-orange-500 hover:text-orange-400',
+                    ].join(' ')}
+                  >
+                    <Percent size={11} /> %
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    max={discountType === 'percent' ? 100 : undefined}
+                    value={discountInput}
+                    onChange={(e) => setDiscountInput(e.target.value)}
+                    placeholder={discountType === 'percent' ? 'เช่น 10' : 'เช่น 20'}
+                    className="flex-1 rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 px-3 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <p className="text-xs text-orange-400 font-medium">
+                    ลด{discountType === 'percent' ? ` ${discountInput}%` : ''} = -{formatCurrency(discountAmount)}
+                  </p>
+                )}
+              </div>
+
+              {/* Member lookup */}
+              {settings?.loyalty?.enabled && (
+                <div className="rounded-xl bg-[#1c1209] border border-amber-900/30 px-4 py-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Star size={12} className="text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-600">สมาชิก (ไม่บังคับ)</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 z-10" />
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={memberPhone}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 10)
+                          setMemberPhone(v)
+                          setShowDropdown(true)
+                        }}
+                        onFocus={() => setShowDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                        placeholder="เบอร์โทร / ชื่อลูกค้า"
+                        className="w-full rounded-lg border border-amber-800 bg-[#0d0a07] text-amber-100 pl-7 pr-2.5 py-2 text-sm outline-none focus:border-orange-500 placeholder-amber-900"
+                      />
+                      {showDropdown && customerSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-amber-800/60 bg-[#1c1209] shadow-2xl overflow-hidden">
+                          {customerSuggestions.map((c) => (
+                            <button
+                              key={c.phone}
+                              type="button"
+                              onMouseDown={() => selectCustomerSuggestion(c)}
+                              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 hover:bg-amber-900/40 transition-colors text-left border-b border-amber-900/30 last:border-0"
+                            >
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-semibold text-amber-200 truncate">{c.name}</span>
+                                <span className="text-xs text-amber-600 font-mono">{c.phone}</span>
+                              </div>
+                              <span className="text-xs text-amber-500 shrink-0">{c.points} แต้ม</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { setShowDropdown(false); searchMember(memberPhone) }}
+                      disabled={memberSearching || memberPhone.length < 9}
+                      className="rounded-lg bg-orange-600 text-white px-3 text-xs font-semibold hover:bg-orange-500 disabled:opacity-40 transition-colors"
+                    >
+                      {memberSearching ? '...' : 'ค้นหา'}
+                    </button>
+                    {memberProfile && (
+                      <button
+                        onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
+                        className="rounded-lg border border-amber-800 text-amber-600 px-2 text-xs hover:bg-amber-900/30"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {memberProfile && memberProfile !== 'not-found' && (
+                    <div className="rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-amber-200">👤 {memberProfile.name}</p>
+                        <p className="text-xs text-amber-500 mt-0.5">แต้มปัจจุบัน {memberProfile.points} แต้ม</p>
+                      </div>
+                      {pointsEarned > 0 && (
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-amber-600">จะได้รับ</p>
+                          <p className="text-base font-extrabold text-amber-400">+{pointsEarned}</p>
+                          <p className="text-[10px] text-amber-600">แต้ม</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {memberProfile === 'not-found' && !addingNew && (
+                    <div className="flex items-center justify-between rounded-xl bg-amber-900/20 border border-amber-900/40 px-3 py-2">
+                      <p className="text-xs text-amber-700">ไม่พบข้อมูลสมาชิก</p>
+                      <button onClick={() => setAddingNew(true)}
+                        className="flex items-center gap-1 rounded-lg bg-orange-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-orange-500 transition-colors">
+                        <Plus size={11} /> เพิ่มสมาชิก
+                      </button>
+                    </div>
+                  )}
+                  {memberProfile === 'not-found' && addingNew && (
+                    <div className="flex flex-col gap-2 rounded-xl bg-amber-900/30 border border-amber-700/50 px-3 py-2.5">
+                      <p className="text-xs font-semibold text-amber-400">เพิ่มสมาชิกใหม่ — {memberPhone}</p>
+                      <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateMember()}
+                        placeholder="ชื่อสมาชิก *" autoFocus
+                        className="rounded-lg border border-amber-700 bg-[#0d0a07] text-amber-100 px-2.5 py-1.5 text-sm outline-none focus:border-orange-500 placeholder-amber-800"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => { setAddingNew(false); setNewName('') }}
+                          className="flex-1 rounded-lg border border-amber-800 py-1.5 text-xs text-amber-600 hover:bg-amber-900/30">ยกเลิก</button>
+                        <button onClick={handleCreateMember} disabled={creatingMember || !newName.trim()}
+                          className="flex-1 rounded-lg bg-orange-600 text-white py-1.5 text-xs font-bold hover:bg-orange-500 disabled:opacity-50 transition-colors">
+                          {creatingMember ? '...' : '✅ บันทึก'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
             {/* ── End left column ── */}
@@ -1325,6 +1439,15 @@ export default function PosPage() {
             </div>{/* end two-column body */}
           </div>
         </div>
+      )}
+
+      {/* ── Order detail modal (online orders) ── */}
+      {detailOrder && (
+        <OrderDetailModal
+          order={detailOrder}
+          onClose={() => setDetailOrder(null)}
+          onUpdated={() => setDetailOrder(null)}
+        />
       )}
     </>
   )
