@@ -2,7 +2,7 @@
 import { use, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift, MapPin, ExternalLink, AlertTriangle, X, Share2, Copy } from 'lucide-react'
+import { CheckCircle, Clock, ChefHat, Truck, XCircle, Upload, ImageIcon, Star, Gift, MapPin, ExternalLink, AlertTriangle, X, Share2, Copy, Bell } from 'lucide-react'
 import { useOrder } from '@/lib/hooks/useOrder'
 import { useOrderNotification } from '@/lib/hooks/useOrderNotification'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -153,6 +153,44 @@ function ReferralShareCard({ phone }: { phone: string }) {
   )
 }
 
+// ─── Notification permission banner ──────────────────────────────────────────
+function NotifyPermissionBanner() {
+  const [perm, setPerm] = useState<NotificationPermission | null>(null)
+  const [requesting, setRequesting] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPerm(Notification.permission)
+    }
+  }, [])
+
+  if (!perm || perm === 'granted' || perm === 'denied') return null
+
+  return (
+    <div className="flex items-start gap-3 rounded-2xl bg-orange-50 border border-orange-200 px-4 py-3.5 shadow-sm">
+      <Bell size={18} className="text-orange-500 shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-orange-800">รับแจ้งเตือนเมื่ออาหารพร้อม</p>
+        <p className="text-xs text-orange-600 mt-0.5">
+          อนุญาตการแจ้งเตือนเพื่อให้รู้ทันทีเมื่อสถานะออเดอร์เปลี่ยน แม้ปิดหน้าจอไว้
+        </p>
+      </div>
+      <button
+        onClick={async () => {
+          setRequesting(true)
+          const result = await Notification.requestPermission().catch(() => 'default' as const)
+          setPerm(result)
+          setRequesting(false)
+        }}
+        disabled={requesting}
+        className="shrink-0 rounded-xl bg-orange-500 hover:bg-orange-400 disabled:opacity-60 text-white text-xs font-bold px-3 py-2 transition-colors"
+      >
+        {requesting ? '...' : 'เปิดรับแจ้งเตือน'}
+      </button>
+    </div>
+  )
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function OrderPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params)
@@ -244,6 +282,11 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 
   return (
     <div className="max-w-md mx-auto flex flex-col gap-5">
+
+      {/* แจ้งเตือน — แสดงเฉพาะออเดอร์ที่ยังดำเนินอยู่ */}
+      {['pending', 'cooking', 'delivering'].includes(order.status) && (
+        <NotifyPermissionBanner />
+      )}
 
       {/* ── #15 Receipt header ── */}
       <div className="rounded-2xl bg-white border border-orange-200 shadow-md overflow-hidden animate-receipt-drop">

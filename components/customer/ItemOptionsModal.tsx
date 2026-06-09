@@ -19,7 +19,17 @@ interface Props {
 
 export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {}, initialNote = '', isEdit = false }: Props) {
   // { [groupId]: choiceId[] }
-  const [selections, setSelections] = useState<Record<string, string[]>>(initialSelections)
+  // Auto-select first available choice for required single-select groups
+  const [selections, setSelections] = useState<Record<string, string[]>>(() => {
+    const auto: Record<string, string[]> = { ...initialSelections }
+    for (const group of item.optionGroups ?? []) {
+      if (!group.multiSelect && group.required && !(auto[group.id]?.length > 0)) {
+        const first = group.choices.find((c) => !c.isSoldOut)
+        if (first) auto[group.id] = [first.id]
+      }
+    }
+    return auto
+  })
   const [itemNote, setItemNote] = useState(initialNote)
   const [qty, setQty] = useState(1)
   const [errors, setErrors] = useState<Record<string, boolean>>({})

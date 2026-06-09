@@ -118,15 +118,25 @@ function OrderCard({
   const mins = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
   const urgent = col.status === 'pending' && mins >= 10
 
+  // ถ้า cooking + delivery → ไปที่ delivering ก่อน ไม่ใช่ completed
+  const nextStatus: OrderStatus | undefined =
+    col.status === 'cooking' && order.orderType === 'delivery' ? 'delivering' : col.next
+  const nextLabel =
+    col.status === 'cooking' && order.orderType === 'delivery' ? '🛵 ส่งเลย' : col.nextLabel
+  const nextColor =
+    col.status === 'cooking' && order.orderType === 'delivery'
+      ? 'bg-blue-500 hover:bg-blue-600 text-white'
+      : col.nextColor
+
   async function advanceStatus() {
-    if (!col.next) return
+    if (!nextStatus) return
     setUpdating(true)
     try {
-      await updateOrderStatus(order.id, col.next)
-      if (col.next === 'completed' && order.payment.status !== 'paid') {
+      await updateOrderStatus(order.id, nextStatus)
+      if (nextStatus === 'completed' && order.payment.status !== 'paid') {
         await updatePaymentStatus(order.id, 'paid')
       }
-      toast.success(`✅ ${col.nextLabel}`)
+      toast.success(`✅ ${nextLabel}`)
     } catch {
       toast.error('อัปเดตไม่สำเร็จ')
     } finally {
@@ -240,16 +250,16 @@ function OrderCard({
           )}
 
           {/* Advance status */}
-          {col.next && (
+          {nextStatus && (
             <button
               onClick={advanceStatus}
               disabled={updating}
               className={[
                 'rounded-xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 disabled:opacity-50',
-                col.nextColor ?? '',
+                nextColor ?? '',
               ].join(' ')}
             >
-              {updating ? '...' : col.nextLabel}
+              {updating ? '...' : nextLabel}
             </button>
           )}
         </div>
@@ -345,20 +355,32 @@ function SummaryBar({ orders }: { orders: Order[] }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+type TypeFilter = 'all' | 'delivery' | 'pickup' | 'dine-in'
+
+const TYPE_FILTERS: { value: TypeFilter; label: string; icon: string }[] = [
+  { value: 'all',      label: 'ทั้งหมด', icon: '📋' },
+  { value: 'delivery', label: 'จัดส่ง',  icon: '🛵' },
+  { value: 'pickup',   label: 'รับเอง',  icon: '🛍️' },
+  { value: 'dine-in',  label: 'ที่ร้าน', icon: '🍽️' },
+]
+
 export default function OrdersPage() {
   const { orders, loading } = useOrders()
   const [selected, setSelected] = useState<Order | null>(null)
   const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [completedExpanded, setCompletedExpanded] = useState(false)
 
   const COMPLETED_PREVIEW = 5
 
-  const filteredOrders = orders.filter((o) =>
-    !search ||
-    o.orderNumber.includes(search) ||
-    o.customer.name.includes(search) ||
-    o.customer.phone.includes(search)
-  )
+  const filteredOrders = orders.filter((o) => {
+    const matchSearch = !search ||
+      o.orderNumber.includes(search) ||
+      o.customer.name.includes(search) ||
+      o.customer.phone.includes(search)
+    const matchType = typeFilter === 'all' || o.orderType === typeFilter
+    return matchSearch && matchType
+  })
 
   return (
     <div className="flex flex-col gap-5">
@@ -379,29 +401,62 @@ export default function OrdersPage() {
       {/* Cancel alerts */}
       <CancelAlertPanel orders={orders} />
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ค้นหาเลขออเดอร์, ชื่อ, หรือเบอร์โทร..."
-          className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:border-orange-400 outline-none bg-white shadow-sm"
-        />
+      {/* Search + Type filter */}
+      <div className="flex flex-col gap-2.5">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาเลขออเดอร์, ชื่อ, หรือเบอร์โทร..."
+            className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:border-orange-400 outline-none bg-white shadow-sm"
+          />
+        </div>
+        {/* Order type filter */}
+        <div className="flex gap-2 flex-wrap">
+          {TYPE_FILTERS.map((f) => {
+            const count = f.value === 'all'
+              ? orders.length
+              : orders.filter((o) => o.orderType === f.value).length
+            return (
+              <button
+                key={f.value}
+                onClick={() => setTypeFilter(f.value)}
+                className={[
+                  'flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all',
+                  typeFilter === f.value
+                    ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-600',
+                ].join(' ')}
+              >
+                {f.icon} {f.label}
+                <span className={[
+                  'flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold',
+                  typeFilter === f.value ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500',
+                ].join(' ')}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Kanban board */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-          {COLUMNS.map((col) => (
-            <div key={col.status} className={`rounded-2xl border ${col.border} ${col.bg} p-3 flex flex-col gap-3`}>
-              <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
-              {[1, 2].map((i) => <div key={i} className="h-36 bg-white/70 rounded-2xl animate-pulse" />)}
-            </div>
-          ))}
+        <div className="overflow-x-auto pb-2">
+          <div className="grid grid-cols-5 gap-4 min-w-[960px]">
+            {COLUMNS.map((col) => (
+              <div key={col.status} className={`rounded-2xl border ${col.border} ${col.bg} p-3 flex flex-col gap-3`}>
+                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+                {[1, 2].map((i) => <div key={i} className="h-36 bg-white/70 rounded-2xl animate-pulse" />)}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="overflow-x-auto pb-2">
+        <div className="grid grid-cols-5 gap-4 min-w-[960px]">
           {COLUMNS.map((col) => {
             const colOrders = filteredOrders.filter((o) => o.status === col.status)
             const isCompleted = col.status === 'completed'
@@ -442,6 +497,7 @@ export default function OrdersPage() {
               </div>
             )
           })}
+        </div>
         </div>
       )}
 

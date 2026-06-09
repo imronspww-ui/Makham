@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, QrCode } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, QrCode, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -116,6 +116,7 @@ export default function PosPage() {
   // ── Cart state ────────────────────────────────────────────────────────────
   const [cart, setCart]               = useState<PosCartItem[]>([])
   const [selectedCat, setSelectedCat] = useState<string>('all')
+  const [menuSearch,  setMenuSearch]  = useState('')
 
   // ── Option modal state ────────────────────────────────────────────────────
   const [pendingItem, setPendingItem] = useState<MenuItem | null>(null)
@@ -197,9 +198,15 @@ export default function PosPage() {
 
   // ── Filtered menu (แสดงทั้ง available + soldOut ให้กดหมดได้จาก POS) ───────
   const filteredItems = useMemo(() => {
-    if (selectedCat === 'all') return menuItems.filter((m) => m.isAvailable)
-    return menuItems.filter((m) => m.isAvailable && m.categoryId === selectedCat)
-  }, [menuItems, selectedCat])
+    let base = selectedCat === 'all'
+      ? menuItems.filter((m) => m.isAvailable)
+      : menuItems.filter((m) => m.isAvailable && m.categoryId === selectedCat)
+    if (menuSearch.trim()) {
+      const q = menuSearch.toLowerCase()
+      base = base.filter((m) => m.name.toLowerCase().includes(q))
+    }
+    return base
+  }, [menuItems, selectedCat, menuSearch])
 
   // ── Quick cash buttons ────────────────────────────────────────────────────
   const quickAmounts = useMemo(() => {
@@ -624,6 +631,28 @@ export default function PosPage() {
                 {cat.id === 'all' ? '🍽️ ทั้งหมด' : categoryEmoji(cat.name) + ' ' + cat.name}
               </button>
             ))}
+          </div>
+
+          {/* Search box */}
+          <div className="px-4 py-2 shrink-0">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 pointer-events-none" />
+              <input
+                type="text"
+                value={menuSearch}
+                onChange={(e) => setMenuSearch(e.target.value)}
+                placeholder="ค้นหาเมนู..."
+                className="w-full rounded-xl border border-amber-900/40 bg-[#1c1209] text-amber-200 pl-8 pr-8 py-2 text-sm outline-none focus:border-amber-600 placeholder-amber-900"
+              />
+              {menuSearch && (
+                <button
+                  onClick={() => setMenuSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-amber-700 hover:text-amber-400 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Menu grid */}

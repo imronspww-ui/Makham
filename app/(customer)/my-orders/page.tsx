@@ -76,7 +76,7 @@ export default function MyOrdersPage() {
 
   if (orders.length === 0) {
     return (
-      <div className="py-20 flex flex-col items-center gap-4 text-gray-400">
+      <div className="min-h-[65vh] py-20 flex flex-col items-center gap-4 text-gray-400">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-50">
           <ShoppingBag size={36} className="text-gray-200" />
         </div>
