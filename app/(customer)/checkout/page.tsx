@@ -80,6 +80,11 @@ export default function CheckoutPage() {
       setSelectedRedeem(null)
       setRedeemQty(1)
       setLoadingProfile(false)
+      // auto-fill name if profile has one and field is currently empty
+      if (profile?.name) {
+        const currentName = (document.querySelector('input[name="customerName"]') as HTMLInputElement)?.value ?? ''
+        if (!currentName.trim()) setValue('customerName', profile.name)
+      }
     }, 500)
     return () => { if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current) }
   }, [phoneValue, loyalty?.enabled])

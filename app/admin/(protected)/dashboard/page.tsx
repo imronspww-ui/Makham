@@ -1,13 +1,16 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
+import Link from 'next/link'
 import {
   ClipboardList, TrendingUp, Clock, ChefHat, Truck,
   CalendarDays, BarChart2, Trophy, ShoppingBag, Bell, TrendingDown, Wallet,
-  ChevronDown, ChevronUp, ChevronsUpDown, PackageSearch,
+  ChevronDown, ChevronUp, ChevronsUpDown, PackageSearch, Pencil, Check, X, ExternalLink,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useOrders } from '@/lib/hooks/useOrders'
 import { useSettings } from '@/lib/hooks/useSettings'
+import { updateStoreCosts } from '@/lib/services/settingsService'
+import type { CostItem } from '@/types'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
 import { formatCurrency } from '@/lib/utils/format'
 import { OrderStatusBadge } from '@/components/admin/OrderStatusBadge'
@@ -83,6 +86,10 @@ export default function DashboardPage() {
   const [sortKey, setSortKey] = useState<SortKey>('qty')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [showAllItems, setShowAllItems] = useState(false)
+  const [showCostBreakdown, setShowCostBreakdown] = useState(false)
+  const [editingCosts, setEditingCosts] = useState(false)
+  const [draftCosts, setDraftCosts] = useState<CostItem[]>([])
+  const [savingCosts, setSavingCosts] = useState(false)
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -447,17 +454,41 @@ export default function DashboardPage() {
           </div>
           {/* กำไรสุทธิ */}
           {stats.monthStoreCost > 0 && (
-            <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between bg-gray-50/60">
-              <div className="flex items-center gap-3 text-sm text-gray-500">
-                <span>กำไรขั้นต้น {formatCurrency(stats.monthGross)}</span>
-                <span className="text-gray-300">−</span>
-                <span>ค่าใช้จ่ายร้าน {formatCurrency(stats.monthStoreCost)}</span>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">กำไรสุทธิเดือนนี้</p>
-                <p className={`text-lg font-bold ${stats.monthNet >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {formatCurrency(stats.monthNet)}
-                </p>
+            <div className="border-t border-gray-100 bg-gray-50/60">
+              <div className="px-5 py-3 flex items-center justify-between">
+                <div className="flex flex-col gap-1 text-sm text-gray-500">
+                  <div className="flex items-center gap-3">
+                    <span>กำไรขั้นต้น {formatCurrency(stats.monthGross)}</span>
+                    <span className="text-gray-300">−</span>
+                    <button
+                      onClick={() => setShowCostBreakdown((v) => !v)}
+                      className="flex items-center gap-1 text-orange-600 hover:underline font-medium"
+                    >
+                      ค่าใช้จ่ายร้าน {formatCurrency(stats.monthStoreCost)}
+                      <span className="text-xs text-gray-400">({(settings?.costs ?? []).length} รายการ)</span>
+                      {showCostBreakdown ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  </div>
+                  {showCostBreakdown && (
+                    <div className="mt-1 ml-0 flex flex-col gap-0.5 pl-3 border-l-2 border-orange-200">
+                      {(settings?.costs ?? []).map((c) => (
+                        <span key={c.id} className="text-xs text-gray-400 flex justify-between gap-4">
+                          <span>{c.name}</span>
+                          <span className="font-medium text-gray-600">{formatCurrency(c.amount)}</span>
+                        </span>
+                      ))}
+                      <Link href="/admin/costs" className="flex items-center gap-1 text-xs text-orange-500 hover:underline mt-0.5">
+                        แก้ไขค่าใช้จ่าย <ExternalLink size={10} />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">กำไรสุทธิเดือนนี้</p>
+                  <p className={`text-lg font-bold ${stats.monthNet >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    {formatCurrency(stats.monthNet)}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -484,6 +515,77 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── #11 Inline cost editor ── */}
+      {(settings?.costs ?? []).length > 0 && (
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <TrendingDown size={15} className="text-orange-500" />
+              <h2 className="font-semibold text-gray-700 text-sm">ค่าใช้จ่ายร้านรายเดือน</h2>
+              <span className="text-xs text-gray-400">รวม {formatCurrency(stats.monthStoreCost)}</span>
+            </div>
+            {!editingCosts ? (
+              <button
+                onClick={() => { setDraftCosts((settings?.costs ?? []).map((c) => ({ ...c }))); setEditingCosts(true) }}
+                className="flex items-center gap-1 text-xs text-orange-600 hover:underline font-medium"
+              >
+                <Pencil size={12} />แก้ไข
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={savingCosts}
+                  onClick={async () => {
+                    setSavingCosts(true)
+                    try {
+                      await updateStoreCosts(draftCosts)
+                      toast.success('บันทึกค่าใช้จ่ายแล้ว')
+                      setEditingCosts(false)
+                    } catch { toast.error('บันทึกไม่สำเร็จ') }
+                    finally { setSavingCosts(false) }
+                  }}
+                  className="flex items-center gap-1 text-xs bg-orange-600 text-white px-2.5 py-1 rounded-lg hover:bg-orange-500 disabled:opacity-50"
+                >
+                  {savingCosts ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Check size={12} />}
+                  บันทึก
+                </button>
+                <button onClick={() => setEditingCosts(false)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                  <X size={12} />ยกเลิก
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="divide-y divide-gray-50">
+            {(editingCosts ? draftCosts : (settings?.costs ?? [])).map((cost, i) => (
+              <div key={cost.id} className="flex items-center gap-3 px-5 py-2.5">
+                <span className="flex-1 text-sm text-gray-600 truncate">{cost.name}</span>
+                {editingCosts ? (
+                  <input
+                    type="number"
+                    min={0}
+                    value={draftCosts[i]?.amount ?? 0}
+                    onChange={(e) => {
+                      const next = [...draftCosts]
+                      next[i] = { ...next[i], amount: Number(e.target.value) }
+                      setDraftCosts(next)
+                    }}
+                    className="w-28 text-right rounded-lg border border-gray-200 px-2 py-1 text-sm font-medium focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-gray-700">{formatCurrency(cost.amount)}</span>
+                )}
+                <span className="text-[10px] text-gray-300 uppercase w-10 shrink-0">{cost.type === 'fixed' ? 'คงที่' : 'ผัน'}</span>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-2 border-t border-gray-100 flex justify-end">
+            <Link href="/admin/costs" className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition-colors">
+              จัดการต้นทุนเต็มรูปแบบ <ExternalLink size={10} />
+            </Link>
+          </div>
         </div>
       )}
 

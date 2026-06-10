@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
   onSnapshot,
   Timestamp,
   docToData,
@@ -18,6 +19,21 @@ import type { Order, OrderStatus } from '@/types'
 import { adjustCustomerPoints } from '@/lib/services/customerService'
 
 const COL = 'orders'
+
+export async function getOrdersByPhone(phone: string): Promise<Order[]> {
+  if (!isFirebaseConfigured || !phone) return []
+  try {
+    const q = query(
+      collection(db, COL),
+      where('customer.phone', '==', phone),
+      orderBy('createdAt', 'desc'),
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => docToData<Order>(d.id, d.data()))
+  } catch {
+    return []
+  }
+}
 
 export async function getOrders(): Promise<Order[]> {
   if (!isFirebaseConfigured) return []
