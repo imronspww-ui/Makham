@@ -93,7 +93,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
           'overflow-hidden transition-all duration-200',
           unavailable
             ? 'cursor-not-allowed'
-            : 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer active:scale-[0.98]',
+            : 'hover:shadow-xl hover:shadow-orange-100 hover:-translate-y-1 hover:border-orange-300 cursor-pointer active:scale-[0.98]',
         ].join(' ')}
       >
         {/* Image — เต็มความกว้างทุก breakpoint */}
@@ -181,7 +181,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
               onClick={(e) => { e.stopPropagation(); handleClick() }}
               disabled={unavailable}
               aria-label={`เพิ่ม ${item.name}`}
-              className={['flex h-9 w-9 items-center justify-center rounded-full bg-orange-600 text-white shadow-sm transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50', popping ? 'animate-btn-pop' : ''].join(' ')}
+              className={['flex h-9 w-9 items-center justify-center rounded-full bg-orange-600 text-white shadow-sm shadow-orange-300 transition-all hover:bg-orange-500 hover:shadow-md hover:shadow-orange-400 hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50', popping ? 'animate-btn-pop' : ''].join(' ')}
             >
               <Plus size={18} />
             </button>

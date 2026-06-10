@@ -135,13 +135,28 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
           {/* ── Popular section (only when no filter active) ── */}
           {popularItems.length > 0 && !activeCategoryId && (
             <section className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Flame size={18} className="text-orange-500" />
-                <h2 className="page-title text-base font-bold text-stone-800">เมนูยอดนิยม</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 shadow-sm shadow-orange-300">
+                    <Flame size={14} className="text-white" />
+                  </div>
+                  <h2 className="page-title text-base font-bold">
+                    <span className="shimmer-text">เมนูยอดนิยม</span>
+                  </h2>
+                </div>
+                <span className="text-xs text-stone-400 bg-orange-50 border border-orange-100 rounded-full px-2.5 py-0.5 font-medium">
+                  {popularItems.length} เมนู
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-                {popularItems.map((item) => (
-                  <MenuCard key={`pop-${item.id}`} item={item} showPopularBadge={false} />
+                {popularItems.map((item, i) => (
+                  <div
+                    key={`pop-${item.id}`}
+                    className="animate-card-enter"
+                    style={{ animationDelay: `${i * 55}ms` }}
+                  >
+                    <MenuCard item={item} showPopularBadge={false} />
+                  </div>
                 ))}
               </div>
               <div className="border-t border-stone-100 mt-1" />
@@ -162,8 +177,14 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
             <div className="py-12 text-center text-stone-400">ยังไม่มีเมนูในหมวดนี้</div>
           ) : (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-              {filtered.map((item) => (
-                <MenuCard key={item.id} item={item} />
+              {filtered.map((item, i) => (
+                <div
+                  key={item.id}
+                  className="animate-card-enter"
+                  style={{ animationDelay: `${i * 45}ms` }}
+                >
+                  <MenuCard item={item} />
+                </div>
               ))}
             </div>
           )}
