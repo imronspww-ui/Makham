@@ -1,6 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, QrCode, Search } from 'lucide-react'
+import { Trash2, Plus, Minus, RotateCcw, CheckCircle2, Tag, Percent, Banknote, UtensilsCrossed, Printer, Phone, Star, Delete, BookmarkPlus, X, ClipboardList, ChefHat, QrCode, Search, UserX } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useMenu } from '@/lib/hooks/useMenu'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -1041,6 +1041,57 @@ export default function PosPage() {
                 >
                   <X size={13} />
                 </button>
+              </div>
+            ) : memberProfile === 'not-found' && !addingNew ? (
+              /* ── ไม่พบสมาชิก → แสดงปุ่มเพิ่ม ── */
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-900/40 bg-[#1c1209] px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <UserX size={12} className="text-amber-700 shrink-0" />
+                  <span className="text-xs text-amber-700 truncate">ไม่พบสมาชิก: {memberPhone}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => { setAddingNew(true); setNewName('') }}
+                    className="flex items-center gap-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                  >
+                    <Plus size={11} /> เพิ่มสมาชิก
+                  </button>
+                  <button
+                    onClick={() => { setMemberPhone(''); setMemberProfile(null) }}
+                    className="text-amber-700 hover:text-red-400 transition-colors"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            ) : memberProfile === 'not-found' && addingNew ? (
+              /* ── ฟอร์มเพิ่มสมาชิกใหม่ inline ── */
+              <div className="flex flex-col gap-1.5 rounded-xl border border-amber-700/50 bg-[#1c1209] px-3 py-2">
+                <p className="text-[11px] font-semibold text-amber-400">สมาชิกใหม่ — {memberPhone}</p>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateMember(); if (e.key === 'Escape') setAddingNew(false) }}
+                    placeholder="ชื่อสมาชิก"
+                    className="flex-1 rounded-lg border border-amber-800/50 bg-[#0d0a07] text-amber-200 px-2.5 py-1.5 text-xs outline-none focus:border-amber-500 placeholder-amber-900"
+                  />
+                  <button
+                    onClick={handleCreateMember}
+                    disabled={creatingMember || !newName.trim()}
+                    className="rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white px-3 py-1.5 text-xs font-semibold transition-colors"
+                  >
+                    {creatingMember ? '...' : 'บันทึก'}
+                  </button>
+                  <button
+                    onClick={() => setAddingNew(false)}
+                    className="rounded-lg border border-amber-900/40 text-amber-700 hover:text-amber-400 px-2 py-1.5 text-xs transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="relative">
