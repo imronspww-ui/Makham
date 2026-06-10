@@ -16,6 +16,7 @@ import {
   where,
   onSnapshot,
   runTransaction,
+  writeBatch,
   Timestamp,
   type DocumentData,
   type Firestore,
@@ -75,5 +76,6 @@ export {
   where,
   onSnapshot,
   runTransaction,
+  writeBatch,
   Timestamp,
 }

@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
-import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2, PackageX, Star } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Tag, Settings2, PackageX, Star, GripVertical, Save, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAdminMenu } from '@/lib/hooks/useMenu'
-import { deleteMenuItem, updateMenuItem } from '@/lib/services/menuService'
+import { deleteMenuItem, updateMenuItem, updateMenuItemsOrder } from '@/lib/services/menuService'
 import { deleteCategory } from '@/lib/services/categoryService'
 import { MenuFormModal } from '@/components/admin/MenuFormModal'
 import { CategoryFormModal } from '@/components/admin/CategoryFormModal'
@@ -18,6 +18,10 @@ export default function MenuPage() {
   const { items, categories, loading, reload } = useAdminMenu()
   const [modalOpen,    setModalOpen]    = useState(false)
   const [editItem,     setEditItem]     = useState<MenuItem | null>(null)
+  const [sortMode,     setSortMode]     = useState(false)
+  const [sortedItems,  setSortedItems]  = useState<MenuItem[]>([])
+  const [savingOrder,  setSavingOrder]  = useState(false)
+  const dragIdx = useRef<number | null>(null)
   const [catModalOpen, setCatModalOpen] = useState(false)
   const [editCategory, setEditCategory] = useState<Category | null>(null)
   function openAdd() { setEditItem(null); setModalOpen(true) }
@@ -58,6 +62,48 @@ export default function MenuPage() {
     } catch { toast.error('อัปเดตไม่สำเร็จ') }
   }
 
+  function enterSortMode() {
+    setSortedItems([...items])
+    setSortMode(true)
+  }
+
+  function cancelSortMode() {
+    setSortMode(false)
+    setSortedItems([])
+  }
+
+  function onDragStart(idx: number) {
+    dragIdx.current = idx
+  }
+
+  function onDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    const from = dragIdx.current
+    if (from === null || from === idx) return
+    setSortedItems((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(idx, 0, moved)
+      dragIdx.current = idx
+      return next
+    })
+  }
+
+  async function saveOrder() {
+    setSavingOrder(true)
+    try {
+      await updateMenuItemsOrder(sortedItems.map((item, i) => ({ id: item.id, sortOrder: i })))
+      toast.success('บันทึกลำดับสำเร็จ')
+      setSortMode(false)
+      setSortedItems([])
+      reload()
+    } catch {
+      toast.error('บันทึกไม่สำเร็จ')
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
   function openAddCategory() {
     setEditCategory(null)
     setCatModalOpen(true)
@@ -82,10 +128,33 @@ export default function MenuPage() {
   return (
     <div className="flex flex-col gap-6">
       <FirebaseBanner />
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-800">จัดการเมนู</h1>
-        <Button onClick={openAdd}><Plus size={16} />เพิ่มเมนู</Button>
+        <div className="flex items-center gap-2">
+          {sortMode ? (
+            <>
+              <Button size="sm" variant="outline" onClick={cancelSortMode} disabled={savingOrder}>
+                <X size={14} />ยกเลิก
+              </Button>
+              <Button size="sm" onClick={saveOrder} disabled={savingOrder}>
+                <Save size={14} />{savingOrder ? 'กำลังบันทึก...' : 'บันทึกลำดับ'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={enterSortMode}>
+                <GripVertical size={14} />จัดเรียง
+              </Button>
+              <Button onClick={openAdd}><Plus size={16} />เพิ่มเมนู</Button>
+            </>
+          )}
+        </div>
       </div>
+      {sortMode && (
+        <p className="text-sm text-orange-600 bg-orange-50 border border-orange-100 rounded-xl px-4 py-2">
+          ลากแถวเพื่อเรียงลำดับ — กด "บันทึกลำดับ" เมื่อเรียบร้อย
+        </p>
+      )}
 
       {/* Categories */}
       <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
@@ -133,19 +202,34 @@ export default function MenuPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
+                {sortMode && <th className="w-10 px-3 py-3" />}
                 {['เมนู', 'หมวดหมู่', 'ราคา', 'ตัวเลือก', 'คะแนน', 'สินค้าหมด', 'สถานะ', 'จัดการ'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs text-gray-400 font-medium">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs text-gray-400 font-medium">{sortMode && h === 'จัดการ' ? '' : h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => {
+              {(sortMode ? sortedItems : items).map((item, idx) => {
                 const cat = categories.find((c) => c.id === item.categoryId)
                 return (
-                  <tr key={item.id} className={[
-                    'border-t border-gray-50 transition-colors',
-                    item.isSoldOut ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50/50',
-                  ].join(' ')}>
+                  <tr
+                    key={item.id}
+                    draggable={sortMode}
+                    onDragStart={() => sortMode && onDragStart(idx)}
+                    onDragOver={(e) => sortMode && onDragOver(e, idx)}
+                    onDragEnd={() => { dragIdx.current = null }}
+                    className={[
+                      'border-t border-gray-50 transition-colors',
+                      sortMode ? 'cursor-grab active:cursor-grabbing bg-white hover:bg-orange-50/40' : '',
+                      !sortMode && item.isSoldOut ? 'bg-red-50/40 hover:bg-red-50/60' : '',
+                      !sortMode && !item.isSoldOut ? 'hover:bg-gray-50/50' : '',
+                    ].join(' ')}
+                  >
+                    {sortMode && (
+                      <td className="px-3 py-3 text-gray-300">
+                        <GripVertical size={16} />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {item.imageUrl ? (

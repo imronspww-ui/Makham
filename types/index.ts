@@ -29,6 +29,7 @@ export interface MenuItem {
   isAvailable: boolean
   isSoldOut: boolean
   isPopular?: boolean
+  sortOrder?: number     // ลำดับการแสดง (น้อย = แสดงก่อน)
   optionGroups: OptionGroup[]
   packSize?: number      // จำนวนชิ้นต่อ 1 แพ็ค (สำหรับคำนวณต้นทุน)
   costPerPack?: number   // ราคาซื้อต่อแพ็ค (บาท) สำหรับคำนวณต้นทุน

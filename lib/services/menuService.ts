@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  writeBatch,
   Timestamp,
   docToData,
 } from '@/lib/firebase/firestore'
@@ -26,9 +27,15 @@ export async function getMenuItems(): Promise<MenuItem[]> {
   if (!isFirebaseConfigured) return []
 
   try {
-    const q = query(collection(db, COL), orderBy('createdAt', 'desc'))
-    const snap = await getDocs(q)
-    const items = snap.docs.map((d) => docToData<MenuItem>(d.id, d.data()))
+    const snap = await getDocs(collection(db, COL))
+    const items = snap.docs
+      .map((d) => docToData<MenuItem>(d.id, d.data()))
+      .sort((a, b) => {
+        const ao = a.sortOrder ?? 9999
+        const bo = b.sortOrder ?? 9999
+        if (ao !== bo) return ao - bo
+        return a.createdAt < b.createdAt ? 1 : -1
+      })
     cacheSet(CACHE_KEY, items, TTL)
     return items
   } catch {
@@ -73,6 +80,16 @@ export async function updateMenuItem(
 export async function deleteMenuItem(id: string): Promise<void> {
   requireFirebase()
   await deleteDoc(doc(db, COL, id))
+  cacheClear('menu:')
+}
+
+export async function updateMenuItemsOrder(orders: { id: string; sortOrder: number }[]): Promise<void> {
+  requireFirebase()
+  const batch = writeBatch(db)
+  for (const { id, sortOrder } of orders) {
+    batch.update(doc(db, COL, id), { sortOrder })
+  }
+  await batch.commit()
   cacheClear('menu:')
 }
 
