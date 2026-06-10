@@ -52,7 +52,10 @@ export const deliverySettingsSchema = z.object({
 
 export const storeSettingsSchema = z.object({
   name: z.string().min(1, 'กรุณากรอกชื่อร้าน'),
+  description: z.string().optional(),
+  announcement: z.string().optional(),
   logoUrl: z.string().optional(),
+  bannerUrl: z.string().optional(),
   bgImageUrl: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),

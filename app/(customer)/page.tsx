@@ -11,7 +11,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col gap-5">
       {/* E: Store Profile Header */}
-      {settings?.store && <StoreProfileHeader store={settings.store} />}
+      {settings?.store && <StoreProfileHeader store={settings.store} items={items} />}
 
       <div>
         <h1 className="page-title text-2xl font-bold text-stone-800 tracking-tight">เมนูอาหาร</h1>

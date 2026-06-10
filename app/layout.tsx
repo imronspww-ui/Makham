@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from 'next'
+import { Sarabun } from 'next/font/google'
 import './globals.css'
+
+const sarabun = Sarabun({
+  subsets: ['thai', 'latin'],
+  weight: ['400', '600', '700'],
+  display: 'swap',
+})
 import { ToastProvider } from '@/components/ui/ToastProvider'
 import { PwaSetup } from '@/components/PwaSetup'
 
@@ -29,7 +36,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th">
+    <html lang="th" className={sarabun.className}>
       <body className="min-h-screen bg-gray-50">
         <PwaSetup />
         <ToastProvider />

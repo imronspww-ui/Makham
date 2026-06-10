@@ -224,11 +224,14 @@ export function StoreSettingsForm({ settings, onSaved }: Props) {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<StoreSettingsFormData>({
     resolver: zodResolver(storeSettingsSchema),
     defaultValues: {
-      name:       settings.store.name,
-      logoUrl:    settings.store.logoUrl ?? '',
-      bgImageUrl: settings.store.bgImageUrl ?? '',
-      lat:        settings.store.lat,
-      lng:        settings.store.lng,
+      name:         settings.store.name,
+      description:  settings.store.description ?? '',
+      announcement: settings.store.announcement ?? '',
+      logoUrl:      settings.store.logoUrl ?? '',
+      bannerUrl:    settings.store.bannerUrl ?? '',
+      bgImageUrl:   settings.store.bgImageUrl ?? '',
+      lat:          settings.store.lat,
+      lng:          settings.store.lng,
     },
   })
 
@@ -270,9 +273,12 @@ export function StoreSettingsForm({ settings, onSaved }: Props) {
     try {
       await updateStoreSettings({
         ...settings.store,
-        name:       data.name,
-        logoUrl:    data.logoUrl || undefined,
-        bgImageUrl: data.bgImageUrl || undefined,
+        name:         data.name,
+        description:  data.description  || undefined,
+        announcement: data.announcement || undefined,
+        logoUrl:      data.logoUrl      || undefined,
+        bannerUrl:    data.bannerUrl    || undefined,
+        bgImageUrl:   data.bgImageUrl   || undefined,
         ...(data.lat && data.lng && !isNaN(data.lat) && !isNaN(data.lng)
           ? { lat: data.lat, lng: data.lng }
           : {}),
@@ -295,6 +301,22 @@ export function StoreSettingsForm({ settings, onSaved }: Props) {
         placeholder="ร้านมะขาม"
       />
 
+      <Input
+        label="คำอธิบายร้าน"
+        {...register('description')}
+        placeholder="เช่น ลาบ ส้มตำ อาหารอีสาน รสต้นตำรับ · ส่งถึงโต๊ะ"
+      />
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">ประกาศ / โปรโมชัน</label>
+        <textarea
+          {...register('announcement')}
+          rows={2}
+          placeholder="เช่น โปรวันนี้! สั่ง 2 ได้ 1 ฟรี เมนูลูกชิ้นปิ้งทุกชนิด (ถ้าว่างจะไม่แสดง)"
+          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none resize-none"
+        />
+      </div>
+
       {/* Logo URL */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">URL โลโก้</label>
@@ -316,6 +338,17 @@ export function StoreSettingsForm({ settings, onSaved }: Props) {
             <div className="h-12 w-12 rounded-xl bg-gray-100 border border-dashed border-gray-300 flex-shrink-0 flex items-center justify-center text-gray-300 text-xs">โลโก้</div>
           )}
         </div>
+      </div>
+
+      {/* Banner/Cover URL */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-gray-700">URL รูป Cover (header card)</label>
+        <input
+          {...register('bannerUrl')}
+          placeholder="https://example.com/cover.jpg"
+          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-orange-400 outline-none"
+        />
+        <p className="text-xs text-gray-400">รูปแบนเนอร์ด้านบนการ์ดชื่อร้าน (แนะนำสัดส่วน 16:5)</p>
       </div>
 
       {/* Background URL */}

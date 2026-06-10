@@ -1,5 +1,5 @@
 'use client'
-import { Phone, ExternalLink, MapPin } from 'lucide-react'
+import { Phone, ExternalLink, MapPin, Star, Flame } from 'lucide-react'
 import type { StoreSettings } from '@/types'
 
 // ── SVG Icons ─────────────────────────────────────────────────────────────────
@@ -84,66 +84,107 @@ export function buildSocials(store: StoreSettings): SocialItem[] {
 // ── E: Store Profile Header ───────────────────────────────────────────────────
 interface ProfileProps {
   store: StoreSettings
+  items?: import('@/types').MenuItem[]
 }
 
-export function StoreProfileHeader({ store }: ProfileProps) {
+export function StoreProfileHeader({ store, items = [] }: ProfileProps) {
   const socials = buildSocials(store)
   const extra   = store.additionalLinks ?? []
-  const hasAny  = socials.length > 0 || extra.length > 0
+
+  // คำนวณคะแนนรวมจาก menu items ที่มีรีวิว
+  const ratedItems = items.filter((i) => i.ratingCount != null && (i.ratingCount ?? 0) > 0)
+  const storeRating = ratedItems.length > 0
+    ? ratedItems.reduce((sum, i) => sum + (i.avgRating ?? 0) * (i.ratingCount ?? 0), 0) /
+      ratedItems.reduce((sum, i) => sum + (i.ratingCount ?? 0), 0)
+    : null
+  const totalReviews = ratedItems.reduce((sum, i) => sum + (i.ratingCount ?? 0), 0)
+
+  const hasCover = !!(store.bannerUrl || store.bgImageUrl)
 
   return (
-    <div className="section-card relative overflow-hidden rounded-2xl border border-stone-100 bg-white shadow-sm">
-      {/* Decorative gradient bar top */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600" />
-
-      <div className="flex items-center gap-4 px-4 pt-4 pb-3">
-        {/* Logo or initials */}
-        {store.logoUrl ? (
+    <div className="section-card relative rounded-2xl border border-stone-100 bg-white shadow-sm">
+      {/* Cover photo zone */}
+      <div className="relative h-20 overflow-hidden rounded-t-2xl bg-gradient-to-br from-amber-700 via-orange-800 to-stone-900">
+        {hasCover && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={store.logoUrl} alt={store.name}
-            className="h-16 w-16 rounded-2xl object-cover border-2 border-amber-100 shadow-sm shrink-0" />
-        ) : (
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-sm shrink-0">
-            <span className="text-2xl font-bold text-white">
-              {store.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
+          <img
+            src={store.bannerUrl ?? store.bgImageUrl}
+            alt=""
+            className="h-full w-full object-cover opacity-70"
+          />
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+      </div>
 
-        {/* Name + address */}
-        <div className="min-w-0 flex-1">
-          <h2 className="font-bold text-stone-800 text-base leading-tight truncate">{store.name}</h2>
-          {store.address && (
-            <div className="flex items-center gap-1 mt-0.5 text-xs text-stone-400">
-              <MapPin size={11} className="shrink-0" />
-              <span className="truncate">{store.address}</span>
+      {/* Logo — overlaps cover */}
+      <div className="px-4 pb-3">
+        <div className="flex items-end justify-between -mt-7 mb-2">
+          {store.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={store.logoUrl}
+              alt={store.name}
+              className="h-14 w-14 rounded-2xl object-cover border-2 border-amber-400 shadow-md shrink-0"
+            />
+          ) : (
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-md border-2 border-amber-400 shrink-0">
+              <span className="text-xl font-bold text-white">{store.name.charAt(0).toUpperCase()}</span>
             </div>
           )}
 
-          {/* Social icon circles */}
-          {hasAny && (
-            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-              {socials.map((s) => (
-                <a key={s.key} href={s.href}
-                  target={s.key === 'phone' ? '_self' : '_blank'} rel="noreferrer"
-                  className={`flex h-8 w-8 items-center justify-center rounded-full border ${s.bgColor} ${s.iconColor} ${s.borderColor} shadow-sm active:scale-95 transition-transform`}
-                  title={s.label}
-                >
-                  {s.icon(15)}
-                </a>
-              ))}
-              {extra.map((link, i) => (
-                <a key={i} href={link.url} target="_blank" rel="noreferrer"
-                  className="flex h-8 items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100 px-2.5 text-xs font-medium text-stone-600 active:scale-95 transition-transform"
-                  title={link.label}
-                >
-                  <ExternalLink size={11} />
-                  <span>{link.label}</span>
-                </a>
-              ))}
+          {/* Store rating pill */}
+          {storeRating !== null && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 shadow-sm">
+              <Star size={12} className="fill-amber-400 text-amber-400" />
+              <span className="text-xs font-bold text-amber-700">{storeRating.toFixed(1)}</span>
+              <span className="text-[10px] text-stone-400">({totalReviews})</span>
             </div>
           )}
         </div>
+
+        {/* Name + description */}
+        <h2 className="font-bold text-stone-800 text-base leading-tight">{store.name}</h2>
+        {store.description && (
+          <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{store.description}</p>
+        )}
+        {store.address && !store.description && (
+          <div className="flex items-center gap-1 mt-0.5 text-xs text-stone-400">
+            <MapPin size={11} className="shrink-0" />
+            <span className="truncate">{store.address}</span>
+          </div>
+        )}
+
+        {/* Social icons */}
+        {(socials.length > 0 || extra.length > 0) && (
+          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+            {socials.map((s) => (
+              <a key={s.key} href={s.href}
+                target={s.key === 'phone' ? '_self' : '_blank'} rel="noreferrer"
+                className={`flex h-8 w-8 items-center justify-center rounded-full ${s.bgColor} ${s.iconColor} shadow-sm active:scale-95 transition-transform`}
+                title={s.label}
+              >
+                {s.icon(15)}
+              </a>
+            ))}
+            {extra.map((link, i) => (
+              <a key={i} href={link.url} target="_blank" rel="noreferrer"
+                className="flex h-8 items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100 px-2.5 text-xs font-medium text-stone-600 active:scale-95 transition-transform"
+                title={link.label}
+              >
+                <ExternalLink size={11} />
+                <span>{link.label}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Announcement banner */}
+        {store.announcement && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
+            <Flame size={14} className="text-orange-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-orange-700 leading-relaxed">{store.announcement}</p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -163,40 +204,44 @@ export function SocialFloatingBar({ store, hide = false, theme = 'light' }: Floa
 
   if ((socials.length === 0 && extra.length === 0) || hide) return null
 
-  const barBg     = theme === 'dark' ? 'rgba(21,14,6,0.92)' : 'rgba(255,255,255,0.92)'
-  const borderCol = theme === 'dark' ? '#3d2a10' : '#fed7aa'
+  const pillBg     = theme === 'dark' ? 'rgba(26,18,9,0.95)' : 'rgba(26,18,9,0.92)'
+  const dividerCol = theme === 'dark' ? '#3d2a10' : '#3d2a10'
 
   return (
     <div
       className="fixed bottom-16 left-0 right-0 z-30"
-      style={{ borderTop: `1px solid ${borderCol}` }}
+      style={{ borderTop: `1px solid ${dividerCol}` }}
     >
       <div
         className="mx-auto max-w-5xl px-3 py-2 backdrop-blur-md flex items-center gap-2 overflow-x-auto scrollbar-hide"
-        style={{ background: barBg }}
+        style={{ background: pillBg }}
       >
-        <span className="text-[10px] font-semibold shrink-0"
-          style={{ color: theme === 'dark' ? '#a8825a' : '#a8825a' }}>
-          ติดต่อ
-        </span>
-        <div className="w-px h-4 shrink-0" style={{ background: borderCol }} />
+        <span className="text-[10px] font-semibold text-[#a8825a] shrink-0 tracking-wide">ติดต่อ</span>
+        <div className="w-px h-4 shrink-0" style={{ background: dividerCol }} />
 
         {socials.map((s) => (
-          <a key={s.key} href={s.href}
-            target={s.key === 'phone' ? '_self' : '_blank'} rel="noreferrer"
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shrink-0 active:scale-95 transition-transform ${s.bgColor} ${s.iconColor} ${s.borderColor}`}
+          <a
+            key={s.key}
+            href={s.href}
+            target={s.key === 'phone' ? '_self' : '_blank'}
+            rel="noreferrer"
+            title={s.label}
+            className={`flex h-8 w-8 items-center justify-center rounded-full shrink-0 active:scale-90 transition-transform ${s.bgColor} ${s.iconColor}`}
           >
-            {s.icon(13)}
-            <span>{s.shortLabel}</span>
+            {s.icon(15)}
           </a>
         ))}
 
         {extra.map((link, i) => (
-          <a key={i} href={link.url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-full border border-stone-300 bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700 shrink-0 active:scale-95 transition-transform"
+          <a
+            key={i}
+            href={link.url}
+            target="_blank"
+            rel="noreferrer"
+            title={link.label}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-600 text-white shrink-0 active:scale-90 transition-transform"
           >
-            <ExternalLink size={11} />
-            <span>{link.label}</span>
+            <ExternalLink size={14} />
           </a>
         ))}
       </div>

@@ -142,6 +142,9 @@ export interface StoreSettings {
   lng: number
   logoUrl?: string
   bgImageUrl?: string
+  bannerUrl?: string             // รูป cover ด้านบน header
+  description?: string          // คำอธิบายร้าน 1 บรรทัด
+  announcement?: string         // ข้อความโปรโมชัน/ประกาศ
   // ช่องทางติดต่อ & โซเชียล
   phoneContact?: string          // เบอร์โทรร้าน (กด tel:)
   lineId?: string                // LINE ID หรือ LINE OA URL
