@@ -62,10 +62,9 @@ export default function CheckoutPage() {
     getSettings().then((s) => setLoyalty(s.loyalty ?? null)).catch(() => {})
   }, [])
 
-  // Debounce phone → ดึงแต้มลูกค้า
+  // Debounce phone → ดึงโปรไฟล์ลูกค้า (ทำงานเสมอ ไม่ขึ้นกับ loyalty)
   const phoneValue = watch('customerPhone')
   useEffect(() => {
-    if (!loyalty?.enabled) return
     if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current)
     const phone = (phoneValue ?? '').replace(/\D/g, '')
     if (phone.length !== 10) {
@@ -80,14 +79,14 @@ export default function CheckoutPage() {
       setSelectedRedeem(null)
       setRedeemQty(1)
       setLoadingProfile(false)
-      // auto-fill name if profile has one and field is currently empty
       if (profile?.name) {
-        const currentName = (document.querySelector('input[name="customerName"]') as HTMLInputElement)?.value ?? ''
-        if (!currentName.trim()) setValue('customerName', profile.name)
+        setValue('customerName', profile.name)
+      } else {
+        setValue('customerName', '')
       }
     }, 500)
     return () => { if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current) }
-  }, [phoneValue, loyalty?.enabled])
+  }, [phoneValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const subtotal = getTotalPrice()
   const fee = orderType === 'delivery' ? (deliveryFee ?? 0) : 0
@@ -274,8 +273,37 @@ export default function CheckoutPage() {
         {/* Customer info */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
           <h2 className="font-semibold text-stone-700">ข้อมูลลูกค้า</h2>
-          <Input label="ชื่อ *" {...register('customerName')} error={errors.customerName?.message} placeholder="ชื่อ-นามสกุล" />
-          <Input label="เบอร์โทร *" {...register('customerPhone')} error={errors.customerPhone?.message} placeholder="0812345678" type="tel" />
+          <Input label="เบอร์โทร *" {...register('customerPhone')} error={errors.customerPhone?.message} placeholder="0812345678" type="tel" inputMode="numeric" />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-stone-600">
+              ชื่อ *
+              {loadingProfile && <span className="ml-2 text-xs text-stone-400 font-normal">กำลังตรวจสอบ...</span>}
+              {!loadingProfile && customerProfile && (
+                <span className="ml-2 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">สมาชิก</span>
+              )}
+              {!loadingProfile && customerProfile === null && (phoneValue ?? '').replace(/\D/g, '').length === 10 && (
+                <span className="ml-2 text-xs text-stone-400 font-normal">ลูกค้าใหม่ — กรอกชื่อ</span>
+              )}
+            </label>
+            <input
+              {...register('customerName')}
+              readOnly={!!customerProfile}
+              placeholder={
+                loadingProfile ? 'กำลังตรวจสอบ...'
+                : customerProfile ? customerProfile.name
+                : 'ชื่อ-นามสกุล'
+              }
+              className={[
+                'w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors',
+                customerProfile
+                  ? 'border-amber-200 bg-amber-50 text-amber-800 cursor-default'
+                  : 'border-gray-200 bg-white focus:border-orange-400',
+              ].join(' ')}
+            />
+            {errors.customerName?.message && (
+              <p className="text-xs text-red-500">{errors.customerName.message}</p>
+            )}
+          </div>
         </section>
 
         {/* ── Loyalty Points Section ── */}
