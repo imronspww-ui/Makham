@@ -149,14 +149,8 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-                {popularItems.map((item, i) => (
-                  <div
-                    key={`pop-${item.id}`}
-                    className="animate-card-enter"
-                    style={{ animationDelay: `${i * 55}ms` }}
-                  >
-                    <MenuCard item={item} showPopularBadge={false} />
-                  </div>
+                {popularItems.map((item) => (
+                  <MenuCard key={`pop-${item.id}`} item={item} showPopularBadge={false} />
                 ))}
               </div>
               <div className="border-t border-stone-100 mt-1" />
@@ -177,14 +171,8 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
             <div className="py-12 text-center text-stone-400">ยังไม่มีเมนูในหมวดนี้</div>
           ) : (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-              {filtered.map((item, i) => (
-                <div
-                  key={item.id}
-                  className="animate-card-enter"
-                  style={{ animationDelay: `${i * 45}ms` }}
-                >
-                  <MenuCard item={item} />
-                </div>
+              {filtered.map((item) => (
+                <MenuCard key={item.id} item={item} />
               ))}
             </div>
           )}
