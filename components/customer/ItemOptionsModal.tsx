@@ -99,26 +99,31 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
   const totalPrice = unitPrice * qty
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Dialog — centered บนทุก breakpoint */}
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl max-h-[85vh] flex flex-col shadow-2xl">
+      {/* Bottom sheet (mobile) / centered dialog (desktop) */}
+      <div className="relative z-10 w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl animate-sheet-up">
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-start justify-between p-4 border-b border-gray-100">
+        <div className="flex items-start justify-between px-5 pt-3 pb-4 border-b border-gray-100">
           <div>
-            <h2 className="font-bold text-gray-800 text-lg">{item.name}</h2>
-            <p className="text-sm text-orange-600 font-semibold">{formatCurrency(item.price)}</p>
+            <h2 className="font-bold text-gray-800 text-lg leading-tight">{item.name}</h2>
+            <p className="text-sm text-orange-600 font-semibold mt-0.5">{formatCurrency(item.price)}</p>
           </div>
           <button onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
+            className="p-1.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 mt-0.5">
             <X size={20} />
           </button>
         </div>
 
         {/* Scrollable options */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
           {(item.optionGroups ?? []).map((group) => (
             <div key={group.id}>
               <div className="flex items-center gap-2 mb-2">
@@ -190,7 +195,7 @@ export function ItemOptionsModal({ item, onClose, onAdd, initialSelections = {},
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 flex flex-col gap-3">
+        <div className="px-5 py-4 border-t border-gray-100 flex flex-col gap-3 pb-safe">
           {/* Qty selector — hidden in edit mode */}
           {!isEdit && (
             <div className="flex items-center justify-between">
