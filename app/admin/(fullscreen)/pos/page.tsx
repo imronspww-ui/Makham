@@ -931,13 +931,6 @@ export default function PosPage() {
                       <span className="text-xs font-bold text-amber-300">{h.label}</span>
                       <span className="text-[10px] text-amber-500">{formatCurrency(h.total)}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); cancelHeld(h.id) }}
-                      className="text-amber-700 hover:text-red-400 transition-colors ml-0.5"
-                    >
-                      <X size={12} />
-                    </button>
                   </div>
                 ))}
               </div>

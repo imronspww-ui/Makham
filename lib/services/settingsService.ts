@@ -64,7 +64,8 @@ export async function toggleDeliveryEnabled(enabled: boolean): Promise<void> {
 
 export async function updateStoreSettings(data: StoreSettings): Promise<void> {
   requireFirebase()
-  await setDoc(doc(db, 'settings', 'main'), { store: data }, { merge: true })
+  const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined))
+  await setDoc(doc(db, 'settings', 'main'), { store: clean }, { merge: true })
   cacheClear('settings:')
 }
 

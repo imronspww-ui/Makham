@@ -118,7 +118,7 @@ export function StoreProfileHeader({ store, items = [] }: ProfileProps) {
 
       {/* Logo — overlaps cover */}
       <div className="px-4 pb-3">
-        <div className="flex items-end justify-between -mt-7 mb-2">
+        <div className="relative z-10 flex items-end justify-between -mt-7 mb-2">
           {store.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
