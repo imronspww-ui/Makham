@@ -292,12 +292,13 @@ export default function PosPage() {
       .slice(0, 6)
   }, [memberPhone, allCustomers, memberProfile])
 
-  // Auto-search เมื่อพิมพ์ครบ 10 หลัก
+  // Auto-search เมื่อพิมพ์ครบ 10 หลัก (เฉพาะตัวเลข)
   useEffect(() => {
-    if (memberPhone.length === 10) {
+    const isPhone = /^\d{10}$/.test(memberPhone)
+    if (isPhone) {
       setShowDropdown(false)
       searchMember(memberPhone)
-    } else if (memberPhone.length < 9) {
+    } else if (memberPhone.length < 9 || !/^\d+$/.test(memberPhone)) {
       setMemberProfile(null)
     }
   }, [memberPhone, searchMember])
@@ -1045,12 +1046,13 @@ export default function PosPage() {
               <div className="relative">
                 <Phone size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 z-10" />
                 <input
-                  type="tel"
-                  inputMode="numeric"
+                  type="text"
+                  inputMode="text"
                   value={memberPhone}
                   onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, '').slice(0, 10)
-                    setMemberPhone(v)
+                    const v = e.target.value
+                    const isNumeric = /^\d+$/.test(v)
+                    setMemberPhone(isNumeric ? v.slice(0, 10) : v)
                     setShowCartDropdown(true)
                   }}
                   onFocus={() => setShowCartDropdown(true)}
@@ -1358,12 +1360,13 @@ export default function PosPage() {
                     <div className="relative flex-1">
                       <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700 z-10" />
                       <input
-                        type="tel"
-                        inputMode="numeric"
+                        type="text"
+                        inputMode="text"
                         value={memberPhone}
                         onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, '').slice(0, 10)
-                          setMemberPhone(v)
+                          const v = e.target.value
+                          const isNumeric = /^\d+$/.test(v)
+                          setMemberPhone(isNumeric ? v.slice(0, 10) : v)
                           setShowDropdown(true)
                         }}
                         onFocus={() => setShowDropdown(true)}
