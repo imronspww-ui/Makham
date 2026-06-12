@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Upload, ImageIcon, Star, Gift, CheckCircle } from 'lucide-react'
+import { ThaiChangThaiInlineNotice } from '@/components/customer/ThaiChangThaiBanner'
 import { useCartStore } from '@/store/cartStore'
 import { useCheckoutStore } from '@/store/checkoutStore'
 import { useOrderHistoryStore } from '@/store/orderHistoryStore'
@@ -433,6 +434,7 @@ export default function CheckoutPage() {
         {/* Payment */}
         <section className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
           <h2 className="font-semibold text-stone-700">วิธีชำระเงิน</h2>
+          <ThaiChangThaiInlineNotice />
           <PaymentSection />
         </section>
 
