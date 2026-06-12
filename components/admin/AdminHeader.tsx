@@ -40,15 +40,15 @@ export function AdminHeader() {
   })
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-3.5 shrink-0">
+    <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-3.5 shrink-0">
       {meta ? (
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/15 text-orange-400">
             <meta.icon size={16} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-800 leading-tight">{meta.label}</p>
-            <p className="text-xs text-gray-400 leading-tight">{meta.desc}</p>
+            <p className="text-sm font-bold text-zinc-100 leading-tight">{meta.label}</p>
+            <p className="text-xs text-zinc-500 leading-tight">{meta.desc}</p>
           </div>
         </div>
       ) : (
@@ -56,9 +56,9 @@ export function AdminHeader() {
       )}
 
       {/* Date + time */}
-      <div className="flex items-center gap-2 text-xs text-gray-400">
+      <div className="flex items-center gap-2 text-xs text-zinc-500">
         <span>{today}</span>
-        <span className="font-mono bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-gray-600 font-medium">
+        <span className="font-mono bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-zinc-300 font-medium">
           {time}
         </span>
       </div>

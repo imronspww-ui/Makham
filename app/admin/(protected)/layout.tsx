@@ -34,7 +34,7 @@ function AdminAlertProvider() {
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div data-theme="admin-dark" className="flex h-screen overflow-hidden bg-zinc-950">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <AdminServiceWorker />
