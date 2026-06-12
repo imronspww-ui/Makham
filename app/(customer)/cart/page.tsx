@@ -48,10 +48,25 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 text-stone-400">
-        <ShoppingCart size={60} strokeWidth={1.5} />
-        <p className="text-lg">ตะกร้าว่างเปล่า</p>
-        <Link href="/"><Button variant="outline">เลือกเมนู</Button></Link>
+      <div className="flex flex-col items-center justify-center gap-6 py-16 px-6 text-center">
+        {/* Illustration */}
+        <div className="relative">
+          <div className="flex h-28 w-28 items-center justify-center rounded-full bg-orange-50">
+            <ShoppingCart size={52} strokeWidth={1.2} className="text-orange-300" />
+          </div>
+          {/* floating dots */}
+          <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-orange-100 flex items-center justify-center">
+            <span className="text-[10px]">🍜</span>
+          </div>
+          <div className="absolute bottom-0 -left-2 h-6 w-6 rounded-full bg-amber-50 flex items-center justify-center">
+            <span className="text-xs">🥢</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-lg font-semibold text-gray-700">ตะกร้าว่างเปล่า</p>
+          <p className="text-sm text-gray-400">เลือกเมนูอร่อยๆ แล้วเพิ่มลงตะกร้าเลย</p>
+        </div>
+        <Link href="/"><Button>ดูเมนูอาหาร</Button></Link>
       </div>
     )
   }

@@ -33,6 +33,24 @@ export function MenuGridSkeleton() {
   )
 }
 
+export function OrderCardSkeleton() {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+      <div className="flex-1 flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+        </div>
+        <div className="flex gap-1">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-1 flex-1 rounded-full" />)}
+        </div>
+        <Skeleton className="h-3 w-28" />
+      </div>
+      <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+    </div>
+  )
+}
+
 export function OrderRowSkeleton() {
   return (
     <tr className="border-t border-gray-50">

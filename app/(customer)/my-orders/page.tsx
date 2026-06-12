@@ -249,13 +249,23 @@ export default function MyOrdersPage() {
   if (orders.length === 0 && extraOrders.length === 0) {
     return (
       <div className="max-w-lg mx-auto flex flex-col gap-5">
-        <div className="min-h-[50vh] py-16 flex flex-col items-center gap-4 text-gray-400">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-50">
-            <ShoppingBag size={36} className="text-gray-200" />
+        <div className="py-14 flex flex-col items-center gap-5 text-center px-6">
+          <div className="relative">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gray-50">
+              <ShoppingBag size={50} strokeWidth={1.2} className="text-gray-200" />
+            </div>
+            <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-orange-50 flex items-center justify-center">
+              <span className="text-sm">🍱</span>
+            </div>
+            <div className="absolute bottom-1 -left-2 h-5 w-5 rounded-full bg-amber-50 flex items-center justify-center">
+              <span className="text-[10px]">⏱️</span>
+            </div>
           </div>
-          <p className="text-base">ยังไม่มีประวัติออเดอร์</p>
-          <p className="text-sm text-gray-300">ออเดอร์ที่สั่งจะแสดงที่นี่</p>
-          <Link href="/"><Button variant="outline">เริ่มสั่งอาหาร</Button></Link>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-base font-semibold text-gray-700">ยังไม่มีประวัติออเดอร์</p>
+            <p className="text-sm text-gray-400">ออเดอร์ที่คุณสั่งจะปรากฏที่นี่<br/>สั่งอาหารแล้วติดตามสถานะได้เลย</p>
+          </div>
+          <Link href="/"><Button>เริ่มสั่งอาหาร</Button></Link>
         </div>
         <PhoneLookup onFound={setPhoneOrders} />
       </div>

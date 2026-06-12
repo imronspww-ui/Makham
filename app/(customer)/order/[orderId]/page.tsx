@@ -373,10 +373,29 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
         </div>
       </div>
 
+      {/* ── Wait time estimate ── */}
+      {(order.status === 'pending' || order.status === 'cooking') && (
+        <div className="flex items-center gap-3 rounded-2xl bg-orange-50 border border-orange-100 px-4 py-3.5 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-100">
+            <Clock size={20} className="text-orange-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-orange-500 font-medium uppercase tracking-wide">เวลารอโดยประมาณ</p>
+            <p className="text-lg font-bold text-orange-700 leading-tight">
+              {order.status === 'pending' ? '15–25 นาที' : '10–15 นาที'}
+            </p>
+            <p className="text-xs text-orange-400 mt-0.5">
+              {order.status === 'pending' ? 'รอร้านยืนยันและเริ่มทำอาหาร' : 'กำลังเตรียมอาหาร ใกล้เสร็จแล้ว'}
+            </p>
+          </div>
+          <span className="text-2xl">🍳</span>
+        </div>
+      )}
+
       {/* ── Vertical Timeline ── */}
       {order.status !== 'cancelled' && (
         <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-700 text-sm">สถานะออเดอร์</h2>
             {order.status !== 'completed' && (
               <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
@@ -384,6 +403,18 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
                 อัปเดตสดทันที
               </span>
             )}
+          </div>
+
+          {/* Horizontal step progress bar */}
+          <div className="flex items-center gap-1 mb-5">
+            {FLOW.map((s, i) => (
+              <div key={s} className="flex-1 flex flex-col items-center gap-1">
+                <div className={[
+                  'h-1.5 w-full rounded-full transition-all duration-700',
+                  currentStep >= i ? 'bg-orange-500' : 'bg-gray-100',
+                ].join(' ')} />
+              </div>
+            ))}
           </div>
 
           <div className="flex flex-col">
