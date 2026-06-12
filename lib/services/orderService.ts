@@ -17,6 +17,7 @@ import {
 import { isFirebaseConfigured } from '@/lib/firebase/config'
 import type { Order, OrderStatus } from '@/types'
 import { adjustCustomerPoints } from '@/lib/services/customerService'
+import { trackMenuOrders } from '@/lib/services/menuStatsService'
 
 const COL = 'orders'
 
@@ -65,6 +66,9 @@ export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'update
   requireFirebase()
   const now = Timestamp.now()
   const ref = await addDoc(collection(db, COL), { ...data, createdAt: now, updatedAt: now })
+  // fire-and-forget: track daily order counts per menu item
+  const menuItemIds = [...new Set(data.items.map(i => i.menuItemId))]
+  trackMenuOrders(menuItemIds).catch(() => {})
   return ref.id
 }
 

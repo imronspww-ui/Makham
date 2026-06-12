@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ClipboardList, UtensilsCrossed,
-  Settings, LogOut, ExternalLink, Store, Users, ShoppingBag, TrendingDown, QrCode,
+  Settings, LogOut, ExternalLink, Store, Users, ShoppingBag, TrendingDown, QrCode, BarChart2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSettings } from '@/lib/hooks/useSettings'
@@ -14,7 +14,8 @@ const adminNavItems = [
   { href: '/admin/orders',    label: 'ออเดอร์',        icon: ClipboardList   },
   { href: '/admin/menu',      label: 'จัดการเมนู',     icon: UtensilsCrossed },
   { href: '/admin/customers', label: 'ลูกค้า',         icon: Users           },
-  { href: '/admin/costs',     label: 'ต้นทุน & กำไร',  icon: TrendingDown    },
+  { href: '/admin/costs',      label: 'ต้นทุน & กำไร',  icon: TrendingDown    },
+  { href: '/admin/analytics', label: 'วิเคราะห์',       icon: BarChart2       },
   { href: '/admin/tables',    label: 'QR โต๊ะ',         icon: QrCode          },
   { href: '/admin/settings',  label: 'ตั้งค่า',         icon: Settings        },
 ]

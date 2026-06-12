@@ -17,6 +17,7 @@ import {
   onSnapshot,
   runTransaction,
   writeBatch,
+  increment,
   Timestamp,
   type DocumentData,
   type Firestore,
@@ -77,5 +78,6 @@ export {
   onSnapshot,
   runTransaction,
   writeBatch,
+  increment,
   Timestamp,
 }

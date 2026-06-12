@@ -1,21 +1,25 @@
 'use client'
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { Plus, UtensilsCrossed, Flame, Star } from 'lucide-react'
+import { Plus, UtensilsCrossed, Flame, Star, Eye } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { ItemOptionsModal } from '@/components/customer/ItemOptionsModal'
+import { MenuQuickViewModal } from '@/components/customer/MenuQuickViewModal'
 import { formatCurrency } from '@/lib/utils/format'
 import { flyToCart } from '@/lib/utils/flyToCart'
+import { trackMenuClick } from '@/lib/services/menuStatsService'
 import type { MenuItem, SelectedOption } from '@/types'
 
 interface Props {
   item: MenuItem
   showPopularBadge?: boolean
+  ordersToday?: number
 }
 
-export function MenuCard({ item, showPopularBadge = true }: Props) {
+export function MenuCard({ item, showPopularBadge = true, ordersToday }: Props) {
   const { addItem, items } = useCartStore()
-  const [imgError,    setImgError]    = useState(false)
-  const [showOptions, setShowOptions] = useState(false)
+  const [imgError,     setImgError]     = useState(false)
+  const [showOptions,  setShowOptions]  = useState(false)
+  const [showQuickView, setShowQuickView] = useState(false)
 
   const [popping, setPopping] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -118,6 +122,22 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
             </div>
           )}
 
+          {/* Quick-view button */}
+          {!unavailable && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                trackMenuClick(item.id).catch(() => {})
+                setShowQuickView(true)
+              }}
+              className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors opacity-0 group-hover:opacity-100 sm:flex hidden"
+              aria-label="ดูรายละเอียด"
+            >
+              <Eye size={13} />
+            </button>
+          )}
+
           {/* Cart qty badge — ติดมุมขวาบนภาพ */}
           {cartQty > 0 && (
             <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shadow-md ring-2 ring-white">
@@ -135,7 +155,7 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
           )}
 
           {/* Tags row */}
-          {(hasOptions || (item.avgRating != null && item.ratingCount != null && item.ratingCount > 0)) && (
+          {(hasOptions || (item.avgRating != null && item.ratingCount != null && item.ratingCount > 0) || (ordersToday != null && ordersToday > 0)) && (
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               {hasOptions && (
                 <span className="item-tag rounded-full bg-stone-100 text-[10px] font-medium text-stone-400 px-2 py-0.5">
@@ -147,6 +167,11 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
                   <Star size={9} className="fill-amber-400 text-amber-400" />
                   {item.avgRating.toFixed(1)}
                   <span className="text-stone-400 font-normal">({item.ratingCount})</span>
+                </span>
+              )}
+              {ordersToday != null && ordersToday > 0 && (
+                <span className="rounded-full bg-orange-50 text-[10px] font-semibold text-orange-500 px-2 py-0.5">
+                  🔥 {ordersToday} คนวันนี้
                 </span>
               )}
             </div>
@@ -188,6 +213,14 @@ export function MenuCard({ item, showPopularBadge = true }: Props) {
           item={item}
           onClose={() => setShowOptions(false)}
           onAdd={handleModalAdd}
+        />
+      )}
+
+      {showQuickView && (
+        <MenuQuickViewModal
+          item={item}
+          ordersToday={ordersToday}
+          onClose={() => setShowQuickView(false)}
         />
       )}
     </>

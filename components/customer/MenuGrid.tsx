@@ -7,6 +7,7 @@ import { HeroBanner } from './HeroBanner'
 import { ItemOptionsModal } from './ItemOptionsModal'
 import { MenuGridSkeleton } from '@/components/ui/Skeleton'
 import { useCartStore } from '@/store/cartStore'
+import { useMenuStats } from '@/lib/hooks/useMenuStats'
 import type { MenuItem, Category, SelectedOption } from '@/types'
 
 interface Props {
@@ -21,6 +22,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
   const [search, setSearch] = useState('')
   const [bannerItem, setBannerItem] = useState<MenuItem | null>(null)
   const { addItem } = useCartStore()
+  const menuStats = useMenuStats()
 
   function handleBannerSelect(item: MenuItem) {
     if ((item.optionGroups ?? []).length === 0) {
@@ -125,7 +127,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
           ) : (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {filtered.map((item) => (
-                <MenuCard key={item.id} item={item} showPopularBadge />
+                <MenuCard key={item.id} item={item} showPopularBadge ordersToday={menuStats[item.id]?.ordersToday} />
               ))}
             </div>
           )}
@@ -150,7 +152,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
                 {popularItems.map((item) => (
-                  <MenuCard key={`pop-${item.id}`} item={item} showPopularBadge={false} />
+                  <MenuCard key={`pop-${item.id}`} item={item} showPopularBadge={false} ordersToday={menuStats[item.id]?.ordersToday} />
                 ))}
               </div>
               <div className="border-t border-stone-100 mt-1" />
@@ -172,7 +174,7 @@ export function MenuGrid({ items, categories, loading, error }: Props) {
           ) : (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {filtered.map((item) => (
-                <MenuCard key={item.id} item={item} />
+                <MenuCard key={item.id} item={item} ordersToday={menuStats[item.id]?.ordersToday} />
               ))}
             </div>
           )}
