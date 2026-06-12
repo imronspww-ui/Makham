@@ -1,5 +1,5 @@
 'use client'
-import { QrCode, Store, Truck, Clock, ShieldAlert, Star, Receipt, UtensilsCrossed, KeyRound, Phone } from 'lucide-react'
+import { QrCode, Store, Truck, Clock, ShieldAlert, Star, Receipt, UtensilsCrossed, KeyRound, Phone, Wallet } from 'lucide-react'
 import { useSettings } from '@/lib/hooks/useSettings'
 import { PromptPaySettingsForm, DeliverySettingsForm, StoreSettingsForm } from '@/components/admin/SettingsForm'
 import { ContactSettingsForm } from '@/components/admin/ContactSettingsForm'
@@ -8,6 +8,7 @@ import { LoyaltySettingsForm } from '@/components/admin/LoyaltySettingsForm'
 import { ReceiptSettingsForm } from '@/components/admin/ReceiptSettingsForm'
 import { TableQRManager } from '@/components/admin/TableQRManager'
 import { DangerZoneForm } from '@/components/admin/DangerZoneForm'
+import { ThaiChangThaiSettingsForm } from '@/components/admin/ThaiChangThaiSettingsForm'
 import { StaffAccountsForm } from '@/components/admin/StaffAccountsForm'
 import { Spinner } from '@/components/ui/Spinner'
 import { FirebaseBanner } from '@/components/admin/FirebaseBanner'
@@ -54,6 +55,19 @@ export default function SettingsPage() {
           <h2 className="font-semibold text-gray-700">ข้อมูล PromptPay</h2>
         </div>
         <PromptPaySettingsForm settings={settings} onSaved={reload} />
+      </div>
+
+      <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <Wallet size={16} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-700">ไทยช่วยไทยพลัส 60/40</h2>
+            <p className="text-xs text-gray-400">อัปโหลด Merchant QR จากกรุงไทยเพื่อรับชำระผ่านเป๋าตัง</p>
+          </div>
+        </div>
+        <ThaiChangThaiSettingsForm settings={settings} onSaved={reload} />
       </div>
 
       <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">

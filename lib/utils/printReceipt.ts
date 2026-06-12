@@ -18,7 +18,7 @@ export interface ReceiptData {
   orderNumber:       string
   paidAt:            Date
   orderType?:        'pickup' | 'delivery' | 'dine-in'
-  paymentMethod?:    'cash' | 'promptpay'
+  paymentMethod?:    'cash' | 'promptpay' | 'thaichangthai'
   items:             ReceiptItem[]
   subtotal:          number
   discountAmount:    number
@@ -57,6 +57,7 @@ function orderTypeLabel(t?: string) {
 
 function paymentLabel(m?: string) {
   if (m === 'promptpay') return 'พร้อมเพย์'
+  if (m === 'thaichangthai') return 'ไทยช่วยไทยพลัส 60/40'
   return 'เงินสด'
 }
 

@@ -273,7 +273,7 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 
   const info = statusInfo[order.status]
   const currentStep = FLOW.indexOf(order.status)
-  const needsSlip = order.payment.method === 'promptpay'
+  const needsSlip = (order.payment.method === 'promptpay' || order.payment.method === 'thaichangthai')
     && order.payment.status === 'pending'
     && order.status !== 'cancelled'
   const hasSlip = !!order.payment.slipUrl
@@ -349,7 +349,7 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 
           <div className="flex justify-between text-xs text-stone-400">
             <span>ชำระด้วย</span>
-            <span>{order.payment.method === 'promptpay' ? 'QR PromptPay' : 'เงินสด'}</span>
+            <span>{order.payment.method === 'promptpay' ? 'QR PromptPay' : order.payment.method === 'thaichangthai' ? 'ไทยช่วยไทยพลัส' : 'เงินสด'}</span>
           </div>
           {order.customer.name && (
             <div className="flex justify-between text-xs text-stone-400 mt-0.5">

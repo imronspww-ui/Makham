@@ -76,7 +76,7 @@ export interface CartItem {
 
 export type OrderType = 'pickup' | 'delivery' | 'dine-in'
 export type OrderStatus = 'pending' | 'cooking' | 'delivering' | 'completed' | 'cancelled'
-export type PaymentMethod = 'promptpay' | 'cash'
+export type PaymentMethod = 'promptpay' | 'cash' | 'thaichangthai'
 export type PaymentStatus = 'pending' | 'paid'
 
 export interface OrderItem {
@@ -245,6 +245,11 @@ export interface CostItem {
   type: 'fixed' | 'variable'
 }
 
+export interface ThaiChangThaiSettings {
+  qrUrl: string       // URL รูป Merchant QR จากกรุงไทย
+  accountName: string // ชื่อร้านที่ลงทะเบียน
+}
+
 export interface Settings {
   store: StoreSettings
   promptpay: PromptPaySettings
@@ -255,6 +260,7 @@ export interface Settings {
   costs?: CostItem[]       // ค่าใช้จ่ายร้านรายเดือน
   reservePercent?: number  // % เงินสำรองร้าน (0-100), default 20
   staffPinHash?: string    // legacy — replaced by StaffAccount per-person PIN
+  thaichangthai?: ThaiChangThaiSettings
 }
 
 // ─── Staff Accounts ───────────────────────────────────────────────────────────

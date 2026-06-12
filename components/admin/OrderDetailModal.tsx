@@ -33,7 +33,7 @@ export function OrderDetailModal({ order, onClose, onUpdated }: Props) {
         orderNumber:    order.orderNumber,
         paidAt:         new Date(order.createdAt),
         orderType:      order.orderType as 'pickup' | 'delivery' | 'dine-in',
-        paymentMethod:  order.payment.method as 'cash' | 'promptpay' | undefined,
+        paymentMethod:  order.payment.method as 'cash' | 'promptpay' | 'thaichangthai' | undefined,
         items:          order.items.map((i) => ({
           name:    i.name,
           price:   i.price,

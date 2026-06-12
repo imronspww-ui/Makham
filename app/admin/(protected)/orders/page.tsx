@@ -28,6 +28,7 @@ function orderTypeLabel(t: string) {
 function paymentLabel(method?: string, status?: string) {
   const paid = status === 'paid'
   if (method === 'promptpay') return { icon: paid ? '✅' : '⏳', label: 'พร้อมเพย์' }
+  if (method === 'thaichangthai') return { icon: paid ? '✅' : '⏳', label: 'ไทยช่วยไทยพลัส' }
   return { icon: paid ? '✅' : '⏳', label: 'เงินสด' }
 }
 

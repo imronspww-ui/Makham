@@ -1,7 +1,7 @@
 import { db, doc, getDoc, setDoc, onSnapshot } from '@/lib/firebase/firestore'
 import { isFirebaseConfigured } from '@/lib/firebase/config'
 import { cacheGet, cacheSet, cacheClear } from '@/lib/utils/cache'
-import type { Settings, PromptPaySettings, DeliverySettings, StoreSettings, OpeningHoursSettings, LoyaltySettings, ReceiptSettings, CostItem } from '@/types'
+import type { Settings, PromptPaySettings, DeliverySettings, StoreSettings, OpeningHoursSettings, LoyaltySettings, ReceiptSettings, CostItem, ThaiChangThaiSettings } from '@/types'
 
 const CACHE_KEY = 'settings:main'
 const TTL = 5 * 60_000
@@ -96,6 +96,12 @@ export async function updateStoreCosts(costs: CostItem[]): Promise<void> {
 export async function updateReservePercent(reservePercent: number): Promise<void> {
   requireFirebase()
   await setDoc(doc(db, 'settings', 'main'), { reservePercent }, { merge: true })
+  cacheClear('settings:')
+}
+
+export async function updateThaiChangThaiSettings(data: ThaiChangThaiSettings): Promise<void> {
+  requireFirebase()
+  await setDoc(doc(db, 'settings', 'main'), { thaichangthai: data }, { merge: true })
   cacheClear('settings:')
 }
 

@@ -146,8 +146,8 @@ export default function CheckoutPage() {
       toast.error('กรุณาตรวจสอบระยะทางจัดส่งก่อน')
       return
     }
-    // Require slip for PromptPay
-    if (paymentMethod === 'promptpay' && !slipUrl) {
+    // Require slip for PromptPay / ไทยช่วยไทยพลัส
+    if ((paymentMethod === 'promptpay' || paymentMethod === 'thaichangthai') && !slipUrl) {
       toast.error('กรุณาแนบสลิปการโอนเงินก่อนยืนยัน')
       return
     }
@@ -436,8 +436,8 @@ export default function CheckoutPage() {
           <PaymentSection />
         </section>
 
-        {/* Slip upload — PromptPay only */}
-        {paymentMethod === 'promptpay' && (
+        {/* Slip upload — PromptPay / ไทยช่วยไทยพลัส */}
+        {(paymentMethod === 'promptpay' || paymentMethod === 'thaichangthai') && (
           <section className="rounded-2xl bg-white border border-orange-100 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <ImageIcon size={16} className="text-orange-400" />

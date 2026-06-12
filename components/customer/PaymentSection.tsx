@@ -18,6 +18,7 @@ export function PaymentSection() {
 
   const total = getTotalPrice() + (deliveryFee ?? 0)
   const promptpay = settings?.promptpay
+  const tctSettings = settings?.thaichangthai
 
   useEffect(() => {
     if (paymentMethod === 'promptpay' && promptpay?.phone) {
@@ -33,19 +34,23 @@ export function PaymentSection() {
 
   const options: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
     { value: 'promptpay', label: 'QR PromptPay', icon: <QrCode size={18} /> },
+    { value: 'thaichangthai', label: 'ไทยช่วยไทยพลัส', icon: <span className="text-base leading-none">🇹🇭</span> },
     { value: 'cash', label: 'เงินสด', icon: <Banknote size={18} /> },
   ]
 
+  const customerPays = Math.ceil(total * 0.6)
+  const govPays = total - customerPays
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {options.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => setPaymentMethod(opt.value)}
             className={[
-              'flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all',
+              'flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-3 text-xs font-medium transition-all',
               paymentMethod === opt.value
                 ? 'border-orange-600 bg-orange-50 text-orange-600'
                 : 'border-gray-200 text-gray-600 hover:border-orange-300',
@@ -79,6 +84,36 @@ export function PaymentSection() {
             <p className="py-4 text-sm text-gray-400">
               {promptpay?.phone ? 'ไม่สามารถสร้าง QR ได้' : 'ยังไม่มีข้อมูล PromptPay กรุณาติดต่อร้าน'}
             </p>
+          )}
+        </div>
+      )}
+
+      {paymentMethod === 'thaichangthai' && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <div className="w-full rounded-xl bg-white border border-blue-100 px-3 py-2.5 flex flex-col gap-1 text-sm">
+            <p className="font-semibold text-blue-700 text-center">ไทยช่วยไทยพลัส 60/40</p>
+            <div className="flex justify-between text-blue-600">
+              <span>คุณจ่าย (60%)</span>
+              <span className="font-bold">{formatCurrency(customerPays)}</span>
+            </div>
+            <div className="flex justify-between text-blue-400">
+              <span>รัฐบาลจ่าย (40%)</span>
+              <span className="font-bold">{formatCurrency(govPays)}</span>
+            </div>
+          </div>
+          {tctSettings?.qrUrl ? (
+            <>
+              <Image src={tctSettings.qrUrl} alt="ไทยช่วยไทยพลัส QR" width={220} height={220} className="rounded-xl" />
+              <div className="text-center text-sm">
+                {tctSettings.accountName && (
+                  <p className="text-gray-600">ชื่อร้าน: <span className="font-semibold">{tctSettings.accountName}</span></p>
+                )}
+                <p className="mt-1 text-xs text-blue-500">สแกนด้วยแอปเป๋าตัง → ไทยช่วยไทยพลัส</p>
+                <p className="text-base font-bold text-blue-600 mt-1">คุณจ่าย {formatCurrency(customerPays)}</p>
+              </div>
+            </>
+          ) : (
+            <p className="py-4 text-sm text-gray-400">ยังไม่ได้ตั้งค่า QR ไทยช่วยไทยพลัส กรุณาติดต่อร้าน</p>
           )}
         </div>
       )}
