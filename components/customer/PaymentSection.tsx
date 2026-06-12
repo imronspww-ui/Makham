@@ -18,10 +18,9 @@ export function PaymentSection() {
 
   const total = getTotalPrice() + (deliveryFee ?? 0)
   const promptpay = settings?.promptpay
-  const tctSettings = settings?.thaichangthai
 
   useEffect(() => {
-    if (paymentMethod === 'promptpay' && promptpay?.phone) {
+    if ((paymentMethod === 'promptpay' || paymentMethod === 'thaichangthai') && promptpay?.phone) {
       setLoadingQr(true)
       generatePromptPayQR(promptpay.phone, total)
         .then(setQrUrl)
@@ -101,19 +100,27 @@ export function PaymentSection() {
               <span className="font-bold">{formatCurrency(govPays)}</span>
             </div>
           </div>
-          {tctSettings?.qrUrl ? (
+          {loadingQr ? (
+            <div className="flex items-center gap-2 py-8 text-gray-400">
+              <Loader2 size={20} className="animate-spin" />
+              <span className="text-sm">กำลังสร้าง QR Code...</span>
+            </div>
+          ) : qrUrl ? (
             <>
-              <Image src={tctSettings.qrUrl} alt="ไทยช่วยไทยพลัส QR" width={220} height={220} className="rounded-xl" />
-              <div className="text-center text-sm">
-                {tctSettings.accountName && (
-                  <p className="text-gray-600">ชื่อร้าน: <span className="font-semibold">{tctSettings.accountName}</span></p>
-                )}
-                <p className="mt-1 text-xs text-blue-500">สแกนด้วยแอปเป๋าตัง → ไทยช่วยไทยพลัส</p>
-                <p className="text-base font-bold text-blue-600 mt-1">คุณจ่าย {formatCurrency(customerPays)}</p>
-              </div>
+              <Image src={qrUrl} alt="ไทยช่วยไทยพลัส QR" width={220} height={220} className="rounded-xl" />
+              {promptpay && (
+                <div className="text-center text-sm">
+                  <p className="text-gray-600">พร้อมเพย์: <span className="font-semibold">{promptpay.phone}</span></p>
+                  <p className="text-gray-600">ชื่อบัญชี: <span className="font-semibold">{promptpay.accountName}</span></p>
+                  <p className="mt-2 text-xs text-blue-600 font-medium">เปิดแอปเป๋าตัง → ไทยช่วยไทยพลัส → สแกน QR นี้</p>
+                  <p className="text-base font-bold text-blue-600 mt-1">ยอดเต็ม {formatCurrency(total)} (คุณจ่าย {formatCurrency(customerPays)})</p>
+                </div>
+              )}
             </>
           ) : (
-            <p className="py-4 text-sm text-gray-400">ยังไม่ได้ตั้งค่า QR ไทยช่วยไทยพลัส กรุณาติดต่อร้าน</p>
+            <p className="py-4 text-sm text-gray-400">
+              {promptpay?.phone ? 'ไม่สามารถสร้าง QR ได้' : 'ยังไม่มีข้อมูล PromptPay กรุณาติดต่อร้าน'}
+            </p>
           )}
         </div>
       )}
