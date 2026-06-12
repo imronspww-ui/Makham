@@ -20,7 +20,7 @@ export function PaymentSection() {
   const promptpay = settings?.promptpay
 
   useEffect(() => {
-    if ((paymentMethod === 'promptpay' || paymentMethod === 'thaichangthai') && promptpay?.phone) {
+    if (paymentMethod === 'promptpay' && promptpay?.phone) {
       setLoadingQr(true)
       generatePromptPayQR(promptpay.phone, total)
         .then(setQrUrl)
@@ -33,23 +33,19 @@ export function PaymentSection() {
 
   const options: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
     { value: 'promptpay', label: 'QR PromptPay', icon: <QrCode size={18} /> },
-    { value: 'thaichangthai', label: 'ไทยช่วยไทยพลัส', icon: <span className="text-base leading-none">🇹🇭</span> },
     { value: 'cash', label: 'เงินสด', icon: <Banknote size={18} /> },
   ]
 
-  const customerPays = Math.ceil(total * 0.6)
-  const govPays = total - customerPays
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         {options.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => setPaymentMethod(opt.value)}
             className={[
-              'flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-3 text-xs font-medium transition-all',
+              'flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all',
               paymentMethod === opt.value
                 ? 'border-orange-600 bg-orange-50 text-orange-600'
                 : 'border-gray-200 text-gray-600 hover:border-orange-300',
@@ -87,35 +83,8 @@ export function PaymentSection() {
         </div>
       )}
 
-      {paymentMethod === 'thaichangthai' && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          {loadingQr ? (
-            <div className="flex items-center gap-2 py-8 text-gray-400">
-              <Loader2 size={20} className="animate-spin" />
-              <span className="text-sm">กำลังสร้าง QR Code...</span>
-            </div>
-          ) : qrUrl ? (
-            <>
-              <Image src={qrUrl} alt="ไทยช่วยไทยพลัส QR" width={220} height={220} className="rounded-xl" />
-              {promptpay && (
-                <div className="text-center text-sm">
-                  <p className="text-gray-600">พร้อมเพย์: <span className="font-semibold">{promptpay.phone}</span></p>
-                  <p className="text-gray-600">ชื่อบัญชี: <span className="font-semibold">{promptpay.accountName}</span></p>
-                  <p className="mt-1 text-base font-bold text-blue-600">ยอดที่ต้องชำระ {formatCurrency(total)}</p>
-                  <p className="mt-1 text-xs text-blue-500">เปิดแอปเป๋าตัง → ไทยช่วยไทยพลัส → สแกน QR นี้</p>
-                  <p className="mt-1 text-xs text-red-500 font-medium">⚠️ ต้องสแกนด้วยแอปเป๋าตังเท่านั้น หากสแกนด้วยแอปอื่นจะไม่ได้รับสิทธิ์ลด 40%</p>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="py-4 text-sm text-gray-400">
-              {promptpay?.phone ? 'ไม่สามารถสร้าง QR ได้' : 'ยังไม่มีข้อมูล PromptPay กรุณาติดต่อร้าน'}
-            </p>
-          )}
-        </div>
-      )}
 
-      {paymentMethod === 'cash' && (
+{paymentMethod === 'cash' && (
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
           ชำระเงินสดเมื่อรับสินค้า / เมื่อพนักงานจัดส่งถึงที่
         </div>
