@@ -103,6 +103,7 @@ export function PaymentSection() {
                   <p className="text-gray-600">ชื่อบัญชี: <span className="font-semibold">{promptpay.accountName}</span></p>
                   <p className="mt-1 text-base font-bold text-blue-600">ยอดที่ต้องชำระ {formatCurrency(total)}</p>
                   <p className="mt-1 text-xs text-blue-500">เปิดแอปเป๋าตัง → ไทยช่วยไทยพลัส → สแกน QR นี้</p>
+                  <p className="mt-1 text-xs text-red-500 font-medium">⚠️ ต้องสแกนด้วยแอปเป๋าตังเท่านั้น หากสแกนด้วยแอปอื่นจะไม่ได้รับสิทธิ์ลด 40%</p>
                 </div>
               )}
             </>
