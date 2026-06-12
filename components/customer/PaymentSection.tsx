@@ -89,17 +89,6 @@ export function PaymentSection() {
 
       {paymentMethod === 'thaichangthai' && (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <div className="w-full rounded-xl bg-white border border-blue-100 px-3 py-2.5 flex flex-col gap-1 text-sm">
-            <p className="font-semibold text-blue-700 text-center">ไทยช่วยไทยพลัส 60/40</p>
-            <div className="flex justify-between text-blue-600">
-              <span>คุณจ่าย (60%)</span>
-              <span className="font-bold">{formatCurrency(customerPays)}</span>
-            </div>
-            <div className="flex justify-between text-blue-400">
-              <span>รัฐบาลจ่าย (40%)</span>
-              <span className="font-bold">{formatCurrency(govPays)}</span>
-            </div>
-          </div>
           {loadingQr ? (
             <div className="flex items-center gap-2 py-8 text-gray-400">
               <Loader2 size={20} className="animate-spin" />
@@ -112,8 +101,8 @@ export function PaymentSection() {
                 <div className="text-center text-sm">
                   <p className="text-gray-600">พร้อมเพย์: <span className="font-semibold">{promptpay.phone}</span></p>
                   <p className="text-gray-600">ชื่อบัญชี: <span className="font-semibold">{promptpay.accountName}</span></p>
-                  <p className="mt-2 text-xs text-blue-600 font-medium">เปิดแอปเป๋าตัง → ไทยช่วยไทยพลัส → สแกน QR นี้</p>
-                  <p className="text-base font-bold text-blue-600 mt-1">ยอดเต็ม {formatCurrency(total)} (คุณจ่าย {formatCurrency(customerPays)})</p>
+                  <p className="mt-1 text-base font-bold text-blue-600">ยอดที่ต้องชำระ {formatCurrency(total)}</p>
+                  <p className="mt-1 text-xs text-blue-500">เปิดแอปเป๋าตัง → ไทยช่วยไทยพลัส → สแกน QR นี้</p>
                 </div>
               )}
             </>
